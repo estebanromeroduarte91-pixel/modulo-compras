@@ -1143,7 +1143,7 @@ function filtrarEnlaceKits(q){
     if(document.activeElement===document.getElementById('kit-enlace-search')){
       const html=grupos.map(g=>{
         const cnt=getProductos().filter(p=>p.enlace&&p.enlace.trim().toLowerCase()===g.trim().toLowerCase()).length;
-        return `<div onmousedown="aplicarEnlaceKit('${g.replace(/'/g,"'")}')" ontouchstart="aplicarEnlaceKit('${g.replace(/'/g,"'")}')"
+        return `<div onmousedown="aplicarEnlaceKit(${JSON.stringify(g)})" ontouchstart="aplicarEnlaceKit(${JSON.stringify(g)})"
           style="padding:14px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f3f0ff;display:flex;align-items:center;gap:10px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,0)"
           onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='white'">
           <span style="color:#7c3aed;font-size:16px">🔗</span>
@@ -1165,7 +1165,7 @@ function filtrarEnlaceKits(q){
   const hl=(txt)=>txt.replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<strong style="color:#7c3aed">$1</strong>');
   resultsEl.innerHTML=filtered.map(g=>{
     const cnt=getProductos().filter(p=>p.enlace&&p.enlace.trim().toLowerCase()===g.trim().toLowerCase()).length;
-    return `<div onmousedown="aplicarEnlaceKit('${g.replace(/'/g,"'")}')" ontouchstart="aplicarEnlaceKit('${g.replace(/'/g,"'")}')"
+    return `<div onmousedown="aplicarEnlaceKit(${JSON.stringify(g)})" ontouchstart="aplicarEnlaceKit(${JSON.stringify(g)})"
       style="padding:14px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f3f0ff;display:flex;align-items:center;gap:10px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,0)"
       onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='white'">
       <span style="color:#7c3aed;font-size:16px">🔗</span>
