@@ -5,7 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Módulo de Compras ERP</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
+/* ── LOGIN SCREEN ── */
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);display:flex;align-items:center;justify-content:center;z-index:9999}
+#login-screen.hidden{display:none}
+.login-box{background:#fff;border-radius:16px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo h1{font-size:22px;font-weight:800;color:#1e3a5f;margin-top:10px}
+.login-logo p{font-size:13px;color:#64748b;margin-top:4px}
+.login-tabs{display:flex;gap:0;margin-bottom:24px;border-radius:8px;overflow:hidden;border:1.5px solid #e2e8f0}
+.login-tab{flex:1;padding:9px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;color:#64748b;background:#f8fafc;transition:all .15s}
+.login-tab.active{background:#2563eb;color:#fff}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px}
+.login-field input{width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;transition:border .15s}
+.login-field input:focus{border-color:#2563eb}
+.login-btn{width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:background .15s}
+.login-btn:hover{background:#1d4ed8}
+.login-err{color:#dc2626;font-size:12px;text-align:center;margin-top:10px;min-height:18px}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.8);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px}
+.logout-btn:hover{background:rgba(255,255,255,.1)}
+</style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --primary:#2563eb;--primary-dark:#1d4ed8;--primary-light:#eff6ff;--primary-mid:#bfdbfe;
@@ -251,6 +272,33 @@ select{cursor:pointer}
 </head>
 <body>
 
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div style="font-size:36px">🛒</div>
+      <h1>ERP Compras</h1>
+      <p>Gestión empresarial inteligente</p>
+    </div>
+    <div class="login-tabs">
+      <div class="login-tab active" id="tab-login" onclick="switchTab('login')">Iniciar sesión</div>
+      <div class="login-tab" id="tab-register" onclick="switchTab('register')">Registrarse</div>
+    </div>
+    <div id="login-form">
+      <div class="login-field"><label>Email</label><input id="l-email" type="email" placeholder="tu@empresa.com"></div>
+      <div class="login-field"><label>Contraseña</label><input id="l-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    </div>
+    <div id="register-form" style="display:none">
+      <div class="login-field"><label>Nombre de tu empresa</label><input id="r-empresa" type="text" placeholder="Mi Empresa SpA"></div>
+      <div class="login-field"><label>Email</label><input id="r-email" type="email" placeholder="tu@empresa.com"></div>
+      <div class="login-field"><label>Contraseña (mín. 6 caracteres)</label><input id="r-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()"></div>
+      <button class="login-btn" onclick="doRegister()">Crear cuenta</button>
+    </div>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
 <nav id="sidebar">
   <div class="sidebar-logo">
     <h1>🛒 ERP Compras</h1>
@@ -275,13 +323,17 @@ select{cursor:pointer}
     <div class="nav-subitem" id="nav-gastos" onclick="nav('gastos')"><span class="icon">💳</span> Gastos</div>
     <div class="nav-subitem" id="nav-contabilidad-page" onclick="nav('contabilidad')"><span class="icon">📒</span> Libro contable</div>
   </div>
-  <div class="sidebar-footer">v2.0 · datos locales</div>
+  <div class="sidebar-footer" id="sidebar-user-info">v2.0</div>
 </nav>
 
 <div id="main">
   <div id="topbar">
     <h2 id="page-title">Dashboard</h2>
-    <div id="topbar-actions"></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="topbar-empresa" style="font-size:12px;color:var(--gray-500)"></span>
+      <div id="topbar-actions"></div>
+      <button class="logout-btn" onclick="doLogout()">Cerrar sesión</button>
+    </div>
   </div>
   <div id="page-content"></div>
 </div>
@@ -291,18 +343,136 @@ select{cursor:pointer}
 
 <script>
 // ─────────────────────────────────────────────
-// DB HELPER
+// SUPABASE CONFIG
+// ─────────────────────────────────────────────
+const _SB_URL = 'https://nfcdqdbhrsjhbnbtqewl.supabase.co';
+const _SB_KEY = 'sb_publishable_hbmva0O8zTFwr-EfnqBUdw_X8lwOPoZ';
+const _sb = supabase.createClient(_SB_URL, _SB_KEY);
+let _empresaId = null;
+let _dbCache = {};
+let _syncQueue = {};
+let _syncTimer = null;
+
+// ─────────────────────────────────────────────
+// DB HELPER (con sync a Supabase)
 // ─────────────────────────────────────────────
 const DB = {
   prefix: 'erp_',
-  get(k){ try{ return JSON.parse(localStorage.getItem(this.prefix+k)) }catch(e){ return null } },
-  set(k,v){ localStorage.setItem(this.prefix+k, JSON.stringify(v)) },
+  get(k){
+    if(_dbCache[k] !== undefined) return _dbCache[k];
+    try{ return JSON.parse(localStorage.getItem(this.prefix+k)) }catch(e){ return null }
+  },
+  set(k,v){
+    _dbCache[k] = v;
+    localStorage.setItem(this.prefix+k, JSON.stringify(v));
+    if(_empresaId) _queueSync(k, v);
+  },
   getCfg(){ return this.get('cfg') || {ocCounter:0} },
   setCfg(v){ this.set('cfg',v) },
   nextOC(){ const c=this.getCfg(); c.ocCounter=(c.ocCounter||0)+1; this.setCfg(c); return c.ocCounter },
   nextAsiento(){ const c=this.getCfg(); c.asientoCounter=(c.asientoCounter||0)+1; this.setCfg(c); return c.asientoCounter },
   nextVenta(){ const c=this.getCfg(); c.ventaCounter=(c.ventaCounter||0)+1; this.setCfg(c); return c.ventaCounter }
 };
+
+function _queueSync(clave, datos){
+  _syncQueue[clave] = datos;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(_flushSync, 1500);
+}
+
+async function _flushSync(){
+  if(!_empresaId || !Object.keys(_syncQueue).length) return;
+  const rows = Object.entries(_syncQueue).map(([clave, datos])=>({
+    empresa_id: _empresaId, clave, datos, actualizado_en: new Date().toISOString()
+  }));
+  _syncQueue = {};
+  const {error} = await _sb.from('erp_data').upsert(rows, {onConflict:'empresa_id,clave'});
+  if(error) console.error('Sync error:', error);
+}
+
+async function _cargarDesdeSupabase(){
+  if(!_empresaId) return;
+  const {data, error} = await _sb.from('erp_data').select('clave,datos').eq('empresa_id', _empresaId);
+  if(error){ console.error(error); return; }
+  if(data) data.forEach(r=>{ _dbCache[r.clave]=r.datos; localStorage.setItem('erp_'+r.clave, JSON.stringify(r.datos)); });
+}
+
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+function switchTab(t){
+  document.getElementById('login-form').style.display = t==='login'?'block':'none';
+  document.getElementById('register-form').style.display = t==='register'?'block':'none';
+  document.getElementById('tab-login').classList.toggle('active', t==='login');
+  document.getElementById('tab-register').classList.toggle('active', t==='register');
+  document.getElementById('login-err').textContent = '';
+}
+
+async function doLogin(){
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  if(!email||!pass){ document.getElementById('login-err').textContent='Completa todos los campos'; return; }
+  document.getElementById('login-err').textContent = 'Ingresando...';
+  const {data, error} = await _sb.auth.signInWithPassword({email, password:pass});
+  if(error){ document.getElementById('login-err').textContent = _tradError(error.message); return; }
+  await _iniciarApp(data.user);
+}
+
+async function doRegister(){
+  const empresa = document.getElementById('r-empresa').value.trim();
+  const email   = document.getElementById('r-email').value.trim();
+  const pass    = document.getElementById('r-pass').value;
+  if(!empresa||!email||!pass){ document.getElementById('login-err').textContent='Completa todos los campos'; return; }
+  if(pass.length<6){ document.getElementById('login-err').textContent='La contraseña debe tener al menos 6 caracteres'; return; }
+  document.getElementById('login-err').textContent = 'Creando cuenta...';
+  const {data, error} = await _sb.auth.signUp({email, password:pass});
+  if(error){ document.getElementById('login-err').textContent = _tradError(error.message); return; }
+  // Crear empresa
+  await _sb.from('empresas').insert({nombre: empresa, owner_id: data.user.id});
+  await _iniciarApp(data.user, empresa);
+}
+
+async function doLogout(){
+  await _flushSync();
+  await _sb.auth.signOut();
+  _empresaId = null; _dbCache = {};
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('l-email').value='';
+  document.getElementById('l-pass').value='';
+  document.getElementById('login-err').textContent='';
+}
+
+async function _iniciarApp(user, empresaNombre){
+  // Buscar o crear empresa del usuario
+  let {data: emp} = await _sb.from('empresas').select('id,nombre').eq('owner_id', user.id).single();
+  if(!emp && empresaNombre){
+    const {data: nuevo} = await _sb.from('empresas').insert({nombre:empresaNombre, owner_id:user.id}).select().single();
+    emp = nuevo;
+  }
+  if(!emp){ document.getElementById('login-err').textContent='No se encontró la empresa. Contacta soporte.'; return; }
+  _empresaId = emp.id;
+  await _cargarDesdeSupabase();
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('topbar-empresa').textContent = emp.nombre;
+  document.getElementById('sidebar-user-info').textContent = emp.nombre + ' · v2.0';
+  nav('dashboard');
+}
+
+function _tradError(msg){
+  if(msg.includes('Invalid login')) return 'Email o contraseña incorrectos';
+  if(msg.includes('already registered')) return 'Este email ya tiene una cuenta';
+  if(msg.includes('Password')) return 'La contraseña debe tener al menos 6 caracteres';
+  return msg;
+}
+
+// Verificar sesión activa al cargar
+(async()=>{
+  const {data:{session}} = await _sb.auth.getSession();
+  if(session){
+    await _iniciarApp(session.user);
+  }
+  // Si no hay sesión, la pantalla de login ya está visible
+})();
 
 // ─────────────────────────────────────────────
 // UTILS
@@ -4476,9 +4646,8 @@ function guardarAsientoManual(){
 }
 
 // ─────────────────────────────────────────────
-// INIT
+// INIT — manejado por auth (ver _iniciarApp)
 // ─────────────────────────────────────────────
-nav('dashboard');
 </script>
 </body>
 </html>
