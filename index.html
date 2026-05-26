@@ -427,9 +427,15 @@ async function doRegister(){
   document.getElementById('login-err').textContent = 'Creando cuenta...';
   const {data, error} = await _sb.auth.signUp({email, password:pass});
   if(error){ document.getElementById('login-err').textContent = _tradError(error.message); return; }
-  // Crear empresa
-  await _sb.from('empresas').insert({nombre: empresa, owner_id: data.user.id});
-  await _iniciarApp(data.user, empresa);
+  if(!data.session){
+    document.getElementById('login-err').style.color='#16a34a';
+    document.getElementById('login-err').textContent = '✅ Revisa tu email para confirmar la cuenta.';
+    return;
+  }
+  // Crear empresa (sesión activa)
+  const {error: empErr} = await _sb.from('empresas').insert({nombre: empresa, owner_id: data.user.id});
+  if(empErr){ document.getElementById('login-err').textContent = 'Error creando empresa: '+empErr.message; return; }
+  await _iniciarApp(data.user);
 }
 
 async function doLogout(){
@@ -442,14 +448,10 @@ async function doLogout(){
   document.getElementById('login-err').textContent='';
 }
 
-async function _iniciarApp(user, empresaNombre){
-  // Buscar o crear empresa del usuario
-  let {data: emp} = await _sb.from('empresas').select('id,nombre').eq('owner_id', user.id).single();
-  if(!emp && empresaNombre){
-    const {data: nuevo} = await _sb.from('empresas').insert({nombre:empresaNombre, owner_id:user.id}).select().single();
-    emp = nuevo;
-  }
-  if(!emp){ document.getElementById('login-err').textContent='No se encontró la empresa. Contacta soporte.'; return; }
+async function _iniciarApp(user){
+  // Buscar empresa del usuario
+  const {data: emp, error} = await _sb.from('empresas').select('id,nombre').eq('owner_id', user.id).maybeSingle();
+  if(!emp){ document.getElementById('login-err').textContent='No se encontró la empresa. Vuelve a registrarte.'; return; }
   _empresaId = emp.id;
   await _cargarDesdeSupabase();
   document.getElementById('login-screen').classList.add('hidden');
