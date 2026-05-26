@@ -1055,13 +1055,12 @@ function modalNuevoKit(editId){
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group" style="margin:0;position:relative">
+        <div class="form-group" style="margin:0">
           <label>Nombre del equipo <span style="color:var(--danger)">*</span></label>
           <input id="kit-nombre" type="text" value="${k.nombre||''}" placeholder="Ej: iPhone 13, MacBook Pro 14"
             oninput="autoCapNombre(this);filtrarEnlaceKits(this.value);posicionarEnlaceDrop()"
             onfocus="filtrarEnlaceKits(this.value);posicionarEnlaceDrop()"
-            onblur="setTimeout(()=>{const r=document.getElementById('kit-enlace-results');if(r)r.style.display='none';},200)">
-          <div id="kit-enlace-results" style="display:none;position:fixed;background:white;border:1.5px solid #7c3aed;border-radius:12px;box-shadow:0 12px 40px rgba(124,58,237,0.22),0 2px 8px rgba(0,0,0,0.08);z-index:10000;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:340px"></div>
+            onblur="setTimeout(()=>{const r=document.getElementById('kit-enlace-results');if(r)r.style.display='none';},300)">
         </div>
         <div class="form-group" style="margin:0">
           <label>Categoría</label>
@@ -1088,6 +1087,7 @@ function modalNuevoKit(editId){
         <button onclick="addKCompRow()" style="margin-top:6px;background:none;border:1.5px dashed var(--gray-300);border-radius:8px;padding:7px 16px;cursor:pointer;color:var(--gray-500);font-size:13px;width:100%">＋ Agregar componente</button>
       </div>
     </div>
+    <div id="kit-enlace-results" style="display:none;position:fixed;background:white;border:1.5px solid #7c3aed;border-radius:12px;box-shadow:0 12px 40px rgba(124,58,237,0.22),0 2px 8px rgba(0,0,0,0.08);z-index:10000;overflow-y:auto;max-height:340px"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveKit('${editId||''}')">✅ ${isEdit?'Guardar cambios':'Crear kit'}</button>
@@ -1133,7 +1133,7 @@ function filtrarEnlaceKits(q){
   if(!q.trim()){
     // Show all when box is focused but empty
     if(document.activeElement===document.getElementById('kit-nombre')){
-      const html=grupos.map(g=>{
+      resultsEl.innerHTML=grupos.map(g=>{
         const cnt=getProductos().filter(p=>p.enlace&&p.enlace.trim().toLowerCase()===g.trim().toLowerCase()).length;
         return `<div onmousedown="aplicarEnlaceKit(${JSON.stringify(g)})" ontouchstart="aplicarEnlaceKit(${JSON.stringify(g)})"
           style="padding:14px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #f3f0ff;display:flex;align-items:center;gap:10px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,0)"
