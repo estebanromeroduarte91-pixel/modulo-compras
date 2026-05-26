@@ -1055,10 +1055,13 @@ function modalNuevoKit(editId){
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group" style="margin:0">
+        <div class="form-group" style="margin:0;position:relative">
           <label>Nombre del equipo <span style="color:var(--danger)">*</span></label>
           <input id="kit-nombre" type="text" value="${k.nombre||''}" placeholder="Ej: iPhone 13, MacBook Pro 14"
-            oninput="autoCapNombre(this)">
+            oninput="autoCapNombre(this);filtrarEnlaceKits(this.value);posicionarEnlaceDrop()"
+            onfocus="filtrarEnlaceKits(this.value);posicionarEnlaceDrop()"
+            onblur="setTimeout(()=>{const r=document.getElementById('kit-enlace-results');if(r)r.style.display='none';},200)">
+          <div id="kit-enlace-results" style="display:none;position:fixed;background:white;border:1.5px solid #7c3aed;border-radius:12px;box-shadow:0 12px 40px rgba(124,58,237,0.22),0 2px 8px rgba(0,0,0,0.08);z-index:10000;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:340px"></div>
         </div>
         <div class="form-group" style="margin:0">
           <label>Categoría</label>
@@ -1083,17 +1086,6 @@ function modalNuevoKit(editId){
           <tbody id="kcomp-body">${renderCompRows()}</tbody>
         </table>
         <button onclick="addKCompRow()" style="margin-top:6px;background:none;border:1.5px dashed var(--gray-300);border-radius:8px;padding:7px 16px;cursor:pointer;color:var(--gray-500);font-size:13px;width:100%">＋ Agregar componente</button>
-        <div style="margin-top:10px">
-          <div style="display:flex;align-items:center;gap:8px;background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:8px;padding:8px 12px">
-            <span style="color:#7c3aed;font-size:14px">🔗</span>
-            <input id="kit-enlace-search" type="text" placeholder="Buscar modelo por Enlace (ej: iPhone 13)…"
-              oninput="filtrarEnlaceKits(this.value);posicionarEnlaceDrop()"
-              onfocus="filtrarEnlaceKits(this.value);posicionarEnlaceDrop()"
-              onblur="setTimeout(()=>{const r=document.getElementById('kit-enlace-results');if(r)r.style.display='none';},500)"
-              style="flex:1;border:none;background:transparent;outline:none;font-size:13px;color:var(--gray-700)">
-          </div>
-          <div id="kit-enlace-results" style="display:none;position:fixed;background:white;border:1.5px solid #7c3aed;border-radius:12px;box-shadow:0 12px 40px rgba(124,58,237,0.22),0 2px 8px rgba(0,0,0,0.08);z-index:10000;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:340px"></div>
-        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1122,7 +1114,7 @@ function removeKCompRow(i){
 }
 
 function posicionarEnlaceDrop(){
-  const inp=document.getElementById('kit-enlace-search');
+  const inp=document.getElementById('kit-nombre');
   const drop=document.getElementById('kit-enlace-results');
   if(!inp||!drop) return;
   const rect=inp.getBoundingClientRect();
@@ -1140,7 +1132,7 @@ function filtrarEnlaceKits(q){
   const gruposRaw=getProductos().map(p=>p.enlace&&p.enlace.trim()).filter(Boolean); const grupos=[...new Map(gruposRaw.map(g=>[g.toLowerCase(),g])).values()].sort();
   if(!q.trim()){
     // Show all when box is focused but empty
-    if(document.activeElement===document.getElementById('kit-enlace-search')){
+    if(document.activeElement===document.getElementById('kit-nombre')){
       const html=grupos.map(g=>{
         const cnt=getProductos().filter(p=>p.enlace&&p.enlace.trim().toLowerCase()===g.trim().toLowerCase()).length;
         return `<div onmousedown="aplicarEnlaceKit(${JSON.stringify(g)})" ontouchstart="aplicarEnlaceKit(${JSON.stringify(g)})"
@@ -1182,9 +1174,7 @@ function aplicarEnlaceKit(enlace){
   const prods=getProductos().filter(p=>p.enlace&&p.enlace.trim().toLowerCase()===el);
   if(!prods.length){ toast('No hay productos con el Enlace "'+enlace+'"','error'); return; }
   const kitNombreEl=document.getElementById('kit-nombre');
-  if(kitNombreEl&&!kitNombreEl.value.trim()) kitNombreEl.value=enlace;
-  const searchEl=document.getElementById('kit-enlace-search');
-  if(searchEl) searchEl.value=enlace;
+  if(kitNombreEl) kitNombreEl.value=enlace;
   const resultsEl=document.getElementById('kit-enlace-results');
   if(resultsEl) resultsEl.style.display='none';
   const tbody=document.getElementById('kcomp-body');
