@@ -349,9 +349,10 @@ select{cursor:pointer}
 #tp-wrap .form-input-wrap{position:relative}
 #tp-wrap .form-input-wrap .form-input{width:100%}
 #tp-wrap .checklist-group{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-#tp-wrap .checklist-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px}
+#tp-wrap .checklist-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;user-select:none;transition:background .12s}
+#tp-wrap .checklist-item:hover{background:var(--bg)}
 #tp-wrap .checklist-item:last-child{border-bottom:none}
-#tp-wrap .checklist-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+#tp-wrap .checklist-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0;pointer-events:none}
 #tp-wrap .checklist-item .item-label{flex:1}
 #tp-wrap .checklist-add{display:flex;gap:6px;padding:6px 10px}
 #tp-wrap .checklist-add input{flex:1;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface);font-family:inherit}
@@ -6175,7 +6176,7 @@ function tp_openDetail(id){
             <div class="od-card-name">${o.modelo}</div>
             ${o.color?`<div class="od-card-row">${o.color}</div>`:''}
             ${o.serie?`<div class="od-card-row" style="font-size:11px">${o.serie}</div>`:''}
-            ${o.pin?`<div class="od-card-row">${o.pinType==='pattern'?o.pin:'••••'}</div>`:''}
+            ${o.pin?`<div class="od-card-row" style="display:flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span>${o.pinType==='pattern'?o.pin:o.pin}</span></div>`:''}
           </div>
           <div class="od-card-actions">
             <button class="icon-btn" onclick="tp_closeModal('mod-detail');tp_openEditOrder('${o.id}')" style="color:var(--blue)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -6234,7 +6235,14 @@ function tp_openDetail(id){
       <button class="btn btn-danger btn-sm" onclick="tp_deleteOrder('${o.id}')">Eliminar</button>
       <button class="btn btn-default btn-sm" onclick="tp_printOrder('${o.id}')">Imprimir</button>
       <div class="ml-auto"></div>
-      <button class="btn btn-default btn-sm" onclick="tp_openEditOrder('${o.id}')">Editar orden</button>
+      <button class="btn btn-default btn-sm" onclick="tp_closeModal('mod-detail')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar orden
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="tp_closeModal('mod-detail')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar orden
+      </button>
     </div>`;
   document.getElementById('mod-detail').classList.add('open');
 }
@@ -6257,7 +6265,7 @@ function tp_handlePhotos(type,inp){
 function tp_renderOrderChecklist(type,saved){
   const list=type==='ingreso'?tp_checklistIngreso:tp_checklistSalida;
   const cont=document.getElementById('checklist-'+type+'-form');if(!cont)return;
-  cont.innerHTML=list.map((label,i)=>{const checked=saved?(saved[i]?.checked||false):false;return`<div class="checklist-item"><input type="checkbox" ${checked?'checked':''}><span class="item-label">${label}</span></div>`;}).join('');
+  cont.innerHTML=list.map((label,i)=>{const checked=saved?(saved[i]?.checked||false):false;return`<div class="checklist-item" onclick="this.querySelector('input').click()"><input type="checkbox" ${checked?'checked':''}><span class="item-label">${label}</span></div>`;}).join('');
   if(!list.length)cont.innerHTML='<div style="padding:10px;font-size:12.5px;color:var(--text3);text-align:center">Sin ítems. Ve a Configuración para agregar.</div>';
 }
 function tp_renderSettingsChecklists(){
