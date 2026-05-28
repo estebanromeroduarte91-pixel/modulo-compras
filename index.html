@@ -664,7 +664,16 @@ select{cursor:pointer}
   </div>
   <div style="border-top:1px solid rgba(255,255,255,.1);margin:8px 16px"></div>
   <div class="nav-section">Servicios</div>
-  <div class="nav-item" id="nav-taller" onclick="nav('taller')"><span class="icon">🔧</span> Taller</div>
+  <div class="nav-item-parent" id="nav-taller-parent" onclick="toggleTaller()"><span class="icon">🔧</span> Taller<span class="arrow">▶</span></div>
+  <div class="nav-submenu" id="submenu-taller">
+    <div class="nav-subitem" id="nav-taller-orders" onclick="navTaller('orders','Taller — Órdenes')"><span class="icon">📋</span> Órdenes</div>
+    <div class="nav-subitem" id="nav-taller-branches" onclick="navTaller('branches','Taller — Sucursales')"><span class="icon">🏢</span> Sucursales</div>
+    <div class="nav-subitem" id="nav-taller-equipo" onclick="navTaller('equipo','Taller — Equipo')"><span class="icon">📱</span> Equipo</div>
+    <div class="nav-subitem" id="nav-taller-clients" onclick="navTaller('clients','Taller — Clientes')"><span class="icon">👥</span> Clientes</div>
+    <div class="nav-subitem" id="nav-taller-inventory" onclick="navTaller('inventory','Taller — Inventario')"><span class="icon">📦</span> Inventario</div>
+    <div class="nav-subitem" id="nav-taller-stats" onclick="navTaller('stats','Taller — Estadísticas')"><span class="icon">📊</span> Estadísticas</div>
+    <div class="nav-subitem" id="nav-taller-settings" onclick="navTaller('settings','Taller — Configuración')"><span class="icon">⚙️</span> Configuración</div>
+  </div>
   <div class="sidebar-footer" id="sidebar-user-info">v2.0</div>
 </nav>
 
@@ -926,6 +935,26 @@ const pageTitles = {
   proveedores:'Proveedores',productos:'Productos',bodegas:'Bodegas',estadisticas:'Estadísticas',
   taller:'Taller — Órdenes de Servicio'
 };
+function toggleTaller(){
+  const parent=document.getElementById('nav-taller-parent');
+  const submenu=document.getElementById('submenu-taller');
+  if(!parent||!submenu) return;
+  const isOpen=submenu.classList.contains('open');
+  submenu.classList.toggle('open',!isOpen);
+  parent.classList.toggle('open',!isOpen);
+}
+function navTaller(subpage, title){
+  const alreadyTaller=(currentPage==='taller');
+  currentPage='taller';
+  // Abrir submenu sidebar
+  const sm=document.getElementById('submenu-taller');const par=document.getElementById('nav-taller-parent');
+  if(sm)sm.classList.add('open');if(par)par.classList.add('open');
+  // Título
+  document.getElementById('page-title').textContent=title||'Taller';
+  document.getElementById('topbar-actions').innerHTML='';
+  if(!alreadyTaller){closeModal();renderTaller();}
+  tp_showPage(subpage, null);
+}
 function toggleContabilidad(){
   const parent=document.getElementById('nav-contabilidad');
   const submenu=document.getElementById('submenu-contabilidad');
@@ -955,9 +984,14 @@ function nav(page){
   document.getElementById('page-title').textContent=pageTitles[page]||page;
   document.getElementById('topbar-actions').innerHTML='';
   closeModal();
+  if(page==='taller'){
+    const sm=document.getElementById('submenu-taller');const par=document.getElementById('nav-taller-parent');
+    if(sm)sm.classList.add('open');if(par)par.classList.add('open');
+    renderTaller(); return;
+  }
   ({dashboard:renderDashboard,ventas:renderVentas,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
-    productos:renderProductos,kits:renderKits,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad,
-    taller:renderTaller}[page]||renderDashboard)();
+    productos:renderProductos,kits:renderKits,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad
+  }[page]||renderDashboard)();
 }
 
 // ─────────────────────────────────────────────
@@ -5034,15 +5068,6 @@ function renderTaller() {
       </button>
     </div>
   </div>
-  <div class="tp-subnav">
-    <button class="tp-subnav-btn active" id="tp-tab-branches" onclick="tp_showPage('branches',this)">🏢 Sucursales</button>
-    <button class="tp-subnav-btn" id="tp-tab-orders" onclick="tp_showPage('orders',this)">📋 Órdenes</button>
-    <button class="tp-subnav-btn" id="tp-tab-clients" onclick="tp_showPage('clients',this)">👥 Clientes</button>
-    <button class="tp-subnav-btn" id="tp-tab-inventory" onclick="tp_showPage('inventory',this)">📦 Inventario</button>
-    <button class="tp-subnav-btn" id="tp-tab-stats" onclick="tp_showPage('stats',this)">📊 Estadísticas</button>
-    <button class="tp-subnav-btn" id="tp-tab-settings" onclick="tp_showPage('settings',this)">⚙️ Configuración</button>
-  </div>
-
   <!-- PAGE: ORDERS -->
   <div id="page-orders" class="page-content" style="display:none">
     <div class="status-bar-4">
@@ -5252,17 +5277,7 @@ function renderTaller() {
       <div class="form-section-title">Datos del equipo</div>
       <div class="form-grid cols3">
         <div class="form-group"><label class="form-label">Modelo *</label>
-          <select class="form-input" id="f-modelo">
-            <option value="">Seleccionar...</option>
-            <option>iPhone 16 Pro Max</option><option>iPhone 16 Pro</option><option>iPhone 16 Plus</option><option>iPhone 16</option>
-            <option>iPhone 15 Pro Max</option><option>iPhone 15 Pro</option><option>iPhone 15 Plus</option><option>iPhone 15</option>
-            <option>iPhone 14 Pro Max</option><option>iPhone 14 Pro</option><option>iPhone 14 Plus</option><option>iPhone 14</option>
-            <option>iPhone 13 Pro Max</option><option>iPhone 13 Pro</option><option>iPhone 13</option><option>iPhone 13 mini</option>
-            <option>iPhone 12 Pro Max</option><option>iPhone 12 Pro</option><option>iPhone 12</option><option>iPhone 12 mini</option>
-            <option>iPhone 11 Pro Max</option><option>iPhone 11 Pro</option><option>iPhone 11</option>
-            <option>iPhone XS Max</option><option>iPhone XS</option><option>iPhone XR</option><option>iPhone X</option>
-            <option>iPhone SE (3ª gen)</option><option>iPhone SE (2ª gen)</option><option>Otro</option>
-          </select>
+          <input class="form-input" id="f-modelo" list="equipo-datalist" placeholder="Ej: Apple iPhone 15 Pro…"><datalist id="equipo-datalist"></datalist>
         </div>
         <div class="form-group"><label class="form-label">N° serie / IMEI</label><input class="form-input" id="f-serie" placeholder="C8QH2XXXXXX"></div>
         <div class="form-group"><label class="form-label">Color</label><input class="form-input" id="f-color" placeholder="Negro, Blanco..."></div>
@@ -5598,10 +5613,80 @@ function renderTaller() {
   </div>
   </div>
 
+  <!-- PAGE: EQUIPO -->
+  <div id="page-equipo" class="page-content" style="display:none">
+    <div class="content">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div>
+          <div style="font-size:16px;font-weight:700">Equipo</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">Catálogo de dispositivos que ingresan a taller</div>
+        </div>
+        <button class="btn btn-primary" onclick="tp_openNewEquipo()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo equipo
+        </button>
+      </div>
+      <div style="background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden">
+        <table class="table">
+          <thead><tr><th>Marca</th><th>Modelo</th><th>Categoría</th><th>Descripción</th><th></th></tr></thead>
+          <tbody id="equipo-tbody"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text3)">Sin equipos registrados. Agrega el primero.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Equipo -->
+  <div class="overlay" id="mod-equipo">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-header-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+        <div><div class="modal-title" id="equipo-modal-title">Nuevo equipo</div></div>
+        <button class="btn btn-ghost btn-sm modal-close" onclick="tp_closeModal('mod-equipo')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Marca *</label>
+            <input class="form-input" id="eq-marca" placeholder="Ej: Apple, Samsung, Lenovo…" list="eq-marca-list">
+            <datalist id="eq-marca-list">
+              <option value="Apple"><option value="Samsung"><option value="Lenovo"><option value="HP"><option value="Dell">
+              <option value="Huawei"><option value="Xiaomi"><option value="Sony"><option value="LG"><option value="Asus">
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Categoría *</label>
+            <select class="form-input" id="eq-categoria">
+              <option value="Teléfono">📱 Teléfono</option>
+              <option value="Laptop">💻 Laptop</option>
+              <option value="Tablet">📲 Tablet</option>
+              <option value="Smartwatch">⌚ Smartwatch</option>
+              <option value="PC escritorio">🖥 PC escritorio</option>
+              <option value="Consola">🎮 Consola</option>
+              <option value="Audífonos">🎧 Audífonos</option>
+              <option value="Otro">📦 Otro</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modelo *</label>
+          <input class="form-input" id="eq-modelo" placeholder="Ej: iPhone 15 Pro, MacBook Air M3, Galaxy S24…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descripción (opcional)</label>
+          <input class="form-input" id="eq-desc" placeholder="Notas adicionales del equipo">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="tp_closeModal('mod-equipo')">Cancelar</button>
+        <button class="btn btn-primary" onclick="tp_saveEquipo()">Guardar equipo</button>
+      </div>
+    </div>
+  </div>
+
 </div>`;
   tp_loadState();
   tp_addListeners();
-  tp_showPage('branches', document.getElementById('tp-tab-branches'));
+  tp_showPage('orders', null);
   tp_updateNotifBadge();
 }
 
@@ -5610,21 +5695,24 @@ function tp_showPage(id, btn) {
   const wrap = document.getElementById('tp-wrap');
   if(!wrap) return;
   wrap.querySelectorAll('.page-content').forEach(p => p.style.display='none');
-  wrap.querySelectorAll('.tp-subnav-btn').forEach(b => b.classList.remove('active'));
   const page = document.getElementById('page-'+id);
   if(page) page.style.display = 'block';
-  if(btn) btn.classList.add('active');
+  // Actualizar sidebar activo
+  document.querySelectorAll('#submenu-taller .nav-subitem').forEach(n=>n.classList.remove('active'));
+  const si = document.getElementById('nav-taller-'+id);
+  if(si) si.classList.add('active');
   if(id==='branches') tp_renderBranchScreen();
   if(id==='clients') tp_renderClients();
   if(id==='stats') tp_renderStats();
   if(id==='inventory') tp_renderInventory();
   if(id==='settings') tp_renderSettingsChecklists();
   if(id==='orders') tp_renderAll();
+  if(id==='equipo') tp_renderEquipo();
 }
 function tp_closeModal(id) { const el=document.getElementById(id); if(el) el.classList.remove('open'); }
 
 // ─── STATE ───
-let tp_orders=[], tp_products=[], tp_branches=[];
+let tp_orders=[], tp_products=[], tp_branches=[], tp_equipos=[];
 let tp_currentBranchId=null, tp_editingBranchId=null;
 let tp_editingOrderId=null, tp_editingProductId=null;
 let tp_salidasOrderId=null, tp_currentFilter='todos';
@@ -5651,6 +5739,7 @@ function tp_loadState() {
   try { tp_checklistSalida=JSON.parse(DB.get('tp_cl_salida')||'null')||[...TP_DEFAULT_CHECKS_SALIDA]; } catch(e){ tp_checklistSalida=[...TP_DEFAULT_CHECKS_SALIDA]; }
   try { tp_customCategories=JSON.parse(DB.get('tp_custom_cats')||'[]'); } catch(e){ tp_customCategories=[]; }
   try { tp_customSubcategories=JSON.parse(DB.get('tp_custom_subcats')||'[]'); } catch(e){ tp_customSubcategories=[]; }
+  try { tp_equipos=JSON.parse(DB.get('tp_equipos')||'[]'); } catch(e){ tp_equipos=[]; }
 }
 function tp_saveState() {
   try {
@@ -5660,6 +5749,7 @@ function tp_saveState() {
     DB.set('tp_cl_salida',JSON.stringify(tp_checklistSalida));
     DB.set('tp_custom_cats',JSON.stringify(tp_customCategories));
     DB.set('tp_custom_subcats',JSON.stringify(tp_customSubcategories));
+    DB.set('tp_equipos',JSON.stringify(tp_equipos));
   } catch(e){}
 }
 // ─── UTILS ───
@@ -5702,7 +5792,7 @@ function tp_enterBranch(id){
   if(badgeName&&branch)badgeName.textContent=branch.name;
   if(backBtn)backBtn.style.display='flex';
   tp_currentFilter='todos';
-  tp_showPage('orders',document.getElementById('tp-tab-orders'));
+  tp_showPage('orders', null);
   tp_renderAll();
 }
 function tp_exitBranch(){
@@ -5711,7 +5801,7 @@ function tp_exitBranch(){
   const backBtn=document.getElementById('branch-back-btn');
   if(badge)badge.style.display='none';
   if(backBtn)backBtn.style.display='none';
-  tp_showPage('branches',document.getElementById('tp-tab-branches'));
+  tp_showPage('branches', null);
 }
 function tp_openAddBranch(){
   tp_editingBranchId=null;
@@ -6545,6 +6635,56 @@ function tp_clearPattern(){tp_patternSeq=[];tp_patternCurrent=null;tp_patternDra
 function tp_getPatternValue(){const type=document.getElementById('f-pin-type')?.value||'text';if(type==='pattern'){const lbl=document.getElementById('pin-pattern-label')?.textContent||'';return lbl.startsWith('Patrón:')?lbl:'';}return document.getElementById('f-pin')?.value.trim()||'';}
 function tp_loadPinValue(val,type){if(type==='pattern'){tp_setPinMode('pattern');const lbl=document.getElementById('pin-pattern-label');if(lbl){if(val&&val.startsWith('Patrón:')){lbl.textContent=val;lbl.style.color='var(--text)';lbl.style.fontWeight='500';const m=val.match(/Patrón: ([\d-]+)/);if(m)tp_patternSeq=m[1].split('-').map(Number);}else{lbl.textContent='Sin patrón definido';lbl.style.color='var(--text3)';lbl.style.fontWeight='';}}}else{tp_setPinMode('text');const el=document.getElementById('f-pin');if(el)el.value=val||'';}}
 
+// ─── EQUIPO ───
+let tp_editingEquipoId=null;
+function tp_renderEquipo(){
+  const tbody=document.getElementById('equipo-tbody');if(!tbody)return;
+  if(!tp_equipos.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text3)">Sin equipos registrados. Agrega el primero.</td></tr>';return;}
+  tbody.innerHTML=tp_equipos.map(e=>`<tr>
+    <td style="font-weight:500">${e.marca||'—'}</td>
+    <td>${e.modelo||'—'}</td>
+    <td><span class="badge badge-chequeo">${e.categoria||'—'}</span></td>
+    <td style="font-size:12px;color:var(--text2)">${e.descripcion||'—'}</td>
+    <td style="display:flex;gap:4px">
+      <button class="icon-btn" onclick="tp_openEditEquipo('${e.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button class="icon-btn" style="color:var(--red)" onclick="tp_deleteEquipo('${e.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+    </td>
+  </tr>`).join('');
+  const dl=document.getElementById('equipo-datalist');
+  if(dl)dl.innerHTML=tp_equipos.map(e=>`<option value="${e.marca} ${e.modelo}">`).join('');
+}
+function tp_openNewEquipo(){
+  tp_editingEquipoId=null;
+  const t=document.getElementById('equipo-modal-title');if(t)t.textContent='Nuevo equipo';
+  ['eq-marca','eq-modelo','eq-desc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const cat=document.getElementById('eq-categoria');if(cat)cat.value='Teléfono';
+  document.getElementById('mod-equipo').classList.add('open');
+  setTimeout(()=>document.getElementById('eq-marca')?.focus(),80);
+}
+function tp_openEditEquipo(id){
+  const e=tp_equipos.find(x=>x.id===id);if(!e)return;
+  tp_editingEquipoId=id;
+  const t=document.getElementById('equipo-modal-title');if(t)t.textContent='Editar equipo';
+  const set=(eid,v)=>{const el=document.getElementById(eid);if(el)el.value=v||'';};
+  set('eq-marca',e.marca);set('eq-modelo',e.modelo);set('eq-desc',e.descripcion);
+  const cat=document.getElementById('eq-categoria');if(cat)cat.value=e.categoria||'Teléfono';
+  document.getElementById('mod-equipo').classList.add('open');
+}
+function tp_saveEquipo(){
+  const marca=(document.getElementById('eq-marca')?.value||'').trim();
+  const modelo=(document.getElementById('eq-modelo')?.value||'').trim();
+  if(!marca||!modelo){alert('Marca y modelo son obligatorios.');return;}
+  const d={marca,modelo,categoria:document.getElementById('eq-categoria')?.value||'',descripcion:(document.getElementById('eq-desc')?.value||'').trim()};
+  if(tp_editingEquipoId){const i=tp_equipos.findIndex(e=>e.id===tp_editingEquipoId);if(i!==-1)tp_equipos[i]={...tp_equipos[i],...d};}
+  else tp_equipos.push({id:'eq-'+Date.now(),...d});
+  tp_saveState();tp_closeModal('mod-equipo');tp_renderEquipo();
+}
+function tp_deleteEquipo(id){
+  if(!confirm('¿Eliminar este equipo del catálogo?'))return;
+  tp_equipos=tp_equipos.filter(e=>e.id!==id);
+  tp_saveState();tp_renderEquipo();
+}
+
 // ─── ALERTS / NOTIFICATIONS ───
 function tp_computeAlerts(){
   const alerts=[];
@@ -6599,7 +6739,7 @@ function tp_addListeners(){
     if(panel&&panel.style.display!=='none'&&!panel.contains(e.target)&&btn&&!btn.contains(e.target))panel.style.display='none';
   });
   // Close modals on overlay click
-  ['mod-order','mod-detail','mod-salida','mod-send','mod-product','mod-upload','mod-repuesto','mod-branch','mod-edit-client','mod-pattern','mod-client-history'].forEach(id=>{
+  ['mod-order','mod-detail','mod-salida','mod-send','mod-product','mod-upload','mod-repuesto','mod-branch','mod-edit-client','mod-pattern','mod-client-history','mod-equipo'].forEach(id=>{
     document.addEventListener('click',function(e){const el=document.getElementById(id);if(el&&e.target===el)tp_closeModal(id);});
   });
 }
