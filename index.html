@@ -5736,7 +5736,7 @@ function tp_showPage(id, btn) {
   const si = document.getElementById('nav-taller-'+id);
   if(si) si.classList.add('active');
   const tpHeader=document.querySelector('#tp-wrap .tp-header');
-  if(tpHeader) tpHeader.style.display = (id==='equipo') ? 'none' : '';
+  if(tpHeader) tpHeader.style.display = (id==='equipo'||id==='branches'||id==='settings') ? 'none' : '';
   if(id==='branches') tp_renderBranchScreen();
   if(id==='clients') tp_renderClients();
   if(id==='stats') tp_renderStats();
