@@ -4002,7 +4002,6 @@ function renderProdsTable(prods){
     <td style="text-align:center">${stock!==null?`<span style="${lowStock?'color:#b91c1c;font-weight:700':'font-weight:600'}">${stock}${lowStock?` <span style="font-size:10px">⚠</span>`:''}` :'—'}</span></td>
     <td>${p.categoria?`<span class="badge badge-blue">${p.categoria}</span>`:'—'}</td>
     <td>${p.subcategoria?`<span class="badge badge-gray">${p.subcategoria}</span>`:'—'}</td>
-    <td>${p.enlace?`<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${p.enlace}</span>`:'—'}</td>
     <td><div style="display:flex;gap:4px">
       <button class="btn-icon btn-sm" onclick="modalEditarProducto('${p.id}')">✏️</button>
       <button class="import-row-del" onclick="eliminarProducto('${p.id}')">🗑</button>
