@@ -953,8 +953,8 @@ function navTaller(subpage, title){
   // Abrir submenu sidebar
   const sm=document.getElementById('submenu-taller');const par=document.getElementById('nav-taller-parent');
   if(sm)sm.classList.add('open');if(par)par.classList.add('open');
-  // Título
-  document.getElementById('page-title').textContent=title||'Taller';
+  // Ocultar topbar ERP (taller tiene su propio header)
+  const tb=document.getElementById('topbar');if(tb)tb.style.display='none';
   document.getElementById('topbar-actions').innerHTML='';
   if(!alreadyTaller){closeModal();renderTaller();}
   tp_showPage(subpage, null);
@@ -991,8 +991,11 @@ function nav(page){
   if(page==='taller'){
     const sm=document.getElementById('submenu-taller');const par=document.getElementById('nav-taller-parent');
     if(sm)sm.classList.add('open');if(par)par.classList.add('open');
+    const tb=document.getElementById('topbar');if(tb)tb.style.display='none';
     renderTaller(); return;
   }
+  // Restaurar topbar al salir de taller
+  const tb=document.getElementById('topbar');if(tb)tb.style.display='';
   ({dashboard:renderDashboard,ventas:renderVentas,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
     productos:renderProductos,kits:renderKits,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad
   }[page]||renderDashboard)();
@@ -5625,16 +5628,53 @@ function renderTaller() {
           <div style="font-size:16px;font-weight:700">Equipo</div>
           <div style="font-size:12px;color:var(--text2);margin-top:2px">Catálogo de dispositivos que ingresan a taller</div>
         </div>
-        <button class="btn btn-primary" onclick="tp_openNewEquipo()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nuevo equipo
-        </button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-default" onclick="tp_openEquipoUpload()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Subir Excel
+          </button>
+          <button class="btn btn-primary" onclick="tp_openNewEquipo()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo equipo
+          </button>
+        </div>
       </div>
       <div style="background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden">
         <table class="table">
           <thead><tr><th>Marca</th><th>Modelo</th><th>Categoría</th><th>Descripción</th><th></th></tr></thead>
           <tbody id="equipo-tbody"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text3)">Sin equipos registrados. Agrega el primero.</td></tr></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Upload Equipos Excel -->
+  <div class="overlay" id="mod-equipo-upload">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-header-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <div><div class="modal-title">Importar equipos desde Excel</div><div class="modal-subtitle">Columnas requeridas: Marca, Modelo (opcional: Categoría, Descripción)</div></div>
+        <button class="btn btn-ghost btn-sm modal-close" onclick="tp_closeModal('mod-equipo-upload')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="equipo-drop-zone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:all .2s"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+          ondragleave="this.style.borderColor='var(--border)'"
+          ondrop="tp_handleEquipoDrop(event);this.style.borderColor='var(--border)'"
+          onclick="document.getElementById('equipo-file-inp').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;color:var(--text3);margin:0 auto 10px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div style="font-size:13.5px;font-weight:600;color:var(--text)">Arrastra tu archivo Excel aquí</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">o haz clic para seleccionar</div>
+          <input type="file" id="equipo-file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="tp_handleEquipoFile(this)">
+        </div>
+        <div id="equipo-upload-preview" style="margin-top:12px"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+          <button class="btn btn-default btn-sm" onclick="tp_downloadEquipoTemplate()">⬇ Descargar plantilla</button>
+        </div>
+      </div>
+      <div class="modal-footer" id="equipo-upload-actions" style="display:none">
+        <button class="btn btn-default" onclick="tp_closeModal('mod-equipo-upload')">Cancelar</button>
+        <button class="btn btn-primary" id="equipo-import-btn" onclick="tp_importEquipos()">Importar</button>
       </div>
     </div>
   </div>
@@ -5705,6 +5745,8 @@ function tp_showPage(id, btn) {
   document.querySelectorAll('#submenu-taller .nav-subitem').forEach(n=>n.classList.remove('active'));
   const si = document.getElementById('nav-taller-'+id);
   if(si) si.classList.add('active');
+  const tpHeader=document.querySelector('#tp-wrap .tp-header');
+  if(tpHeader) tpHeader.style.display = (id==='equipo') ? 'none' : '';
   if(id==='branches') tp_renderBranchScreen();
   if(id==='clients') tp_renderClients();
   if(id==='stats') tp_renderStats();
@@ -6683,6 +6725,58 @@ function tp_saveEquipo(){
   else tp_equipos.push({id:'eq-'+Date.now(),...d});
   tp_saveState();tp_closeModal('mod-equipo');tp_renderEquipo();
 }
+let tp_pendingEquipoImport=[];
+function tp_openEquipoUpload(){
+  tp_pendingEquipoImport=[];
+  const pv=document.getElementById('equipo-upload-preview');if(pv)pv.innerHTML='';
+  const ua=document.getElementById('equipo-upload-actions');if(ua)ua.style.display='none';
+  document.getElementById('mod-equipo-upload').classList.add('open');
+}
+function tp_handleEquipoDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)tp_processEquipoExcel(f);}
+function tp_handleEquipoFile(inp){if(inp.files[0])tp_processEquipoExcel(inp.files[0]);inp.value='';}
+function tp_processEquipoExcel(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const data=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!data.length){document.getElementById('equipo-upload-preview').innerHTML='<p style="color:var(--red);font-size:12px">Archivo vacío.</p>';return;}
+      const headers=Object.keys(data[0]).map(h=>h.toLowerCase().trim());
+      const find=keys=>keys.find(k=>headers.includes(k));
+      const cols={marca:find(['marca','brand','fabricante']),modelo:find(['modelo','model','nombre']),categoria:find(['categoria','categoría','category','tipo']),descripcion:find(['descripcion','descripción','description','notas'])};
+      tp_pendingEquipoImport=data.map(row=>{
+        const g=f=>cols[f]?String(row[Object.keys(row).find(k=>k.toLowerCase().trim()===cols[f])]||'').trim():'';
+        return{marca:g('marca'),modelo:g('modelo'),categoria:g('categoria')||'Teléfono',descripcion:g('descripcion')};
+      }).filter(e=>e.marca&&e.modelo);
+      const pv=document.getElementById('equipo-upload-preview');
+      pv.innerHTML=`<div style="font-size:12.5px;color:var(--text2);margin-bottom:8px;font-weight:500">${tp_pendingEquipoImport.length} equipos encontrados</div>
+        <div style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);font-size:12px">
+          <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px;padding:5px 12px;background:var(--bg);font-weight:600;font-size:10.5px;color:var(--text2);text-transform:uppercase">
+            <span>Marca</span><span>Modelo</span><span>Categoría</span>
+          </div>
+          ${tp_pendingEquipoImport.slice(0,20).map(e=>`<div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px;padding:6px 12px;border-top:1px solid var(--border)"><span>${e.marca}</span><span>${e.modelo}</span><span style="color:var(--text2)">${e.categoria}</span></div>`).join('')}
+          ${tp_pendingEquipoImport.length>20?`<div style="padding:6px 12px;color:var(--text3);font-size:11.5px">...y ${tp_pendingEquipoImport.length-20} más</div>`:''}
+        </div>`;
+      const ua=document.getElementById('equipo-upload-actions');if(ua)ua.style.display='flex';
+      const ib=document.getElementById('equipo-import-btn');if(ib)ib.textContent=`Importar ${tp_pendingEquipoImport.length} equipos`;
+    }catch(err){document.getElementById('equipo-upload-preview').innerHTML=`<p style="color:var(--red);font-size:12px">Error: ${err.message}</p>`;}
+  };r.readAsArrayBuffer(file);
+}
+function tp_importEquipos(){
+  const nuevos=tp_pendingEquipoImport.map(e=>({id:'eq-'+Date.now()+Math.random().toString(36).slice(2),...e}));
+  tp_equipos=[...tp_equipos,...nuevos];
+  tp_saveState();tp_closeModal('mod-equipo-upload');tp_renderEquipo();
+  setTimeout(()=>alert(nuevos.length+' equipos importados correctamente.'),200);
+}
+function tp_downloadEquipoTemplate(){
+  const wb=XLSX.utils.book_new();
+  const data=[['marca','modelo','categoria','descripcion'],['Apple','iPhone 15 Pro','Teléfono',''],['Apple','MacBook Air M3','Laptop',''],['Samsung','Galaxy S24','Teléfono',''],['Lenovo','ThinkPad X1','Laptop','']];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:16},{wch:22},{wch:14},{wch:24}];
+  XLSX.utils.book_append_sheet(wb,ws,'Equipos');
+  XLSX.writeFile(wb,'plantilla_equipos_taller.xlsx');
+}
 function tp_deleteEquipo(id){
   if(!confirm('¿Eliminar este equipo del catálogo?'))return;
   tp_equipos=tp_equipos.filter(e=>e.id!==id);
@@ -6750,7 +6844,7 @@ function tp_addListeners(){
     }
   });
   // Close modals on overlay click
-  ['mod-order','mod-detail','mod-salida','mod-send','mod-product','mod-upload','mod-repuesto','mod-branch','mod-edit-client','mod-pattern','mod-client-history','mod-equipo'].forEach(id=>{
+  ['mod-order','mod-detail','mod-salida','mod-send','mod-product','mod-upload','mod-repuesto','mod-branch','mod-edit-client','mod-pattern','mod-client-history','mod-equipo','mod-equipo-upload'].forEach(id=>{
     document.addEventListener('click',function(e){const el=document.getElementById(id);if(el&&e.target===el)tp_closeModal(id);});
   });
 }
