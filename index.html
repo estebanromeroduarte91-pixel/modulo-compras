@@ -5645,7 +5645,7 @@ const TP_DOT_POS={1:[70,70],2:[140,70],3:[210,70],4:[70,140],5:[140,140],6:[210,
 // ─── LOAD / SAVE STATE ───
 function tp_loadState() {
   try { tp_orders=JSON.parse(DB.get('tp_orders')||'[]'); } catch(e){ tp_orders=[]; }
-  try { tp_products=JSON.parse(DB.get('tp_products')||'[]'); } catch(e){ tp_products=[]; }
+  tp_products=getProductos(); // Usa la misma BD de productos del ERP
   try { tp_branches=JSON.parse(DB.get('tp_branches')||'[]'); } catch(e){ tp_branches=[]; }
   try { tp_checklistIngreso=JSON.parse(DB.get('tp_cl_ingreso')||'null')||[...TP_DEFAULT_CHECKS_INGRESO]; } catch(e){ tp_checklistIngreso=[...TP_DEFAULT_CHECKS_INGRESO]; }
   try { tp_checklistSalida=JSON.parse(DB.get('tp_cl_salida')||'null')||[...TP_DEFAULT_CHECKS_SALIDA]; } catch(e){ tp_checklistSalida=[...TP_DEFAULT_CHECKS_SALIDA]; }
@@ -5655,7 +5655,6 @@ function tp_loadState() {
 function tp_saveState() {
   try {
     DB.set('tp_orders',JSON.stringify(tp_orders));
-    DB.set('tp_products',JSON.stringify(tp_products));
     DB.set('tp_branches',JSON.stringify(tp_branches));
     DB.set('tp_cl_ingreso',JSON.stringify(tp_checklistIngreso));
     DB.set('tp_cl_salida',JSON.stringify(tp_checklistSalida));
@@ -5881,14 +5880,16 @@ function tp_saveOrder(){
     repuestos:[...tp_currentRepuestos],checkIngreso,
     photosIngreso:[...tp_photoBuffers.ingreso],
   };
-  if(!tp_editingOrderId){
-    tp_currentRepuestos.forEach(r=>{const p=tp_products.find(x=>x.id===r.productId);if(p)p.stock=Math.max(0,Number(p.stock||0)-Number(r.qty));});
-  }
+  // Stock se rebaja en módulo de Ventas, no al crear la orden
   if(tp_editingOrderId){
     const idx=tp_orders.findIndex(o=>o.id===tp_editingOrderId);
     if(idx!==-1)tp_orders[idx]={...tp_orders[idx],...data};
   } else {
     tp_orders.unshift({id:Date.now().toString(),num:tp_nextNum(),branchId:tp_currentBranchId,...data});
+    // Auto-registrar cliente en BD compartida si no existe
+    const clis=getClientes();
+    const yaExiste=clis.find(c=>(c.rut&&c.rut===data.rut)||(c.nombre+' '+(c.apellido||'')).trim().toLowerCase()===nombre.toLowerCase());
+    if(!yaExiste&&nombre){const partes=nombre.split(' ');clis.push({id:'cli-tp-'+Date.now(),nombre:partes[0]||nombre,apellido:partes.slice(1).join(' ')||'',rut:data.rut||'',email:data.email||'',tel:data.tel||'',fecha_creacion:data.fecha||''});setClientes(clis);}
   }
   tp_saveState();tp_closeModal('mod-order');tp_renderAll();
 }
@@ -6087,13 +6088,13 @@ function tp_openAddRepuesto(){
 }
 function tp_renderRepSearch(){
   const q=(document.getElementById('rep-search')?.value||'').toLowerCase();
-  const list=tp_products.filter(p=>(!tp_currentBranchId||!p.branchId||p.branchId===tp_currentBranchId)&&(!q||p.nombre.toLowerCase().includes(q)||(p.sku&&p.sku.toLowerCase().includes(q))));
+  const list=getProductos().filter(p=>(!q||p.nombre.toLowerCase().includes(q)||(p.sku&&p.sku.toLowerCase().includes(q))));
   const cont=document.getElementById('rep-results');if(!cont)return;
   if(!list.length){cont.innerHTML='<div style="padding:10px;font-size:12.5px;color:var(--text3);text-align:center">Sin productos en inventario</div>';return;}
-  cont.innerHTML=list.slice(0,8).map(p=>`<div onclick="tp_selectRepProduct('${p.id}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"><div style="font-weight:500">${p.nombre}</div><div style="font-size:11.5px;color:var(--text2)">Stock: ${p.stock||0} · $${Number(p.precio||0).toLocaleString('es-CL')}</div></div>`).join('');
+  cont.innerHTML=list.slice(0,8).map(p=>`<div onclick="tp_selectRepProduct('${p.id}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"><div style="font-weight:500">${p.nombre}</div><div style="font-size:11.5px;color:var(--text2)">Stock: ${p.stock||0} · $${Number(p.precio_venta||0).toLocaleString('es-CL')}</div></div>`).join('');
 }
 function tp_selectRepProduct(id){
-  const p=tp_products.find(x=>x.id===id);if(!p)return;
+  const p=getProductos().find(x=>x.id===id);if(!p)return;
   tp_selectedRepProduct=p;
   const sn=document.getElementById('rep-sel-name');if(sn)sn.textContent=p.nombre;
   const ss=document.getElementById('rep-sel-stock');if(ss)ss.textContent=p.stock||0;
@@ -6104,7 +6105,7 @@ function tp_confirmRepuesto(){
   if(!tp_selectedRepProduct){alert('Selecciona un producto.');return;}
   const qty=parseInt(document.getElementById('rep-qty')?.value)||1;
   if(qty>Number(tp_selectedRepProduct.stock||0)){alert('No hay suficiente stock.');return;}
-  tp_currentRepuestos.push({productId:tp_selectedRepProduct.id,name:tp_selectedRepProduct.nombre,qty,precio:tp_selectedRepProduct.precio});
+  tp_currentRepuestos.push({productId:tp_selectedRepProduct.id,name:tp_selectedRepProduct.nombre,qty,precio:tp_selectedRepProduct.precio_venta});
   tp_closeModal('mod-repuesto');tp_renderOrderRepuestos();
 }
 
@@ -6214,8 +6215,8 @@ function tp_renderStats(){
 
 // ─── INVENTORY ───
 function tp_catChipClass(cat){if(!cat)return'';const m={'Cable':'cable','Cargador':'cargador','Repuesto':'repuesto','Funda':'funda','Vidrio protector':'vidrio','Accesorio':'accesorio'};return m[cat]||'';}
-function tp_getAllCats(){const fp=[...new Set(tp_products.map(p=>p.cat).filter(c=>c&&!TP_BASE_CATS.includes(c)))].sort();const fc=tp_customCategories.filter(c=>!TP_BASE_CATS.includes(c)&&!fp.includes(c));return[...TP_BASE_CATS,...fp,...fc];}
-function tp_getAllSubcats(){const fp=tp_products.map(p=>p.subcat).filter(Boolean);return[...new Set([...tp_customSubcategories,...fp])].sort();}
+function tp_getAllCats(){const fp=[...new Set(getProductos().map(p=>p.categoria).filter(c=>c&&!TP_BASE_CATS.includes(c)))].sort();const fc=tp_customCategories.filter(c=>!TP_BASE_CATS.includes(c)&&!fp.includes(c));return[...TP_BASE_CATS,...fp,...fc];}
+function tp_getAllSubcats(){const fp=getProductos().map(p=>p.subcategoria).filter(Boolean);return[...new Set([...tp_customSubcategories,...fp])].sort();}
 function tp_rebuildCatFilter(){
   const sel=document.getElementById('inv-cat-filter');if(!sel)return;
   const all=tp_getAllCats();const cur=sel.value;
@@ -6225,21 +6226,21 @@ function tp_renderInventory(){
   tp_rebuildCatFilter();
   const q=(document.getElementById('inv-search')?.value||'').toLowerCase();
   const cat=document.getElementById('inv-cat-filter')?.value||'';
-  const list=tp_products.filter(p=>(!q||p.nombre.toLowerCase().includes(q)||(p.sku&&p.sku.toLowerCase().includes(q)))&&(!cat||p.cat===cat));
+  const list=getProductos().filter(p=>(!q||p.nombre.toLowerCase().includes(q)||(p.sku&&p.sku.toLowerCase().includes(q)))&&(!cat||p.categoria===cat));
   const tbody=document.getElementById('inv-tbody');if(!tbody)return;
   const invContent=document.querySelector('#page-inventory .content');
   const eb=document.getElementById('inv-stock-banner');if(eb)eb.remove();
-  const low=tp_products.filter(p=>Number(p.stock||0)<=3);
+  const low=getProductos().filter(p=>Number(p.stock||0)<=3);
   if(low.length&&invContent){const b=document.createElement('div');b.id='inv-stock-banner';b.className='alert-bar amber';b.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span><strong>${low.length} producto${low.length!==1?'s':''}</strong> con stock bajo (≤3): ${low.slice(0,3).map(p=>p.nombre).join(', ')}${low.length>3?'...':''}</span>`;invContent.insertBefore(b,invContent.firstChild);}
   if(!list.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text3)">Sin productos. Agrega uno o importa desde Excel.</td></tr>';return;}
   tbody.innerHTML=list.map(p=>{
-    const cn=Number(p.costoNeto||0),precio=Number(p.precio||0);
+    const cn=Number(p.precio_compra||0),precio=Number(p.precio_venta||0);
     let mh='—';
     if(cn>0&&precio>0){const pct=Math.round((precio-cn)/precio*100);mh=`<span class="profit-chip ${pct>=30?'profit-pos':''}">${pct}%</span>`;}
     return `<tr>
       <td style="font-family:'DM Mono';font-size:11.5px;color:var(--text2)">${p.sku||'—'}</td>
       <td><div style="font-weight:500">${p.nombre}</div>${p.compat?`<div style="font-size:11px;color:var(--text3)">${p.compat}</div>`:''}</td>
-      <td><span class="cat-chip ${tp_catChipClass(p.cat)}">${p.cat||'—'}</span>${p.subcat?`<div style="font-size:10.5px;color:var(--text3);margin-top:1px">${p.subcat}</div>`:''}</td>
+      <td><span class="cat-chip ${tp_catChipClass(p.categoria)}">${p.categoria||'—'}</span>${p.subcategoria?`<div style="font-size:10.5px;color:var(--text3);margin-top:1px">${p.subcategoria}</div>`:''}</td>
       <td style="font-family:'DM Mono';font-size:12.5px;color:var(--text2)">${cn>0?'$'+cn.toLocaleString('es-CL'):'—'}</td>
       <td style="font-family:'DM Mono';font-size:12.5px;font-weight:500">${precio>0?'$'+precio.toLocaleString('es-CL'):'—'}</td>
       <td>${mh}</td>
@@ -6324,7 +6325,7 @@ function tp_rebuildSubcatSelect(cur){
   const lbl=document.getElementById('combo-subcat-label');
   if(lbl){lbl.textContent=cur||'— Sin subcategoría —';lbl.className='combo-trigger-label'+(cur?'':' placeholder');}
 }
-function tp_nextSku(){if(!tp_products.length)return'SKU-001';const nums=tp_products.map(p=>{const m=(p.sku||'').match(/-(\d+)$/);return m?parseInt(m[1]):0;}).filter(n=>n>0);const next=nums.length?Math.max(...nums)+1:1;return'SKU-'+String(next).padStart(3,'0');}
+function tp_nextSku(){const ps=getProductos();if(!ps.length)return'SKU-001';const nums=ps.map(p=>{const m=(p.sku||'').match(/-(\d+)$/);return m?parseInt(m[1]):0;}).filter(n=>n>0);const next=nums.length?Math.max(...nums)+1:1;return'SKU-'+String(next).padStart(3,'0');}
 function tp_openNewProduct(){
   tp_editingProductId=null;
   const pt=document.getElementById('prod-title');if(pt)pt.textContent='Nuevo producto';
@@ -6338,25 +6339,26 @@ function tp_openNewProduct(){
   document.getElementById('mod-product').classList.add('open');
 }
 function tp_openEditProduct(id){
-  const p=tp_products.find(x=>x.id===id);if(!p)return;
+  const p=getProductos().find(x=>x.id===id);if(!p)return;
   tp_editingProductId=id;
   const pt=document.getElementById('prod-title');if(pt)pt.textContent='Editar producto';
   const set=(eid,v)=>{const el=document.getElementById(eid);if(el)el.value=v||'';};
-  set('p-nombre',p.nombre);set('p-sku',p.sku);set('p-costo-neto',p.costoNeto);set('p-precio',p.precio);set('p-stock',p.stock);set('p-compat',p.compat);set('p-desc',p.desc);
-  tp_rebuildProdCatSelect(p.cat||'Cable');
+  set('p-nombre',p.nombre);set('p-sku',p.sku);set('p-costo-neto',p.precio_compra);set('p-precio',p.precio_venta);set('p-stock',p.stock);set('p-compat',p.enlace);set('p-desc',p.descripcion);
+  tp_rebuildProdCatSelect(p.categoria||'Cable');
   const cw=document.getElementById('p-cat-new-wrap');if(cw)cw.style.display='none';
-  tp_rebuildSubcatSelect(p.subcat||'');
+  tp_rebuildSubcatSelect(p.subcategoria||'');
   const sw=document.getElementById('p-subcat-new-wrap');if(sw)sw.style.display='none';
   tp_calcMargen();document.getElementById('mod-product').classList.add('open');
 }
 function tp_saveProduct(){
   const n=(document.getElementById('p-nombre')?.value||'').trim();if(!n){alert('Nombre requerido.');return;}
-  const d={nombre:n,sku:(document.getElementById('p-sku')?.value||'').trim(),cat:document.getElementById('p-cat')?.value||'',subcat:(document.getElementById('p-subcat')?.value||'').trim(),costoNeto:document.getElementById('p-costo-neto')?.value||'0',precio:document.getElementById('p-precio')?.value||'0',stock:document.getElementById('p-stock')?.value||'0',compat:(document.getElementById('p-compat')?.value||'').trim(),desc:(document.getElementById('p-desc')?.value||'').trim()};
-  if(tp_editingProductId){const i=tp_products.findIndex(p=>p.id===tp_editingProductId);if(i!==-1)tp_products[i]={...tp_products[i],...d};}
-  else tp_products.unshift({id:Date.now().toString(),...d});
-  tp_saveState();tp_closeModal('mod-product');tp_renderInventory();
+  const d={nombre:n,sku:(document.getElementById('p-sku')?.value||'').trim(),categoria:document.getElementById('p-cat')?.value||'',subcategoria:(document.getElementById('p-subcat')?.value||'').trim(),precio_compra:+document.getElementById('p-costo-neto')?.value||0,precio_venta:+document.getElementById('p-precio')?.value||0,stock:+document.getElementById('p-stock')?.value||0,enlace:(document.getElementById('p-compat')?.value||'').trim(),descripcion:(document.getElementById('p-desc')?.value||'').trim()};
+  const prods=getProductos();
+  if(tp_editingProductId){const i=prods.findIndex(p=>p.id===tp_editingProductId);if(i!==-1)prods[i]={...prods[i],...d};}
+  else prods.unshift({id:'tp-'+Date.now().toString(),...d});
+  setProductos(prods);tp_products=prods;tp_closeModal('mod-product');tp_renderInventory();
 }
-function tp_deleteProduct(id){if(!confirm('¿Eliminar producto?'))return;tp_products=tp_products.filter(p=>p.id!==id);tp_saveState();tp_renderInventory();}
+function tp_deleteProduct(id){if(!confirm('¿Eliminar producto?'))return;const prods=getProductos().filter(p=>p.id!==id);setProductos(prods);tp_products=prods;tp_renderInventory();}
 
 // ─── EXCEL ───
 function tp_openUploadModal(){const pv=document.getElementById('upload-preview');if(pv)pv.innerHTML='';const ua=document.getElementById('upload-actions');if(ua)ua.style.display='none';tp_pendingImport=[];document.getElementById('mod-upload').classList.add('open');}
@@ -6380,8 +6382,11 @@ function tp_processExcel(file){
   };r.readAsArrayBuffer(file);
 }
 function tp_importProducts(){
-  tp_products=[...tp_pendingImport.map(p=>({id:Date.now().toString()+Math.random(),branchId:tp_currentBranchId||null,...p})),...tp_products];
-  tp_saveState();tp_closeModal('mod-upload');tp_renderInventory();
+  const prods=getProductos();
+  const newProds=tp_pendingImport.map(p=>({id:'tp-'+Date.now().toString()+Math.random().toString(36).slice(2),nombre:p.nombre,sku:p.sku||'',categoria:p.cat||p.categoria||'Accesorio',subcategoria:p.subcat||p.subcategoria||'',precio_compra:+p.costoNeto||+p.precio_compra||0,precio_venta:+p.precio||+p.precio_venta||0,stock:+p.stock||0,stock_min:0,enlace:p.compat||p.enlace||'',descripcion:p.desc||p.descripcion||''}));
+  const merged=[...newProds,...prods];
+  setProductos(merged);tp_products=merged;
+  tp_closeModal('mod-upload');tp_renderInventory();
   setTimeout(()=>alert(tp_pendingImport.length+' productos importados correctamente.'),200);
 }
 function tp_downloadTemplate(){
@@ -6395,7 +6400,10 @@ function tp_downloadTemplate(){
 function tp_renderClients(){
   const q=(document.getElementById('clients-search')?.value||'').toLowerCase();
   const cm={};
-  tp_orders.forEach(o=>{const key=(o.nombre||'').trim().toLowerCase()+'|'+(o.rut||'');if(!cm[key])cm[key]={nombre:o.nombre||'',rut:o.rut||'',tel:o.tel||'',email:o.email||'',orders:[],lastFecha:o.fecha||''};cm[key].orders.push(o);if(o.fecha&&o.fecha>cm[key].lastFecha)cm[key].lastFecha=o.fecha;});
+  // Partir desde BD compartida del ERP
+  getClientes().forEach(c=>{const nombre=(c.nombre+' '+(c.apellido||'')).trim();const key=nombre.toLowerCase()+'|'+(c.rut||'');if(!cm[key])cm[key]={nombre,rut:c.rut||'',tel:c.tel||'',email:c.email||'',orders:[],lastFecha:''};});
+  // Enriquecer con datos de órdenes
+  tp_orders.forEach(o=>{const key=(o.nombre||'').trim().toLowerCase()+'|'+(o.rut||'');if(!cm[key])cm[key]={nombre:o.nombre||'',rut:o.rut||'',tel:o.tel||'',email:o.email||'',orders:[],lastFecha:o.fecha||''};cm[key].orders.push(o);if(o.tel&&!cm[key].tel)cm[key].tel=o.tel;if(o.email&&!cm[key].email)cm[key].email=o.email;if(o.fecha&&o.fecha>cm[key].lastFecha)cm[key].lastFecha=o.fecha;});
   let clients=Object.values(cm);
   if(q)clients=clients.filter(c=>c.nombre.toLowerCase().includes(q)||c.rut.toLowerCase().includes(q)||c.tel.includes(q)||c.email.toLowerCase().includes(q));
   clients.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -6439,7 +6447,15 @@ function tp_saveClientEdit(){
   const newTel=(document.getElementById('ec-tel')?.value||'').trim();
   const newRut=(document.getElementById('ec-rut')?.value||'').trim();
   const newEmail=(document.getElementById('ec-email')?.value||'').trim();
+  // Actualizar órdenes del taller
   tp_orders.forEach(o=>{if(o.nombre===original){o.nombre=newNombre;if(newTel)o.tel=newTel;if(newRut)o.rut=newRut;if(newEmail)o.email=newEmail;}});
+  // Actualizar también en BD compartida del ERP
+  const clis=getClientes();
+  const partes=newNombre.split(' ');
+  const idx=clis.findIndex(c=>(c.nombre+' '+(c.apellido||'')).trim()===original||(c.rut&&c.rut===newRut));
+  if(idx>=0){Object.assign(clis[idx],{nombre:partes[0],apellido:partes.slice(1).join(' '),rut:newRut,email:newEmail,tel:newTel});}
+  else{clis.push({id:'cli-tp-'+Date.now(),nombre:partes[0],apellido:partes.slice(1).join(' ')||'',rut:newRut,email:newEmail,tel:newTel,fecha_creacion:''});}
+  setClientes(clis);
   tp_saveState();tp_closeModal('mod-edit-client');tp_renderClients();
 }
 
@@ -6448,6 +6464,9 @@ function tp_clientAC(val){
   const dd=document.getElementById('client-ac-dropdown');if(!dd)return;
   const q=val.trim().toLowerCase();if(q.length<1){dd.style.display='none';return;}
   const seen=new Map();
+  // Primero desde BD compartida del ERP
+  getClientes().forEach(c=>{const nombre=(c.nombre+' '+(c.apellido||'')).trim();const key=nombre.toLowerCase();if(!seen.has(key))seen.set(key,{nombre,tel:c.tel||'',email:c.email||'',rut:c.rut||'',apellido:c.apellido||''});});
+  // Luego desde órdenes (puede tener teléfono que ERP no tiene)
   tp_orders.forEach(o=>{if(!o.nombre)return;const key=o.nombre.trim().toLowerCase();if(!seen.has(key))seen.set(key,{nombre:o.nombre,tel:o.tel||'',email:o.email||'',rut:o.rut||''});const c=seen.get(key);if(!c.tel&&o.tel)c.tel=o.tel;if(!c.email&&o.email)c.email=o.email;if(!c.rut&&o.rut)c.rut=o.rut;});
   const matches=[...seen.values()].filter(c=>c.nombre.toLowerCase().includes(q)).slice(0,6);
   if(!matches.length){dd.style.display='none';return;}
