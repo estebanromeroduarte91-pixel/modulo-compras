@@ -1683,7 +1683,8 @@ function renderKitsTable(kits){
       ${(k.componentes||[]).slice(0,4).map(c=>c.nombre).join(', ')}${(k.componentes||[]).length>4?` <em>+${(k.componentes||[]).length-4} más</em>`:''}
     </td>
     <td>
-      <div style="display:flex;gap:4px">
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-primary" onclick="crearOCDesdeKit('${k.id}')" title="Crear orden de compra con estos componentes">🛒 Crear OC</button>
         <button class="btn btn-sm btn-outline" onclick="modalNuevoKit('${k.id}')">✏️ Editar</button>
         <button class="btn btn-sm btn-outline" onclick="clonarKit('${k.id}')" title="Clonar kit">📋 Clonar</button>
         <button class="btn-icon btn-sm btn-danger-icon" onclick="eliminarKitConfirm('${k.id}')" title="Eliminar">🗑</button>
@@ -1696,6 +1697,39 @@ function filtrarKits(){
   const q=(document.getElementById('kit-search')?.value||'').toLowerCase();
   const kits=q?getKits().filter(k=>(k.nombre||'').toLowerCase().includes(q)||(k.categoria||'').toLowerCase().includes(q)):getKits();
   document.getElementById('kits-table').innerHTML=renderKitsTable(kits);
+}
+
+function crearOCDesdeKit(kitId){
+  const kit=getKits().find(k=>k.id===kitId);
+  if(!kit||(kit.componentes||[]).length===0){ toast('Este kit no tiene componentes','error'); return; }
+  // Navegar a OC y abrir modal con los componentes del kit pre-cargados
+  nav('oc');
+  // Pequeño delay para que renderOC() termine antes de abrir el modal
+  setTimeout(()=>{
+    const items=(kit.componentes||[]).map(c=>({
+      id:uid(),
+      producto_id:'',
+      producto_nombre:c.nombre||'',
+      cantidad:c.cantidad||1,
+      precio_neto:0,
+      precio_iva:0,
+      precio_unitario:0,
+      subtotal:0,
+      bodega_id:'',
+      bodega_nombre:''
+    }));
+    // Pasamos un pseudo-objeto con items pero sin id para que figure como "Nueva OC"
+    // y con notas pre-llenadas indicando el kit origen
+    modalNuevaOC({
+      items,
+      proveedor_id:'',
+      proveedor_nombre:'',
+      bodega_id:'',
+      fecha:today(),
+      fecha_entrega:'',
+      notas:`Kit: ${kit.nombre}`
+    });
+  }, 80);
 }
 
 function modalNuevoKit(editId){
@@ -2653,7 +2687,7 @@ function confirmarRecepcion(ocId){
 function modalNuevaOC(ocEdit){
   const provs=getProveedores();
   const bodegas=getBodegas();
-  const isEdit=!!ocEdit;
+  const isEdit=!!(ocEdit&&ocEdit.id);
   const items=ocEdit?ocEdit.items:[{id:uid(),producto_id:'',producto_nombre:'',cantidad:1,precio_unitario:0,subtotal:0,bodega_id:'',bodega_nombre:''}];
   showModal(`
   <div class="modal-bg" onclick="if(event.target===this)closeModal()">
