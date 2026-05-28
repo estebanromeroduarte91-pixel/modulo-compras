@@ -2000,11 +2000,12 @@ function renderClientesTable(clientes){
     <p>Agrega clientes manualmente o importa desde Excel</p>
     <button class="btn btn-outline" onclick="modalImportarClientes()">📊 Importar desde Excel</button>
   </div>`;
-  return `<table><thead><tr><th>Nombre</th><th>Apellido</th><th>RUT</th><th>Email</th><th>Acciones</th></tr></thead>
+  return `<table><thead><tr><th>Nombre</th><th>Apellido</th><th>RUT</th><th>Teléfono</th><th>Email</th><th>Acciones</th></tr></thead>
   <tbody>${clientes.map(c=>`<tr>
     <td><strong>${c.nombre||'—'}</strong></td>
     <td>${c.apellido||'—'}</td>
     <td style="font-size:13px">${c.rut||'—'}</td>
+    <td>${c.tel?`<a href="tel:${c.tel}" style="color:var(--primary)">${c.tel}</a>`:'—'}</td>
     <td>${c.email?`<a href="mailto:${c.email}" style="color:var(--primary)">${c.email}</a>`:'—'}</td>
     <td>
       <div style="display:flex;gap:4px">
@@ -2055,6 +2056,15 @@ function modalNuevoCliente(editId){
           oninput="onRUTInput(this)" maxlength="12" style="">
       </div>
       <div class="form-group" style="margin:0">
+        <label>Teléfono</label>
+        <div style="display:flex;align-items:center;border:1.5px solid var(--gray-300);border-radius:7px;overflow:hidden;background:#fff;transition:border .15s" onfocusin="this.style.borderColor='var(--primary)'" onfocusout="this.style.borderColor='var(--gray-300)'">
+          <span style="padding:0 10px;font-size:13.5px;color:var(--gray-500);white-space:nowrap;border-right:1.5px solid var(--gray-200);height:36px;display:flex;align-items:center;background:var(--gray-50)">+56</span>
+          <input id="cli-tel" type="tel" value="${(c.tel||'').replace(/^\+56/,'')}" placeholder="9 1234 5678"
+            style="border:none;outline:none;padding:8px 11px;font-size:13.5px;flex:1;background:transparent"
+            oninput="this.value=this.value.replace(/[^0-9 ]/g,'')" maxlength="12">
+        </div>
+      </div>
+      <div class="form-group" style="margin:0">
         <label>Email</label>
         <input id="cli-email" type="email" value="${c.email||''}" placeholder="cliente@email.com">
       </div>
@@ -2074,14 +2084,16 @@ function saveCliente(editId){
   const apellido=(document.getElementById('cli-apellido')?.value||'').trim();
   const rut=(document.getElementById('cli-rut')?.value||'').trim();
   const email=(document.getElementById('cli-email')?.value||'').trim();
+  const telRaw=(document.getElementById('cli-tel')?.value||'').replace(/\s/g,'');
+  const tel=telRaw?('+56'+telRaw):'';
   if(!nombre){ toast('El nombre es obligatorio','error'); return; }
   const clientes=getClientes();
   if(editId){
     const i=clientes.findIndex(c=>c.id===editId);
-    if(i>=0) Object.assign(clientes[i],{nombre,apellido,rut,email});
+    if(i>=0) Object.assign(clientes[i],{nombre,apellido,rut,email,tel});
     setClientes(clientes); closeModal(); toast('Cliente actualizado'); renderClientes();
   } else {
-    clientes.push({id:uid(),nombre,apellido,rut,email,fecha_creacion:today()});
+    clientes.push({id:uid(),nombre,apellido,rut,email,tel,fecha_creacion:today()});
     setClientes(clientes); closeModal(); toast(`Cliente ${nombre} ${apellido} creado ✓`,'success'); renderClientes();
   }
 }
@@ -2097,11 +2109,11 @@ function eliminarClienteConfirm(id){
 function descargarPlantillaClientes(){
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet([
-    ['Nombre','Apellido','RUT','Email'],
-    ['Juan','Pérez','12.345.678-9','juan@email.com'],
-    ['María','González','9.876.543-2','maria@email.com']
+    ['Nombre','Apellido','RUT','Telefono','Email'],
+    ['Juan','Pérez','12.345.678-9','+56912345678','juan@email.com'],
+    ['María','González','9.876.543-2','+56987654321','maria@email.com']
   ]);
-  ws['!cols']=[{wch:20},{wch:20},{wch:16},{wch:28}];
+  ws['!cols']=[{wch:20},{wch:20},{wch:16},{wch:16},{wch:28}];
   XLSX.utils.book_append_sheet(wb,ws,'Clientes');
   XLSX.writeFile(wb,'plantilla_clientes.xlsx');
   toast('Plantilla descargada');
@@ -2119,7 +2131,7 @@ function modalImportarClientes(){
     <div class="modal-body">
       <div class="template-info">
         💡 Descarga la <strong style="cursor:pointer;text-decoration:underline" onclick="descargarPlantillaClientes()">plantilla Excel</strong> para asegurarte que las columnas estén correctas.
-        Columnas esperadas: <strong>Nombre, Apellido, RUT, Email</strong>
+        Columnas esperadas: <strong>Nombre, Apellido, RUT, Telefono, Email</strong>
       </div>
       <div class="drop-zone" id="cli-import-drop" onclick="document.getElementById('cli-import-file').click()"
            ondragover="event.preventDefault();this.classList.add('drag-over')"
@@ -2168,12 +2180,17 @@ function parseCliExcel(rows){
   const first=(rows[0]||[]).map(c=>String(c).toLowerCase());
   const hasHeader=first.some(c=>c.includes('nombre')||c.includes('rut'));
   const dataRows=hasHeader?rows.slice(1):rows;
+  // detect column order dynamically
+  const hdr=hasHeader?(rows[0]||[]).map(c=>String(c).toLowerCase()):[];
+  const ci=(names)=>{const i=hdr.findIndex(h=>names.some(n=>h.includes(n)));return i>=0?i:names[0]==='nombre'?0:names[0]==='apellido'?1:names[0]==='rut'?2:names[0]==='tel'?3:4;};
+  const iNom=ci(['nombre']),iApe=ci(['apellido']),iRut=ci(['rut']),iTel=ci(['tel','telefono','phone']),iEmail=ci(['email','correo']);
   _importClienteRows=dataRows.filter(r=>r.some(c=>c!=='')).map((r,idx)=>({
     _id:'climp_'+idx,
-    nombre:String(r[0]||'').trim(),
-    apellido:String(r[1]||'').trim(),
-    rut:String(r[2]||'').trim(),
-    email:String(r[3]||'').trim(),
+    nombre:String(r[iNom]||'').trim(),
+    apellido:String(r[iApe]||'').trim(),
+    rut:String(r[iRut]||'').trim(),
+    tel:String(r[iTel]||'').trim(),
+    email:String(r[iEmail]||'').trim(),
   }));
   if(!_importClienteRows.length){ toast('No se encontraron datos válidos','error'); return; }
   // Auto-format RUT and capitalize names
@@ -2190,12 +2207,12 @@ function parseCliExcel(rows){
       Se importarán <strong>${_importClienteRows.length}</strong> clientes. Vista previa:
     </div>
     <div style="max-height:260px;overflow-y:auto">
-      <table><thead><tr><th>Nombre</th><th>Apellido</th><th>RUT</th><th>Email</th></tr></thead>
+      <table><thead><tr><th>Nombre</th><th>Apellido</th><th>RUT</th><th>Teléfono</th><th>Email</th></tr></thead>
       <tbody>${_importClienteRows.slice(0,10).map(c=>`<tr>
         <td>${c.nombre||'—'}</td><td>${c.apellido||'—'}</td>
-        <td style="font-family:inherit">${c.rut||'—'}</td><td>${c.email||'—'}</td>
+        <td>${c.rut||'—'}</td><td>${c.tel||'—'}</td><td>${c.email||'—'}</td>
       </tr>`).join('')}
-      ${_importClienteRows.length>10?`<tr><td colspan="4" style="text-align:center;color:var(--gray-400);font-size:12px">… y ${_importClienteRows.length-10} más</td></tr>`:''}
+      ${_importClienteRows.length>10?`<tr><td colspan="5" style="text-align:center;color:var(--gray-400);font-size:12px">… y ${_importClienteRows.length-10} más</td></tr>`:''}
       </tbody></table>
     </div>`;
   const footer=document.getElementById('cli-import-footer');
@@ -2211,7 +2228,7 @@ function confirmarImportarClientes(){
   let nuevos=0, dupes=0;
   _importClienteRows.forEach(c=>{
     if(c.rut&&rutsExist.has(c.rut)){ dupes++; return; }
-    existentes.push({id:uid(),nombre:c.nombre,apellido:c.apellido,rut:c.rut,email:c.email,fecha_creacion:today()});
+    existentes.push({id:uid(),nombre:c.nombre,apellido:c.apellido,rut:c.rut,tel:c.tel||'',email:c.email,fecha_creacion:today()});
     if(c.rut) rutsExist.add(c.rut);
     nuevos++;
   });
