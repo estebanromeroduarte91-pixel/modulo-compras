@@ -4047,32 +4047,57 @@ function getCategorias(){
   });
   return Object.values(map).map(c=>({...c,subcats:[...c.subcats].sort()})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
 }
+const _catColors=[
+  {bg:'#EFF6FF',icon:'#1D4ED8',badge:'#DBEAFE',badgeTxt:'#1E40AF'},
+  {bg:'#F0FDF4',icon:'#15803D',badge:'#DCFCE7',badgeTxt:'#166534'},
+  {bg:'#FFFBEB',icon:'#B45309',badge:'#FEF3C7',badgeTxt:'#92400E'},
+  {bg:'#FDF4FF',icon:'#7E22CE',badge:'#F3E8FF',badgeTxt:'#6B21A8'},
+  {bg:'#FFF1F2',icon:'#BE123C',badge:'#FFE4E6',badgeTxt:'#9F1239'},
+  {bg:'#F0FDFA',icon:'#0F766E',badge:'#CCFBF1',badgeTxt:'#115E59'},
+  {bg:'#FEFCE8',icon:'#A16207',badge:'#FEF9C3',badgeTxt:'#854D0E'},
+  {bg:'#F5F3FF',icon:'#6D28D9',badge:'#EDE9FE',badgeTxt:'#5B21B6'},
+];
+function _catIcon(nombre){
+  const n=(nombre||'').toLowerCase();
+  if(n.includes('iphone')||n.includes('celular')||n.includes('tel')) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2.5"/></svg>`;
+  if(n.includes('mac')||n.includes('laptop')||n.includes('notebook')) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M0 20h24"/></svg>`;
+  if(n.includes('ipad')||n.includes('tablet')) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px"><rect x="4" y="2" width="16" height="20" rx="3"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2.5"/></svg>`;
+  if(n.includes('accesorio')||n.includes('cable')||n.includes('cargador')) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px"><path d="M12 22v-5M12 2v5M7 7h10l-1 5H8L7 7z"/><line x1="9" y1="2" x2="9" y2="5"/><line x1="15" y1="2" x2="15" y2="5"/></svg>`;
+  if(n.includes('micro')||n.includes('chip')||n.includes('soldadura')) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px"><rect x="7" y="7" width="10" height="10" rx="1"/><path d="M7 9H4M7 12H4M7 15H4M17 9h3M17 12h3M17 15h3M9 7V4M12 7V4M15 7V4M9 17v3M12 17v3M15 17v3"/></svg>`;
+  if(n.includes('pantalla')||n.includes('display')) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 20h8M12 18v2"/></svg>`;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px"><path d="M4 7h16M4 12h16M4 17h10"/></svg>`;
+}
 function renderCategorias(){
   document.getElementById('topbar-actions').innerHTML=``;
   const cats=getCategorias();
   const totalProds=getProductos().length;
   document.getElementById('page-content').innerHTML=`
-  <div class="card">
-    <div class="card-header">
-      <h3>Categorías <span style="font-size:12px;color:var(--gray-400);font-weight:400">(${cats.length})</span></h3>
-      <span style="font-size:12.5px;color:var(--gray-500)">${totalProds} productos en total</span>
+  <div style="padding:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <h3 style="margin:0;font-size:18px;font-weight:600;color:var(--gray-800)">Categorías <span style="font-size:13px;font-weight:400;color:var(--gray-400)">(${cats.length})</span></h3>
+        <p style="margin:2px 0 0;font-size:12.5px;color:var(--gray-500)">${totalProds.toLocaleString('es-CL')} productos en total</p>
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:16px 20px">
-      ${cats.map(c=>`
-        <div style="border:1px solid var(--gray-200);border-radius:10px;overflow:hidden;background:#fff;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow=''">
-          <div style="padding:14px 16px;border-bottom:${c.subcats.length?'1px solid var(--gray-100)':'none'}">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-              <span style="font-size:14px;font-weight:700;color:var(--gray-800)">${c.nombre}</span>
-              <span class="badge badge-blue">${c.count} producto${c.count!==1?'s':''}</span>
-            </div>
-            <button onclick="pfGoToCat('${c.nombre.replace(/'/g,"&#39;")}')" style="font-size:11.5px;color:var(--primary);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Ver productos →</button>
+    ${!cats.length?`<div class="empty-state"><div class="empty-icon">🏷️</div><h3>Sin categorías</h3><p>Las categorías se crean automáticamente al agregar productos con categoría asignada</p></div>`:`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+      ${cats.map((c,i)=>{
+        const col=_catColors[i%_catColors.length];
+        const subcatPreview=c.subcats.slice(0,3).join(' · ')+(c.subcats.length>3?` +${c.subcats.length-3}`:'');
+        return `<div onclick="pfGoToCat('${c.nombre.replace(/'/g,"\\'")}')" style="background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px;cursor:pointer;transition:box-shadow .15s,transform .15s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.10)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+            <div style="width:38px;height:38px;border-radius:10px;background:${col.bg};display:flex;align-items:center;justify-content:center;color:${col.icon};flex-shrink:0">${_catIcon(c.nombre)}</div>
+            <span style="font-size:11px;font-weight:600;background:${col.badge};color:${col.badgeTxt};padding:3px 9px;border-radius:20px;white-space:nowrap">${c.count} prod.</span>
           </div>
-          ${c.subcats.length?`<div style="padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px">
-            ${c.subcats.map(s=>`<span class="badge badge-gray">${s}</span>`).join('')}
-          </div>`:''}
-        </div>`).join('')}
-      ${!cats.length?`<div class="empty-state"><div class="empty-icon">🏷️</div><h3>Sin categorías</h3><p>Las categorías se crean al agregar productos con categoría asignada</p></div>`:''}
-    </div>
+          <p style="font-size:14px;font-weight:600;color:var(--gray-800);margin:0 0 4px">${c.nombre}</p>
+          <p style="font-size:12px;color:var(--gray-500);margin:0 0 12px;min-height:16px">${subcatPreview||'Sin subcategorías'}</p>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:11.5px;background:var(--gray-100);color:var(--gray-500);padding:2px 8px;border-radius:20px">${c.subcats.length} subcat${c.subcats.length!==1?'s':''}</span>
+            <span style="font-size:11.5px;color:var(--primary);font-weight:500">Ver productos →</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`}
   </div>`;
 }
 function pfGoToCat(cat){
