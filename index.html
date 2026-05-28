@@ -5770,7 +5770,7 @@ const TP_DOT_POS={1:[70,70],2:[140,70],3:[210,70],4:[70,140],5:[140,140],6:[210,
 function tp_loadState() {
   try { tp_orders=JSON.parse(DB.get('tp_orders')||'[]'); } catch(e){ tp_orders=[]; }
   tp_products=getProductos(); // Usa la misma BD de productos del ERP
-  try { tp_branches=JSON.parse(DB.get('tp_branches')||'[]'); } catch(e){ tp_branches=[]; }
+  tp_branches=getBodegas(); // Usa la misma BD de bodegas/sucursales del ERP
   try { tp_checklistIngreso=JSON.parse(DB.get('tp_cl_ingreso')||'null')||[...TP_DEFAULT_CHECKS_INGRESO]; } catch(e){ tp_checklistIngreso=[...TP_DEFAULT_CHECKS_INGRESO]; }
   try { tp_checklistSalida=JSON.parse(DB.get('tp_cl_salida')||'null')||[...TP_DEFAULT_CHECKS_SALIDA]; } catch(e){ tp_checklistSalida=[...TP_DEFAULT_CHECKS_SALIDA]; }
   try { tp_customCategories=JSON.parse(DB.get('tp_custom_cats')||'[]'); } catch(e){ tp_customCategories=[]; }
@@ -5780,7 +5780,7 @@ function tp_loadState() {
 function tp_saveState() {
   try {
     DB.set('tp_orders',JSON.stringify(tp_orders));
-    DB.set('tp_branches',JSON.stringify(tp_branches));
+    // tp_branches se guarda via setBodegas() directamente
     DB.set('tp_cl_ingreso',JSON.stringify(tp_checklistIngreso));
     DB.set('tp_cl_salida',JSON.stringify(tp_checklistSalida));
     DB.set('tp_custom_cats',JSON.stringify(tp_customCategories));
@@ -5798,7 +5798,7 @@ function tp_nextNum(){const bo=tp_currentBranchId?tp_orders.filter(o=>o.branchId
 // ─── BRANCHES ───
 function tp_renderBranchScreen(){
   const q=(document.getElementById('branch-search-inp')?.value||'').toLowerCase();
-  const list=tp_branches.filter(b=>!q||b.name.toLowerCase().includes(q));
+  const list=tp_branches.filter(b=>!q||(b.nombre||'').toLowerCase().includes(q));
   const container=document.getElementById('branch-list');
   if(!container)return;
   if(!tp_branches.length){
@@ -5812,7 +5812,7 @@ function tp_renderBranchScreen(){
     const meta=bo.length===0?'Sin órdenes':`${bo.length} orden${bo.length!==1?'es':''} · ${open} abierta${open!==1?'s':''}`;
     return `<div class="branch-row">
       <div class="branch-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-      <div class="branch-row-info"><div class="branch-row-name">${b.name}</div><div class="branch-row-meta">${meta}</div></div>
+      <div class="branch-row-info"><div class="branch-row-name">${b.nombre||b.name||'Sin nombre'}</div><div class="branch-row-meta">${meta}</div></div>
       <button class="branch-row-gear" onclick="event.stopPropagation();tp_openEditBranch('${b.id}')" title="Configurar sucursal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
       <button class="branch-enter-btn" onclick="tp_enterBranch('${b.id}')">Taller <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
     </div>`;
@@ -5825,7 +5825,7 @@ function tp_enterBranch(id){
   const badgeName=document.getElementById('branch-badge-name');
   const backBtn=document.getElementById('branch-back-btn');
   if(badge)badge.style.display='flex';
-  if(badgeName&&branch)badgeName.textContent=branch.name;
+  if(badgeName&&branch)badgeName.textContent=branch.nombre||branch.name;
   if(backBtn)backBtn.style.display='flex';
   tp_currentFilter='todos';
   tp_showPage('orders', null);
@@ -5851,7 +5851,7 @@ function tp_openEditBranch(id){
   const b=tp_branches.find(x=>x.id===id);if(!b)return;
   tp_editingBranchId=id;
   document.getElementById('branch-modal-title').textContent='Editar sucursal';
-  document.getElementById('branch-name-inp').value=b.name;
+  document.getElementById('branch-name-inp').value=b.nombre||b.name||'';
   document.getElementById('branch-modal-danger').style.display='block';
   document.getElementById('mod-branch').classList.add('open');
   setTimeout(()=>document.getElementById('branch-name-inp').focus(),100);
@@ -5859,14 +5859,16 @@ function tp_openEditBranch(id){
 function tp_saveBranch(){
   const name=document.getElementById('branch-name-inp').value.trim();
   if(!name){document.getElementById('branch-name-inp').focus();return;}
+  const bodegas=getBodegas();
   if(tp_editingBranchId){
-    const b=tp_branches.find(x=>x.id===tp_editingBranchId);
-    if(b)b.name=name;
+    const i=bodegas.findIndex(x=>x.id===tp_editingBranchId);
+    if(i>=0) bodegas[i].nombre=name;
   } else {
-    const nb={id:Date.now().toString(),name};
+    const nb={id:uid(),nombre:name};
     if(tp_branches.length===0) tp_orders.forEach(o=>{if(!o.branchId)o.branchId=nb.id;});
-    tp_branches.push(nb);
+    bodegas.push(nb);
   }
+  setBodegas(bodegas);tp_branches=getBodegas();
   tp_saveState();tp_closeModal('mod-branch');tp_renderBranchScreen();
   if(tp_editingBranchId&&tp_editingBranchId===tp_currentBranchId){
     const badge=document.getElementById('branch-badge-name');if(badge)badge.textContent=name;
@@ -5876,10 +5878,11 @@ function tp_deleteBranchEditing(){
   if(!tp_editingBranchId)return;
   const b=tp_branches.find(x=>x.id===tp_editingBranchId);
   const cnt=tp_orders.filter(o=>o.branchId===tp_editingBranchId).length;
-  const msg=cnt>0?`¿Eliminar "${b?.name}"? Se eliminarán también ${cnt} orden${cnt!==1?'es':''} asociadas. Esta acción no se puede deshacer.`:`¿Eliminar la sucursal "${b?.name}"?`;
+  const msg=cnt>0?`¿Eliminar "${b?.nombre||b?.name}"? Se eliminarán también ${cnt} orden${cnt!==1?'es':''} asociadas. Esta acción no se puede deshacer.`:`¿Eliminar la sucursal "${b?.nombre||b?.name}"?`;
   if(!confirm(msg))return;
   tp_orders=tp_orders.filter(o=>o.branchId!==tp_editingBranchId);
-  tp_branches=tp_branches.filter(x=>x.id!==tp_editingBranchId);
+  setBodegas(getBodegas().filter(x=>x.id!==tp_editingBranchId));
+  tp_branches=getBodegas();
   tp_saveState();tp_closeModal('mod-branch');tp_renderBranchScreen();
 }
 
@@ -6298,7 +6301,7 @@ function tp_renderStats(){
   const branchSel=document.getElementById('stat-branch');
   if(branchSel){
     const cur=branchSel.value;
-    branchSel.innerHTML='<option value="">Todas las sucursales</option>'+tp_branches.map(b=>`<option value="${b.id}"${cur===b.id?' selected':''}>${b.name}</option>`).join('');
+    branchSel.innerHTML='<option value="">Todas las sucursales</option>'+tp_branches.map(b=>`<option value="${b.id}"${cur===b.id?' selected':''}>${b.nombre||b.name}</option>`).join('');
   }
   const selBranch=branchSel?.value||'';
   let base=selBranch?tp_orders.filter(o=>o.branchId===selBranch):tp_orders;
