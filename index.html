@@ -239,18 +239,26 @@ select{cursor:pointer}
 .search-bar::before{content:'🔍';position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px}
 
 /* PRODUCT FILTERS */
-.prod-filters{display:flex;align-items:center;gap:8px;padding:10px 0 4px;flex-wrap:wrap}
-.prod-filter-select{height:32px;padding:0 28px 0 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12.5px;color:var(--gray-700);background:var(--gray-50);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;transition:border-color .15s,background .15s}
-.prod-filter-select:focus{outline:none;border-color:var(--primary);background-color:#fff}
-.prod-filter-select.active{border-color:var(--primary);background-color:var(--primary-light);color:var(--primary);font-weight:600}
-.prod-filter-chip{height:32px;padding:0 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12.5px;font-weight:500;color:var(--gray-600);background:var(--gray-50);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap}
-.prod-filter-chip:hover{border-color:var(--gray-400)}
-.prod-filter-chip.active{border-color:#f59e0b;background:#fffbeb;color:#b45309;font-weight:600}
-.prod-filter-chip.active-low{border-color:#ef4444;background:#fef2f2;color:#b91c1c}
-.prod-filter-divider{width:1px;height:20px;background:var(--gray-200);flex-shrink:0}
-.prod-filter-clear{height:32px;padding:0 10px;border:none;background:none;font-size:12px;color:var(--gray-400);cursor:pointer;border-radius:6px;display:none;align-items:center;gap:4px}
-.prod-filter-clear:hover{color:var(--danger);background:var(--danger-light)}
-.prod-results-info{font-size:12px;color:var(--gray-400);margin-left:auto}
+/* PRODUCT FILTER BAR */
+.prod-filter-bar{display:flex;align-items:center;gap:6px;padding:10px 20px 12px;border-bottom:1px solid var(--gray-100);flex-wrap:nowrap;overflow-x:auto}
+.prod-filter-bar::-webkit-scrollbar{display:none}
+.pf-btn{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12.5px;font-weight:500;color:var(--gray-600);background:var(--gray-50);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
+.pf-btn:hover{border-color:var(--gray-400);background:#fff}
+.pf-btn.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+.pf-btn.active-low{border-color:#ef4444;background:#fef2f2;color:#b91c1c}
+.pf-btn svg{pointer-events:none;flex-shrink:0}
+.pf-btn .pf-caret{transition:transform .15s}
+.pf-btn.open .pf-caret{transform:rotate(180deg)}
+.pf-dropdown{position:absolute;top:calc(100% + 4px);left:0;min-width:200px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.10);z-index:400;overflow:hidden;display:none}
+.pf-dropdown.open{display:block}
+.pf-dropdown-item{padding:8px 14px;font-size:13px;color:var(--gray-700);cursor:pointer;transition:background .1s;white-space:nowrap}
+.pf-dropdown-item:hover{background:var(--gray-50)}
+.pf-dropdown-item.selected{background:var(--primary-light);color:var(--primary);font-weight:600}
+.pf-wrap{position:relative;flex-shrink:0}
+.pf-divider{width:1px;height:18px;background:var(--gray-200);flex-shrink:0;margin:0 2px}
+.pf-clear{height:30px;padding:0 10px;border:none;background:none;font-size:12px;color:var(--gray-400);cursor:pointer;border-radius:6px;display:none;align-items:center;gap:4px;white-space:nowrap}
+.pf-clear:hover{color:var(--danger);background:var(--danger-light)}
+.pf-info{font-size:12px;color:var(--gray-400);margin-left:auto;white-space:nowrap;flex-shrink:0}
 .stock-low-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#b91c1c;background:#fef2f2;border-radius:6px;padding:1px 6px}
 
 /* ALERT */
@@ -3842,56 +3850,114 @@ function renderProductos(){
       <h3>Productos <span id="prod-count" style="font-size:12px;color:var(--gray-400);font-weight:400">(${prods.length})</span></h3>
       <div class="search-bar"><input id="prod-search" placeholder="Buscar SKU, nombre…" oninput="filtrarProductos()"></div>
     </div>
-    <div class="prod-filters" style="padding:0 0 8px;border-bottom:1px solid var(--gray-100);margin-bottom:4px">
-      <select class="prod-filter-select" id="pf-bodega" onchange="filtrarProductos()">
-        <option value="">Todas las sucursales</option>
-        ${bodegas.map(b=>`<option value="${b.id}">${b.nombre||b.name}</option>`).join('')}
-      </select>
-      <select class="prod-filter-select" id="pf-cat" onchange="pfCatChange()">
-        <option value="">Todas las categorías</option>
-        ${cats.map(c=>`<option value="${c}">${c}</option>`).join('')}
-      </select>
-      <select class="prod-filter-select" id="pf-subcat" onchange="filtrarProductos()">
-        <option value="">Todas las subcategorías</option>
-      </select>
-      <div class="prod-filter-divider"></div>
-      <button class="prod-filter-chip" id="pf-lowstock" onclick="pfToggleLow()">
+    <div class="prod-filter-bar">
+      <div class="pf-wrap">
+        <button class="pf-btn" id="pf-btn-bodega" onclick="pfToggleDD('bodega')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          <span id="pf-lbl-bodega">Sucursal</span>
+          <svg class="pf-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="pf-dropdown" id="pf-dd-bodega">
+          <div class="pf-dropdown-item selected" onclick="pfSelect('bodega','','Sucursal')">Todas las sucursales</div>
+          ${bodegas.map(b=>`<div class="pf-dropdown-item" onclick="pfSelect('bodega','${b.id}','${(b.nombre||b.name).replace(/'/g,"&#39;")}')">${b.nombre||b.name}</div>`).join('')}
+        </div>
+      </div>
+      <div class="pf-wrap">
+        <button class="pf-btn" id="pf-btn-cat" onclick="pfToggleDD('cat')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span id="pf-lbl-cat">Categoría</span>
+          <svg class="pf-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="pf-dropdown" id="pf-dd-cat">
+          <div class="pf-dropdown-item selected" onclick="pfSelect('cat','','Categoría')">Todas las categorías</div>
+          ${cats.map(c=>`<div class="pf-dropdown-item" onclick="pfSelect('cat','${c.replace(/'/g,"&#39;")}','${c.replace(/'/g,"&#39;")}')">${c}</div>`).join('')}
+        </div>
+      </div>
+      <div class="pf-wrap">
+        <button class="pf-btn" id="pf-btn-subcat" onclick="pfToggleDD('subcat')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span id="pf-lbl-subcat">Subcategoría</span>
+          <svg class="pf-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="pf-dropdown" id="pf-dd-subcat">
+          <div class="pf-dropdown-item selected" onclick="pfSelect('subcat','','Subcategoría')">Todas las subcategorías</div>
+        </div>
+      </div>
+      <div class="pf-divider"></div>
+      <button class="pf-btn" id="pf-lowstock" onclick="pfToggleLow()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         Bajo stock
       </button>
-      <button class="prod-filter-clear" id="pf-clear" onclick="pfClearAll()">
+      <button class="pf-clear" id="pf-clear" onclick="pfClearAll()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         Limpiar filtros
       </button>
-      <span class="prod-results-info" id="pf-results-info"></span>
+      <span class="pf-info" id="pf-results-info"></span>
     </div>
     <div id="prods-table">${renderProdsTable(prods)}</div>
   </div>`;
 }
 
-let _pfLowStock=false;
-function pfCatChange(){
-  const cat=document.getElementById('pf-cat')?.value||'';
-  const sub=document.getElementById('pf-subcat');
-  if(sub){
-    const prods=getProductos();
-    const subcats=[...new Set(prods.filter(p=>!cat||p.categoria===cat).map(p=>p.subcategoria).filter(Boolean))].sort();
-    sub.innerHTML=`<option value="">Todas las subcategorías</option>${subcats.map(s=>`<option value="${s}">${s}</option>`).join('')}`;
+let _pfLowStock=false, _pfVals={bodega:'',cat:'',subcat:''};
+function pfToggleDD(key){
+  const dd=document.getElementById('pf-dd-'+key);
+  const btn=document.getElementById('pf-btn-'+key);
+  if(!dd)return;
+  const isOpen=dd.classList.contains('open');
+  // close all
+  document.querySelectorAll('.pf-dropdown.open').forEach(el=>el.classList.remove('open'));
+  document.querySelectorAll('.pf-btn.open').forEach(el=>el.classList.remove('open'));
+  if(!isOpen){dd.classList.add('open');if(btn)btn.classList.add('open');}
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.pf-wrap')){
+    document.querySelectorAll('.pf-dropdown.open').forEach(el=>el.classList.remove('open'));
+    document.querySelectorAll('.pf-btn.open').forEach(el=>el.classList.remove('open'));
+  }
+});
+function pfSelect(key,val,label){
+  _pfVals[key]=val;
+  const lbl=document.getElementById('pf-lbl-'+key);
+  const btn=document.getElementById('pf-btn-'+key);
+  if(lbl)lbl.textContent=label;
+  if(btn)btn.classList.toggle('active',!!val);
+  // update selected state in dropdown
+  const dd=document.getElementById('pf-dd-'+key);
+  if(dd)dd.querySelectorAll('.pf-dropdown-item').forEach(el=>el.classList.toggle('selected',el.textContent.trim()===(val?label:('Todas las '+(key==='bodega'?'sucursales':key==='cat'?'categorías':'subcategorías')))));
+  dd?.classList.remove('open');
+  document.getElementById('pf-btn-'+key)?.classList.remove('open');
+  // if cat changed, rebuild subcat dropdown
+  if(key==='cat'){
+    _pfVals.subcat='';
+    const lbl2=document.getElementById('pf-lbl-subcat');if(lbl2)lbl2.textContent='Subcategoría';
+    const btn2=document.getElementById('pf-btn-subcat');if(btn2)btn2.classList.remove('active');
+    const dd2=document.getElementById('pf-dd-subcat');
+    if(dd2){
+      const prods=getProductos();
+      const subcats=[...new Set(prods.filter(p=>!val||p.categoria===val).map(p=>p.subcategoria).filter(Boolean))].sort();
+      dd2.innerHTML=`<div class="pf-dropdown-item selected" onclick="pfSelect('subcat','','Subcategoría')">Todas las subcategorías</div>`+subcats.map(s=>`<div class="pf-dropdown-item" onclick="pfSelect('subcat','${s.replace(/'/g,"&#39;")}','${s.replace(/'/g,"&#39;")}')">${s}</div>`).join('');
+    }
   }
   filtrarProductos();
 }
 function pfToggleLow(){
   _pfLowStock=!_pfLowStock;
   const btn=document.getElementById('pf-lowstock');
-  if(btn){btn.classList.toggle('active-low',_pfLowStock);btn.innerHTML=_pfLowStock
-    ?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Bajo stock ✓`
-    :`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Bajo stock`;}
+  if(btn)btn.classList.toggle('active-low',_pfLowStock);
   filtrarProductos();
 }
 function pfClearAll(){
-  _pfLowStock=false;
-  ['pf-cat','pf-subcat','pf-bodega'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const btn=document.getElementById('pf-lowstock');if(btn){btn.classList.remove('active-low','active');btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Bajo stock`;}
+  _pfLowStock=false;_pfVals={bodega:'',cat:'',subcat:''};
+  ['bodega','cat','subcat'].forEach(k=>{
+    const lbl=document.getElementById('pf-lbl-'+k);
+    const btn=document.getElementById('pf-btn-'+k);
+    if(lbl)lbl.textContent=k==='bodega'?'Sucursal':k==='cat'?'Categoría':'Subcategoría';
+    if(btn)btn.classList.remove('active');
+    const dd=document.getElementById('pf-dd-'+k);
+    if(dd)dd.querySelectorAll('.pf-dropdown-item').forEach((el,i)=>el.classList.toggle('selected',i===0));
+  });
+  const ls=document.getElementById('pf-lowstock');if(ls)ls.classList.remove('active-low');
+  const si=document.getElementById('prod-search');if(si)si.value='';
   filtrarProductos();
 }
 
@@ -3924,23 +3990,18 @@ function renderProdsTable(prods){
 
 function filtrarProductos(){
   const q=(document.getElementById('prod-search')?.value||'').toLowerCase();
-  const cat=document.getElementById('pf-cat')?.value||'';
-  const subcat=document.getElementById('pf-subcat')?.value||'';
-  const bodega=document.getElementById('pf-bodega')?.value||'';
+  const cat=_pfVals?.cat||'';
+  const subcat=_pfVals?.subcat||'';
   let prods=getProductos();
   if(q) prods=prods.filter(p=>(p.nombre||'').toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q));
   if(cat) prods=prods.filter(p=>p.categoria===cat);
   if(subcat) prods=prods.filter(p=>p.subcategoria===subcat);
   if(_pfLowStock) prods=prods.filter(p=>p.stock!==undefined&&p.stock!==''&&Number(p.stock)<=5);
-  // bodega filter — reserved for per-branch stock; currently highlights if active
-  const hasFilter=q||cat||subcat||bodega||_pfLowStock;
+  const hasFilter=q||cat||subcat||_pfLowStock;
   const clr=document.getElementById('pf-clear');if(clr)clr.style.display=hasFilter?'flex':'none';
-  ['pf-cat','pf-subcat','pf-bodega'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.classList.toggle('active',!!el.value);
-  });
   const info=document.getElementById('pf-results-info');
   const total=getProductos().length;
-  if(info) info.textContent=hasFilter?(prods.length===total?'':'Mostrando '+prods.length+' de '+total+' productos'):'';
+  if(info)info.textContent=hasFilter&&prods.length!==total?`${prods.length} de ${total} productos`:'';
   const cnt=document.getElementById('prod-count');if(cnt)cnt.textContent='('+prods.length+')';
   document.getElementById('prods-table').innerHTML=renderProdsTable(prods);
 }
