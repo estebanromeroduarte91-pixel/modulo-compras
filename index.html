@@ -950,6 +950,8 @@ const getGastoCats=()=>{ const v=DB.get('gasto_cats'); return(v&&v.length)?v:DEF
 const setGastoCats=v=>DB.set('gasto_cats',v);
 const getBodegas = ()=> DB.get('bodegas')||[];
 const setBodegas = v=> DB.set('bodegas',v);
+const getCatsDB = ()=> { try{ return JSON.parse(DB.get('cats_db')||'[]'); }catch(e){ return []; } };
+const setCatsDB = v=> DB.set('cats_db', JSON.stringify(v));
 const DEFAULT_PLAN_CUENTAS=[
   // ACTIVOS
   {id:'pc-110',codigo:'110',nombre:'Caja',tipo:'activo',grupo:'Activo Circulante'},
@@ -4038,6 +4040,11 @@ function eliminarProducto(id){
 function getCategorias(){
   const prods=getProductos();
   const map={};
+  // seed from manual DB first
+  getCatsDB().forEach(c=>{
+    map[c.nombre]={nombre:c.nombre,subcats:new Set(c.subcats||[]),count:0,manual:true};
+  });
+  // add counts + subcats from products
   prods.forEach(p=>{
     const cat=p.categoria||'Sin categoría';
     const sub=p.subcategoria||'';
@@ -4068,7 +4075,10 @@ function _catIcon(nombre){
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px;height:18px"><path d="M4 7h16M4 12h16M4 17h10"/></svg>`;
 }
 function renderCategorias(){
-  document.getElementById('topbar-actions').innerHTML=``;
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-secondary" onclick="descargarPlantillaCats()">📥 Plantilla Excel</button>
+    <button class="btn btn-outline" onclick="modalImportarCats()">📊 Importar Excel</button>
+    <button class="btn btn-primary" onclick="modalNuevaCategoria()">➕ Nueva Categoría</button>`;
   const cats=getCategorias();
   const totalProds=getProductos().length;
   document.getElementById('page-content').innerHTML=`
@@ -4084,7 +4094,7 @@ function renderCategorias(){
       ${cats.map((c,i)=>{
         const col=_catColors[i%_catColors.length];
         const subcatPreview=c.subcats.slice(0,3).join(' · ')+(c.subcats.length>3?` +${c.subcats.length-3}`:'');
-        return `<div onclick="pfGoToCat('${c.nombre.replace(/'/g,"\\'")}')" style="background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px;cursor:pointer;transition:box-shadow .15s,transform .15s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.10)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+        return `<div style="background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px;transition:box-shadow .15s,transform .15s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.10)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
             <div style="width:38px;height:38px;border-radius:10px;background:${col.bg};display:flex;align-items:center;justify-content:center;color:${col.icon};flex-shrink:0">${_catIcon(c.nombre)}</div>
             <span style="font-size:11px;font-weight:600;background:${col.badge};color:${col.badgeTxt};padding:3px 9px;border-radius:20px;white-space:nowrap">${c.count} prod.</span>
@@ -4093,20 +4103,180 @@ function renderCategorias(){
           <p style="font-size:12px;color:var(--gray-500);margin:0 0 12px;min-height:16px">${subcatPreview||'Sin subcategorías'}</p>
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span style="font-size:11.5px;background:var(--gray-100);color:var(--gray-500);padding:2px 8px;border-radius:20px">${c.subcats.length} subcat${c.subcats.length!==1?'s':''}</span>
-            <span style="font-size:11.5px;color:var(--primary);font-weight:500">Ver productos →</span>
+            <button onclick="pfGoToCat('${c.nombre.replace(/'/g,"&#39;")}')" style="font-size:11.5px;color:var(--primary);font-weight:500;background:none;border:none;cursor:pointer;padding:0">Ver productos →</button>
           </div>
         </div>`;
       }).join('')}
+      <div onclick="modalNuevaCategoria()" style="background:#fff;border:1.5px dashed var(--gray-300);border-radius:12px;padding:16px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:150px;transition:border-color .15s,background .15s" onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--primary-light)'" onmouseout="this.style.borderColor='var(--gray-300)';this.style.background='#fff'">
+        <div style="width:38px;height:38px;border-radius:10px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--gray-400)">+</div>
+        <p style="font-size:13px;color:var(--gray-500);margin:0;text-align:center;font-weight:500">Nueva categoría</p>
+      </div>
     </div>`}
   </div>`;
 }
 function pfGoToCat(cat){
   _pfVals={bodega:'',cat:cat,subcat:''};
   nav('productos');
-  // after render, update the button label
-  setTimeout(()=>{
-    pfSelect('cat',cat,cat);
-  },50);
+  setTimeout(()=>{ pfSelect('cat',cat,cat); },50);
+}
+
+// ── Nueva Categoría modal ──
+function modalNuevaCategoria(editNombre){
+  const isEdit=!!editNombre;
+  const existing=isEdit?getCatsDB().find(c=>c.nombre===editNombre):null;
+  const subcatsVal=existing?(existing.subcats||[]).join(', '):'';
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3>${isEdit?'Editar':'Nueva'} Categoría</h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group" style="margin:0">
+        <label>Nombre de la categoría <span style="color:var(--danger)">*</span></label>
+        <input id="cat-nombre" type="text" value="${editNombre||''}" placeholder="Ej: iPhone, MacBook, iPad…" ${isEdit?'readonly style="background:var(--gray-50)"':''}>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Subcategorías <span style="font-size:11px;color:var(--gray-400);font-weight:400">(separadas por coma)</span></label>
+        <input id="cat-subcats" type="text" value="${subcatsVal}" placeholder="Ej: Pantalla, Batería, Carcasa">
+        <p style="font-size:11.5px;color:var(--gray-400);margin:4px 0 0">Escribe las subcategorías separadas por coma</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      ${isEdit?`<button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${editNombre}')">Eliminar</button>`:''}
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCategoria('${editNombre||''}')">✅ ${isEdit?'Guardar cambios':'Crear categoría'}</button>
+    </div>
+  </div></div>`);
+  setTimeout(()=>{ if(!isEdit) document.getElementById('cat-nombre')?.focus(); },80);
+}
+function guardarCategoria(editNombre){
+  const nombre=(document.getElementById('cat-nombre')?.value||'').trim();
+  if(!nombre){ toast('El nombre es obligatorio','error'); return; }
+  const subcatsRaw=(document.getElementById('cat-subcats')?.value||'');
+  const subcats=subcatsRaw.split(',').map(s=>s.trim()).filter(Boolean);
+  const cats=getCatsDB();
+  const existing=cats.findIndex(c=>c.nombre===(editNombre||nombre));
+  if(existing>=0){ cats[existing]={nombre,subcats}; }
+  else { if(cats.find(c=>c.nombre===nombre)){ toast('Ya existe esa categoría','error'); return; } cats.push({nombre,subcats}); }
+  setCatsDB(cats);
+  closeModal(); toast(`Categoría ${nombre} ${editNombre?'actualizada':'creada'} ✓`,'success'); renderCategorias();
+}
+function eliminarCategoria(nombre){
+  if(!confirm(`¿Eliminar la categoría "${nombre}"? No afecta los productos ya asignados.`)) return;
+  setCatsDB(getCatsDB().filter(c=>c.nombre!==nombre));
+  closeModal(); toast('Categoría eliminada'); renderCategorias();
+}
+
+// ── Plantilla + Importar Excel de Categorías ──
+function descargarPlantillaCats(){
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([
+    ['categoria','subcategoria'],
+    ['iPhone','Pantalla'],['iPhone','Batería'],['iPhone','Carcasa'],
+    ['MacBook','Pantalla'],['MacBook','Teclado'],
+    ['iPad','Pantalla'],['iPad','Conector'],
+  ]);
+  ws['!cols']=[{wch:24},{wch:24}];
+  XLSX.utils.book_append_sheet(wb,ws,'Categorias');
+  XLSX.writeFile(wb,'plantilla_categorias.xlsx');
+  toast('Plantilla descargada');
+}
+function modalImportarCats(){
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3>📊 Importar Categorías desde Excel</h3><button class="close-btn" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="template-info">💡 Descarga la <strong style="cursor:pointer;text-decoration:underline" onclick="descargarPlantillaCats()">plantilla Excel</strong>.
+        Columnas: <strong>categoria, subcategoria</strong>
+      </div>
+      <div class="drop-zone" id="cats-import-drop" onclick="document.getElementById('cats-import-file').click()"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="handleCatsExcelDrop(event)">
+        <div class="drop-zone-icon">📂</div>
+        <p>Arrastra tu archivo Excel aquí o <strong>haz clic para seleccionar</strong></p>
+        <p style="font-size:12px;margin-top:4px;color:var(--gray-400)">Soporta .xlsx, .xls y .csv</p>
+        <input type="file" id="cats-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleCatsExcelFile(this.files[0])">
+      </div>
+      <div id="cats-import-preview"></div>
+    </div>
+    <div class="modal-footer" id="cats-import-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    </div>
+  </div></div>`);
+}
+function handleCatsExcelDrop(e){
+  e.preventDefault(); document.getElementById('cats-import-drop')?.classList.remove('drag-over');
+  const f=e.dataTransfer.files[0]; if(f) handleCatsExcelFile(f);
+}
+function handleCatsExcelFile(file){
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    let rows=[];
+    if(ext==='csv'){
+      rows=ev.target.result.split('\n').filter(l=>l.trim()).map(l=>l.split(',').map(c=>c.replace(/^"|"$/g,'').trim()));
+    } else {
+      const data=new Uint8Array(ev.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    }
+    parseCatsExcel(rows);
+  };
+  if(ext==='csv') reader.readAsText(file); else reader.readAsArrayBuffer(file);
+}
+function parseCatsExcel(rows){
+  if(!rows.length){ toast('Archivo vacío','error'); return; }
+  const first=(rows[0]||[]).map(c=>String(c).toLowerCase());
+  const hasHeader=first.some(c=>c.includes('cat'));
+  const dataRows=hasHeader?rows.slice(1):rows;
+  // group by categoria
+  const map={};
+  dataRows.filter(r=>r.some(c=>c!=='')).forEach(r=>{
+    const cat=String(r[0]||'').trim(); const sub=String(r[1]||'').trim();
+    if(!cat) return;
+    if(!map[cat]) map[cat]=new Set();
+    if(sub) map[cat].add(sub);
+  });
+  const preview=Object.entries(map);
+  if(!preview.length){ toast('No se encontraron datos','error'); return; }
+  const pv=document.getElementById('cats-import-preview');
+  if(pv) pv.innerHTML=`
+    <div style="margin-top:16px;padding:10px 14px;background:var(--gray-50);border-radius:8px;font-size:13px;color:var(--gray-600);margin-bottom:8px">
+      Se importarán <strong>${preview.length}</strong> categorías. Vista previa:
+    </div>
+    <div style="max-height:220px;overflow-y:auto">
+      <table><thead><tr><th>Categoría</th><th>Subcategorías</th></tr></thead>
+      <tbody>${preview.slice(0,15).map(([cat,subs])=>`<tr>
+        <td><strong>${cat}</strong></td>
+        <td style="color:var(--gray-600);font-size:12px">${[...subs].join(', ')||'—'}</td>
+      </tr>`).join('')}
+      ${preview.length>15?`<tr><td colspan="2" style="text-align:center;color:var(--gray-400);font-size:12px">… y ${preview.length-15} más</td></tr>`:''}
+      </tbody></table>
+    </div>`;
+  const footer=document.getElementById('cats-import-footer');
+  if(footer) footer.innerHTML=`
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="confirmarImportarCats(${JSON.stringify(JSON.stringify(Object.fromEntries(preview.map(([k,v])=>[k,[...v]]))))})">✅ Importar ${preview.length} categorías</button>`;
+}
+function confirmarImportarCats(mapJson){
+  const map=JSON.parse(mapJson);
+  const cats=getCatsDB();
+  let nuevas=0,actualizadas=0;
+  Object.entries(map).forEach(([nombre,subcats])=>{
+    const idx=cats.findIndex(c=>c.nombre===nombre);
+    if(idx>=0){
+      const merged=[...new Set([...(cats[idx].subcats||[]),...subcats])];
+      cats[idx].subcats=merged; actualizadas++;
+    } else { cats.push({nombre,subcats}); nuevas++; }
+  });
+  setCatsDB(cats); closeModal();
+  toast(`✅ ${nuevas} nuevas · ${actualizadas} actualizadas`,'success');
+  renderCategorias();
 }
 
 function nextSKU(){
