@@ -1651,8 +1651,7 @@ function renderKits(){
 
   document.getElementById('page-content').innerHTML=`
   <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1e40af">
-    💡 <strong>¿Cómo funciona?</strong> Crea un kit para cada modelo de equipo (ej: iPhone 13) con todos sus repuestos internos.
-    Al agregar ese equipo a una Orden de Compra, los componentes se expanden automáticamente como líneas separadas.
+    💡 <strong>¿Cómo funciona?</strong> Crea un kit para cada modelo de equipo (ej: iPhone 13) con todos sus repuestos y componentes. Desde aquí puedes gestionar y ordenar los kits directamente.
   </div>
   <div class="card">
     <div class="card-header">
@@ -2825,19 +2824,9 @@ function buscarOCProducto(itemId,q){
   const drop=document.getElementById('oc-drop-'+itemId);
   if(!drop) return;
   const prods=getProductos();
-  const kits=getKits();
   const ql=q.trim().toLowerCase();
-  const matchProds=ql?prods.filter(p=>p.nombre.toLowerCase().includes(ql)).slice(0,8):prods.slice(0,8);
-  const matchKits=ql?kits.filter(k=>k.nombre.toLowerCase().includes(ql)).slice(0,4):kits.slice(0,4);
-  if(!matchProds.length&&!matchKits.length){ drop.style.display='none'; return; }
-  const kitHtml=matchKits.map(k=>`<div class="prod-drop-item"
-    onmousedown="selectOCProduct('${itemId}','',this.dataset.nombre,0)"
-    ontouchstart="selectOCProduct('${itemId}','',this.dataset.nombre,0)"
-    data-nombre="${(k.nombre||'').replace(/"/g,'&quot;')}"
-    style="background:#eff6ff;border-left:3px solid var(--primary)">
-    <span class="prod-name">🔧 ${k.nombre}</span>
-    <span style="font-size:11px;color:var(--primary);font-weight:600">${k.componentes.length} componentes · ${k.categoria||'Kit'}</span>
-  </div>`).join('');
+  const matchProds=ql?prods.filter(p=>p.nombre.toLowerCase().includes(ql)).slice(0,10):prods.slice(0,10);
+  if(!matchProds.length){ drop.style.display='none'; return; }
   const prodHtml=matchProds.map(p=>`<div class="prod-drop-item"
     onmousedown="selectOCProduct('${itemId}','${p.id}',this.dataset.nombre,${+(p.precio_compra||0)})"
     ontouchstart="selectOCProduct('${itemId}','${p.id}',this.dataset.nombre,${+(p.precio_compra||0)})"
@@ -2848,8 +2837,7 @@ function buscarOCProducto(itemId,q){
       ${p.precio_compra?`<span class="prod-price">${fmt$(p.precio_compra)}</span>`:''}
     </div>
   </div>`).join('');
-  drop.innerHTML=(kitHtml?`<div style="padding:4px 10px;font-size:10px;font-weight:700;color:var(--primary);letter-spacing:.5px;background:#eff6ff">KITS</div>${kitHtml}`:'')+
-    (prodHtml&&kitHtml?`<div style="padding:4px 10px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:.5px">PRODUCTOS</div>`:'')+(prodHtml||'');
+  drop.innerHTML=prodHtml;
   drop.style.display='block';
   posicionarDrop(drop);
 }
