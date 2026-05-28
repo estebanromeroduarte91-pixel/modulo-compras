@@ -238,6 +238,21 @@ select{cursor:pointer}
 .search-bar input{padding-left:32px;border-radius:7px;min-width:200px}
 .search-bar::before{content:'🔍';position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px}
 
+/* PRODUCT FILTERS */
+.prod-filters{display:flex;align-items:center;gap:8px;padding:10px 0 4px;flex-wrap:wrap}
+.prod-filter-select{height:32px;padding:0 28px 0 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12.5px;color:var(--gray-700);background:var(--gray-50);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;transition:border-color .15s,background .15s}
+.prod-filter-select:focus{outline:none;border-color:var(--primary);background-color:#fff}
+.prod-filter-select.active{border-color:var(--primary);background-color:var(--primary-light);color:var(--primary);font-weight:600}
+.prod-filter-chip{height:32px;padding:0 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12.5px;font-weight:500;color:var(--gray-600);background:var(--gray-50);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap}
+.prod-filter-chip:hover{border-color:var(--gray-400)}
+.prod-filter-chip.active{border-color:#f59e0b;background:#fffbeb;color:#b45309;font-weight:600}
+.prod-filter-chip.active-low{border-color:#ef4444;background:#fef2f2;color:#b91c1c}
+.prod-filter-divider{width:1px;height:20px;background:var(--gray-200);flex-shrink:0}
+.prod-filter-clear{height:32px;padding:0 10px;border:none;background:none;font-size:12px;color:var(--gray-400);cursor:pointer;border-radius:6px;display:none;align-items:center;gap:4px}
+.prod-filter-clear:hover{color:var(--danger);background:var(--danger-light)}
+.prod-results-info{font-size:12px;color:var(--gray-400);margin-left:auto}
+.stock-low-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#b91c1c;background:#fef2f2;border-radius:6px;padding:1px 6px}
+
 /* ALERT */
 .alert{padding:12px 16px;border-radius:8px;font-size:13.5px;margin-bottom:14px}
 .alert-warning{background:var(--warning-light);color:#92400e;border:1px solid #fde68a}
@@ -3815,18 +3830,69 @@ function confirmarImportProveedores(){
 // ─────────────────────────────────────────────
 function renderProductos(){
   const prods=getProductos();
+  const cats=[...new Set(prods.map(p=>p.categoria).filter(Boolean))].sort();
+  const bodegas=getBodegas();
   document.getElementById('topbar-actions').innerHTML=`
     <button class="btn btn-secondary" onclick="descargarPlantillaProductos()">📥 Plantilla Excel</button>
     <button class="btn btn-outline" onclick="modalImportarProductos()">📊 Importar Excel</button>
     <button class="btn btn-primary" onclick="modalNuevoProducto()">➕ Nuevo Producto</button>`;
   document.getElementById('page-content').innerHTML=`
   <div class="card">
-    <div class="card-header">
-      <h3>Productos <span style="font-size:12px;color:var(--gray-400);font-weight:400">(${prods.length})</span></h3>
-      <div class="search-bar"><input id="prod-search" placeholder="Buscar SKU, nombre, categoría…" oninput="filtrarProductos()"></div>
+    <div class="card-header" style="flex-wrap:wrap;gap:8px">
+      <h3>Productos <span id="prod-count" style="font-size:12px;color:var(--gray-400);font-weight:400">(${prods.length})</span></h3>
+      <div class="search-bar"><input id="prod-search" placeholder="Buscar SKU, nombre…" oninput="filtrarProductos()"></div>
+    </div>
+    <div class="prod-filters" style="padding:0 0 8px;border-bottom:1px solid var(--gray-100);margin-bottom:4px">
+      <select class="prod-filter-select" id="pf-bodega" onchange="filtrarProductos()">
+        <option value="">Todas las sucursales</option>
+        ${bodegas.map(b=>`<option value="${b.id}">${b.nombre||b.name}</option>`).join('')}
+      </select>
+      <select class="prod-filter-select" id="pf-cat" onchange="pfCatChange()">
+        <option value="">Todas las categorías</option>
+        ${cats.map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <select class="prod-filter-select" id="pf-subcat" onchange="filtrarProductos()">
+        <option value="">Todas las subcategorías</option>
+      </select>
+      <div class="prod-filter-divider"></div>
+      <button class="prod-filter-chip" id="pf-lowstock" onclick="pfToggleLow()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Bajo stock
+      </button>
+      <button class="prod-filter-clear" id="pf-clear" onclick="pfClearAll()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Limpiar filtros
+      </button>
+      <span class="prod-results-info" id="pf-results-info"></span>
     </div>
     <div id="prods-table">${renderProdsTable(prods)}</div>
   </div>`;
+}
+
+let _pfLowStock=false;
+function pfCatChange(){
+  const cat=document.getElementById('pf-cat')?.value||'';
+  const sub=document.getElementById('pf-subcat');
+  if(sub){
+    const prods=getProductos();
+    const subcats=[...new Set(prods.filter(p=>!cat||p.categoria===cat).map(p=>p.subcategoria).filter(Boolean))].sort();
+    sub.innerHTML=`<option value="">Todas las subcategorías</option>${subcats.map(s=>`<option value="${s}">${s}</option>`).join('')}`;
+  }
+  filtrarProductos();
+}
+function pfToggleLow(){
+  _pfLowStock=!_pfLowStock;
+  const btn=document.getElementById('pf-lowstock');
+  if(btn){btn.classList.toggle('active-low',_pfLowStock);btn.innerHTML=_pfLowStock
+    ?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Bajo stock ✓`
+    :`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Bajo stock`;}
+  filtrarProductos();
+}
+function pfClearAll(){
+  _pfLowStock=false;
+  ['pf-cat','pf-subcat','pf-bodega'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const btn=document.getElementById('pf-lowstock');if(btn){btn.classList.remove('active-low','active');btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Bajo stock`;}
+  filtrarProductos();
 }
 
 function renderProdsTable(prods){
@@ -3837,25 +3903,45 @@ function renderProdsTable(prods){
   return `<table><thead><tr>
     <th>SKU</th><th>Producto</th><th>Costo Neto</th><th>Precio Venta</th><th>Stock</th><th>Categoría</th><th>Subcategoría</th><th>Acciones</th>
   </tr></thead>
-  <tbody>${prods.map(p=>`<tr>
+  <tbody>${prods.map(p=>{
+    const stock=p.stock!==undefined&&p.stock!==''?Number(p.stock):null;
+    const lowStock=stock!==null&&stock<=5;
+    return`<tr>
     <td style="font-size:12px;color:var(--gray-500)">${p.sku||'—'}</td>
     <td><strong>${p.nombre}</strong></td>
     <td>${p.precio_compra?fmt$(p.precio_compra):'—'}</td>
     <td>${p.precio_venta?`<span style="color:#10b981;font-weight:600">${fmt$(p.precio_venta)}</span>`:'—'}</td>
-    <td style="text-align:center;font-weight:600">${p.stock!==undefined&&p.stock!==''?p.stock:'—'}</td>
+    <td style="text-align:center">${stock!==null?`<span style="${lowStock?'color:#b91c1c;font-weight:700':'font-weight:600'}">${stock}${lowStock?` <span style="font-size:10px">⚠</span>`:''}` :'—'}</span></td>
     <td>${p.categoria?`<span class="badge badge-blue">${p.categoria}</span>`:'—'}</td>
     <td>${p.subcategoria?`<span class="badge badge-gray">${p.subcategoria}</span>`:'—'}</td>
-  <td>${p.enlace?`<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${p.enlace}</span>`:'—'}</td>
+    <td>${p.enlace?`<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${p.enlace}</span>`:'—'}</td>
     <td><div style="display:flex;gap:4px">
       <button class="btn-icon btn-sm" onclick="modalEditarProducto('${p.id}')">✏️</button>
       <button class="import-row-del" onclick="eliminarProducto('${p.id}')">🗑</button>
     </div></td>
-  </tr>`).join('')}</tbody></table>`;
+  </tr>`;}).join('')}</tbody></table>`;
 }
 
 function filtrarProductos(){
-  const q=document.getElementById('prod-search').value.toLowerCase();
-  const prods=getProductos().filter(p=>(p.nombre||'').toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)||(p.categoria||'').toLowerCase().includes(q));
+  const q=(document.getElementById('prod-search')?.value||'').toLowerCase();
+  const cat=document.getElementById('pf-cat')?.value||'';
+  const subcat=document.getElementById('pf-subcat')?.value||'';
+  const bodega=document.getElementById('pf-bodega')?.value||'';
+  let prods=getProductos();
+  if(q) prods=prods.filter(p=>(p.nombre||'').toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q));
+  if(cat) prods=prods.filter(p=>p.categoria===cat);
+  if(subcat) prods=prods.filter(p=>p.subcategoria===subcat);
+  if(_pfLowStock) prods=prods.filter(p=>p.stock!==undefined&&p.stock!==''&&Number(p.stock)<=5);
+  // bodega filter — reserved for per-branch stock; currently highlights if active
+  const hasFilter=q||cat||subcat||bodega||_pfLowStock;
+  const clr=document.getElementById('pf-clear');if(clr)clr.style.display=hasFilter?'flex':'none';
+  ['pf-cat','pf-subcat','pf-bodega'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.classList.toggle('active',!!el.value);
+  });
+  const info=document.getElementById('pf-results-info');
+  const total=getProductos().length;
+  if(info) info.textContent=hasFilter?(prods.length===total?'':'Mostrando '+prods.length+' de '+total+' productos'):'';
+  const cnt=document.getElementById('prod-count');if(cnt)cnt.textContent='('+prods.length+')';
   document.getElementById('prods-table').innerHTML=renderProdsTable(prods);
 }
 
