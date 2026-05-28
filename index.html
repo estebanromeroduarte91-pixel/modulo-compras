@@ -60,7 +60,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nav-item-parent .arrow{margin-left:auto;font-size:10px;transition:transform .2s}
 .nav-item-parent.open .arrow{transform:rotate(90deg)}
 .nav-submenu{overflow:hidden;max-height:0;transition:max-height .25s ease}
-.nav-submenu.open{max-height:200px}
+.nav-submenu.open{max-height:500px}
+#submenu-taller{position:fixed;left:240px;background:#1a3352;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.35);z-index:300;min-width:190px;padding:6px 0;max-height:none;overflow:visible;transition:none;display:none}
+#submenu-taller.open{display:block;max-height:none}
+#submenu-taller .nav-subitem{padding:9px 18px 9px 18px;border-radius:6px;margin:1px 6px;font-size:13.5px}
 .nav-subitem{display:flex;align-items:center;gap:10px;padding:7px 16px 7px 46px;cursor:pointer;color:rgba(255,255,255,.6);border-radius:6px;margin:1px 8px;transition:all .15s;font-size:13px}
 .nav-subitem:hover{background:rgba(255,255,255,.07);color:#fff}
 .nav-subitem.active{color:#fff;font-weight:600;background:rgba(255,255,255,.1)}
@@ -669,9 +672,6 @@ select{cursor:pointer}
     <div class="nav-subitem" id="nav-taller-orders" onclick="navTaller('orders','Taller — Órdenes')"><span class="icon">📋</span> Órdenes</div>
     <div class="nav-subitem" id="nav-taller-branches" onclick="navTaller('branches','Taller — Sucursales')"><span class="icon">🏢</span> Sucursales</div>
     <div class="nav-subitem" id="nav-taller-equipo" onclick="navTaller('equipo','Taller — Equipo')"><span class="icon">📱</span> Equipo</div>
-    <div class="nav-subitem" id="nav-taller-clients" onclick="navTaller('clients','Taller — Clientes')"><span class="icon">👥</span> Clientes</div>
-    <div class="nav-subitem" id="nav-taller-inventory" onclick="navTaller('inventory','Taller — Inventario')"><span class="icon">📦</span> Inventario</div>
-    <div class="nav-subitem" id="nav-taller-stats" onclick="navTaller('stats','Taller — Estadísticas')"><span class="icon">📊</span> Estadísticas</div>
     <div class="nav-subitem" id="nav-taller-settings" onclick="navTaller('settings','Taller — Configuración')"><span class="icon">⚙️</span> Configuración</div>
   </div>
   <div class="sidebar-footer" id="sidebar-user-info">v2.0</div>
@@ -940,6 +940,10 @@ function toggleTaller(){
   const submenu=document.getElementById('submenu-taller');
   if(!parent||!submenu) return;
   const isOpen=submenu.classList.contains('open');
+  if(!isOpen){
+    const rect=parent.getBoundingClientRect();
+    submenu.style.top=rect.top+'px';
+  }
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
 }
@@ -6737,6 +6741,13 @@ function tp_addListeners(){
   document.addEventListener('click',function(e){
     const panel=document.getElementById('notif-panel');const btn=document.getElementById('notif-btn');
     if(panel&&panel.style.display!=='none'&&!panel.contains(e.target)&&btn&&!btn.contains(e.target))panel.style.display='none';
+  });
+  // Close taller flyout on outside click
+  document.addEventListener('click',function(e){
+    const sm=document.getElementById('submenu-taller');const par=document.getElementById('nav-taller-parent');
+    if(sm&&sm.classList.contains('open')&&!sm.contains(e.target)&&par&&!par.contains(e.target)){
+      sm.classList.remove('open');par.classList.remove('open');
+    }
   });
   // Close modals on overlay click
   ['mod-order','mod-detail','mod-salida','mod-send','mod-product','mod-upload','mod-repuesto','mod-branch','mod-edit-client','mod-pattern','mod-client-history','mod-equipo'].forEach(id=>{
