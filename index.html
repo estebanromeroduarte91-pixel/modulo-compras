@@ -546,8 +546,24 @@ select{cursor:pointer}
 #tp-wrap .od-pipe-step.active{background:var(--accent);color:white}
 #tp-wrap .od-pipe-step.done{background:var(--green);color:white}
 #tp-wrap .od-pipe-meta{font-size:11.5px;color:var(--text3);margin-top:6px}
-#tp-wrap .od-products-empty{text-align:center;padding:30px 20px;color:var(--text3)}
-#tp-wrap .od-products-empty svg{width:36px;height:36px;margin-bottom:10px;color:var(--border2)}
+#tp-wrap .od-products-empty{text-align:center;padding:28px 20px;color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:8px}
+#tp-wrap .od-products-empty svg{width:32px;height:32px;color:var(--border2)}
+#tp-wrap .od-products-empty strong{font-size:13px;font-weight:600;color:var(--text2)}
+#tp-wrap .od-products-empty span{font-size:12px;color:var(--text3)}
+#tp-wrap .rep-table{width:100%;border-collapse:collapse}
+#tp-wrap .rep-table-head{display:grid;grid-template-columns:1fr 56px 90px 32px;padding:5px 10px;border-bottom:1px solid var(--border);margin-bottom:2px}
+#tp-wrap .rep-table-head span{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+#tp-wrap .rep-table-head span:nth-child(2),.rep-table-head span:nth-child(3){text-align:center}
+#tp-wrap .rep-row{display:grid;grid-template-columns:1fr 56px 90px 32px;align-items:center;padding:9px 10px;border-radius:8px;transition:background .15s}
+#tp-wrap .rep-row:hover{background:var(--bg)}
+#tp-wrap .rep-row:not(:last-child){border-bottom:1px solid var(--border)}
+#tp-wrap .rep-row-name{font-size:13px;font-weight:500;color:var(--text)}
+#tp-wrap .rep-row-qty{text-align:center}
+#tp-wrap .rep-qty-badge{display:inline-block;background:var(--accent-soft,rgba(99,102,241,.1));color:var(--accent);font-size:11.5px;font-weight:700;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:20px}
+#tp-wrap .rep-row-price{text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);padding-right:4px}
+#tp-wrap .rep-row-del{display:flex;justify-content:center}
+#tp-wrap .rep-del-btn{border:none;background:none;color:var(--text3);cursor:pointer;width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+#tp-wrap .rep-del-btn:hover{background:rgba(239,68,68,.1);color:var(--red)}
 #tp-wrap .od-action-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 #tp-wrap .od-footer{padding:14px 20px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0}
 #tp-wrap .detail-checklist-item{display:flex;align-items:center;gap:7px;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border)}
@@ -6135,10 +6151,13 @@ function tp_openDetail(id){
       </div>
       <div class="od-section">
         <div class="od-section-header">
-          <span style="font-size:13px;font-weight:600">Repuestos utilizados</span>
-          <button class="btn btn-primary btn-sm" onclick="tp_openAddRepuestoFromDetail('${o.id}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Agregar
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:13px;font-weight:600">Repuestos utilizados</span>
+            ${o.repuestos?.length?`<span style="font-size:11.5px;color:var(--text3)">${o.repuestos.length} ítem${o.repuestos.length!==1?'s':''}</span>`:''}
+          </div>
+          <button onclick="tp_openAddRepuestoFromDetail('${o.id}')" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12.5px;font-weight:600;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='transparent'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar repuesto
           </button>
         </div>
         <div id="detail-repuestos-list">${repHtml}</div>
@@ -6218,13 +6237,29 @@ function tp_removeRepuesto(idx){tp_currentRepuestos.splice(idx,1);tp_renderOrder
 let tp_detailOrderId=null;
 
 function tp_buildRepHtml(o){
-  if(!o.repuestos?.length) return `<div class="od-products-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg><div style="font-size:12.5px">Sin repuestos agregados</div></div>`;
-  return o.repuestos.map((r,i)=>`<div class="detail-checklist-item">
-    <span style="flex:1">${r.name}</span>
-    <span style="font-family:'DM Mono';font-size:12px;color:var(--accent)">x${r.qty}</span>
-    ${r.precio?`<span style="font-family:'DM Mono';font-size:11.5px;color:var(--text2);margin-left:6px">${tp_fmtMoney(r.precio)}</span>`:''}
-    <button onclick="tp_removeRepuestoFromDetail('${o.id}',${i})" style="border:none;background:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 0 0 8px;line-height:1">✕</button>
-  </div>`).join('');
+  if(!o.repuestos?.length) return `<div class="od-products-empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg>
+    <strong>Sin repuestos agregados</strong>
+    <span>Agregá los ítems utilizados en esta reparación.</span>
+  </div>`;
+  const rows = o.repuestos.map((r,i)=>`
+    <div class="rep-row">
+      <div class="rep-row-name">${r.name}</div>
+      <div class="rep-row-qty"><span class="rep-qty-badge">×${r.qty}</span></div>
+      <div class="rep-row-price">${r.precio?tp_fmtMoney(r.precio*r.qty):'—'}</div>
+      <div class="rep-row-del">
+        <button class="rep-del-btn" title="Quitar" onclick="tp_removeRepuestoFromDetail('${o.id}',${i})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>`).join('');
+  const totalCost = o.repuestos.reduce((s,r)=>s+(r.precio?r.precio*r.qty:0),0);
+  const totalRow = totalCost>0?`<div style="display:grid;grid-template-columns:1fr 56px 90px 32px;padding:8px 10px 4px;border-top:1px solid var(--border);margin-top:2px">
+    <div></div><div></div>
+    <div style="text-align:right;font-family:'DM Mono',monospace;font-size:12.5px;font-weight:700;color:var(--text);padding-right:4px">${tp_fmtMoney(totalCost)}</div>
+    <div></div>
+  </div>`:'';
+  return `<div class="rep-table-head"><span>Repuesto</span><span>Cant.</span><span style="text-align:right;padding-right:4px">Subtotal</span><span></span></div>${rows}${totalRow}`;
 }
 
 function tp_openAddRepuestoFromDetail(orderId){
