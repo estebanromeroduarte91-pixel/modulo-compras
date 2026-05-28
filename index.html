@@ -559,8 +559,8 @@ select{cursor:pointer}
 #tp-wrap .rep-row:not(:last-child){border-bottom:1px solid var(--border)}
 #tp-wrap .rep-row-name{font-size:13px;font-weight:500;color:var(--text)}
 #tp-wrap .rep-row-qty{text-align:center}
-#tp-wrap .rep-qty-badge{display:inline-block;background:var(--accent-soft,rgba(99,102,241,.1));color:var(--accent);font-size:11.5px;font-weight:700;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:20px}
-#tp-wrap .rep-row-price{text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);padding-right:4px}
+#tp-wrap .rep-qty-badge{display:inline-block;background:var(--accent-soft,rgba(99,102,241,.1));color:var(--accent);font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px}
+#tp-wrap .rep-row-price{text-align:right;font-size:12px;color:var(--text2);padding-right:4px}
 #tp-wrap .rep-row-del{display:flex;justify-content:center}
 #tp-wrap .rep-del-btn{border:none;background:none;color:var(--text3);cursor:pointer;width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
 #tp-wrap .rep-del-btn:hover{background:rgba(239,68,68,.1);color:var(--red)}
@@ -1277,7 +1277,7 @@ function buscarClienteVta(q){
     onmousedown="selClienteVta('${c.nombre} ${c.apellido}')"
     ontouchstart="selClienteVta('${c.nombre} ${c.apellido}')">
     <span class="prod-name">${c.nombre} ${c.apellido}</span>
-    <span style="font-size:11px;color:var(--gray-400);font-family:monospace">${c.rut||c.email||''}</span>
+    <span style="font-size:11px;color:var(--gray-400)">${c.rut||c.email||''}</span>
   </div>`).join('');
   const inp=document.getElementById('vta-cliente');
   if(inp){ const r=inp.getBoundingClientRect(); drop.style.top=(r.bottom+4)+'px'; drop.style.left=r.left+'px'; drop.style.width=r.width+'px'; }
@@ -1310,7 +1310,7 @@ function modalNuevoClienteRapido(){
       <div class="form-group" style="margin:0">
         <label>RUT</label>
         <input id="rq-rut" type="text" placeholder="12.345.678-9"
-          oninput="onRUTInput(this)" maxlength="12" style="font-family:monospace;letter-spacing:1px">
+          oninput="onRUTInput(this)" maxlength="12" style="">
       </div>
       <div class="form-group" style="margin:0">
         <label>Email</label>
@@ -2004,7 +2004,7 @@ function renderClientesTable(clientes){
   <tbody>${clientes.map(c=>`<tr>
     <td><strong>${c.nombre||'—'}</strong></td>
     <td>${c.apellido||'—'}</td>
-    <td style="font-family:monospace;font-size:13px">${c.rut||'—'}</td>
+    <td style="font-size:13px">${c.rut||'—'}</td>
     <td>${c.email?`<a href="mailto:${c.email}" style="color:var(--primary)">${c.email}</a>`:'—'}</td>
     <td>
       <div style="display:flex;gap:4px">
@@ -2052,7 +2052,7 @@ function modalNuevoCliente(editId){
       <div class="form-group" style="margin:0">
         <label>RUT</label>
         <input id="cli-rut" type="text" value="${c.rut||''}" placeholder="12.345.678-9"
-          oninput="onRUTInput(this)" maxlength="12" style="font-family:monospace;letter-spacing:1px">
+          oninput="onRUTInput(this)" maxlength="12" style="">
       </div>
       <div class="form-group" style="margin:0">
         <label>Email</label>
@@ -2193,7 +2193,7 @@ function parseCliExcel(rows){
       <table><thead><tr><th>Nombre</th><th>Apellido</th><th>RUT</th><th>Email</th></tr></thead>
       <tbody>${_importClienteRows.slice(0,10).map(c=>`<tr>
         <td>${c.nombre||'—'}</td><td>${c.apellido||'—'}</td>
-        <td style="font-family:monospace">${c.rut||'—'}</td><td>${c.email||'—'}</td>
+        <td style="font-family:inherit">${c.rut||'—'}</td><td>${c.email||'—'}</td>
       </tr>`).join('')}
       ${_importClienteRows.length>10?`<tr><td colspan="4" style="text-align:center;color:var(--gray-400);font-size:12px">… y ${_importClienteRows.length-10} más</td></tr>`:''}
       </tbody></table>
@@ -2971,7 +2971,7 @@ function renderOCLogTable(log){
       </tr></thead>
       <tbody>
         ${sorted.map(o=>`<tr style="opacity:0.75">
-          <td><span style="font-family:monospace;font-weight:600;color:var(--danger)">${o.numero||''}</span></td>
+          <td><span style="font-weight:600;color:var(--danger)">${o.numero||''}</span></td>
           <td>${o.proveedor_nombre||'—'}</td>
           <td>${estadoTexto(o.estado||'borrador')}</td>
           <td>${fmtDate(o.fecha||'')}</td>
@@ -3793,7 +3793,7 @@ function renderProdsTable(prods){
     <th>SKU</th><th>Producto</th><th>Costo Neto</th><th>Precio Venta</th><th>Stock</th><th>Categoría</th><th>Subcategoría</th><th>Acciones</th>
   </tr></thead>
   <tbody>${prods.map(p=>`<tr>
-    <td style="font-family:monospace;font-size:12px;color:var(--gray-500)">${p.sku||'—'}</td>
+    <td style="font-size:12px;color:var(--gray-500)">${p.sku||'—'}</td>
     <td><strong>${p.nombre}</strong></td>
     <td>${p.precio_compra?fmt$(p.precio_compra):'—'}</td>
     <td>${p.precio_venta?`<span style="color:#10b981;font-weight:600">${fmt$(p.precio_venta)}</span>`:'—'}</td>
@@ -4041,7 +4041,7 @@ function parseProdExcel(rows){
         ?'<span style="color:#3b82f6;font-size:11px;font-weight:600">🔄 Actualizar</span>'
         :'<span style="color:#10b981;font-size:11px;font-weight:600">✅ Nuevo</span>';
       return `<tr style="background:${bg}">
-        <td style="padding:5px 8px;font-family:monospace;color:var(--gray-500)">${p.sku||'—'}</td>
+        <td style="padding:5px 8px;color:var(--gray-500)">${p.sku||'—'}</td>
         <td style="padding:5px 8px"><strong>${p.nombre}</strong></td>
         <td style="padding:5px 8px;text-align:right">${p.precio_compra?fmt$(p.precio_compra):'—'}</td>
         <td style="padding:5px 8px;text-align:right;color:#10b981">${p.precio_venta?fmt$(p.precio_venta):'—'}</td>
@@ -5519,7 +5519,7 @@ function renderTaller() {
     </div>
     <div class="modal-body">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px">
-        <div style="font-size:12px">Columnas: <code style="font-family:'DM Mono';font-size:10.5px">nombre · sku · costoNeto · precio · stock · categoria · subcategoria</code></div>
+        <div style="font-size:12px">Columnas: <code style="font-size:10.5px">nombre · sku · costoNeto · precio · stock · categoria · subcategoria</code></div>
         <button class="btn btn-default btn-sm" onclick="tp_downloadTemplate()">Descargar plantilla</button>
       </div>
       <div class="drop-zone" id="drop-zone" onclick="document.getElementById('excel-inp').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="tp_handleDrop(event)">
@@ -6083,7 +6083,7 @@ function tp_openDetail(id){
     <div class="modal-header" style="position:sticky;top:0;background:var(--surface);z-index:10">
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-family:'DM Mono';font-size:12px;color:var(--text3);font-weight:600">#${o.num}</span>${tp_badge(o.status)}
+          <span style="font-size:12px;color:var(--text3);font-weight:600">#${o.num}</span>${tp_badge(o.status)}
         </div>
         <div class="modal-title" style="margin-top:2px">${o.nombre}</div>
       </div>
@@ -6101,7 +6101,7 @@ function tp_openDetail(id){
             <div class="od-card-name">${o.nombre}</div>
             ${o.tel?`<div class="od-card-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.63 19.79 19.79 0 01.22 2.18 2 2 0 012.18 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.46-.46a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>${o.tel}</div>`:''}
             ${o.email?`<div class="od-card-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>${o.email}</div>`:''}
-            ${o.rut?`<div class="od-card-row" style="font-family:'DM Mono';font-size:11px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>RUT: ${o.rut}</div>`:''}
+            ${o.rut?`<div class="od-card-row" style="font-size:11px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>RUT: ${o.rut}</div>`:''}
           </div>
           <div class="od-card-actions">
             ${o.tel?`<a href="https://wa.me/${(o.tel||'').replace(/\D/g,'')}" target="_blank" class="icon-btn" title="WhatsApp" style="color:#1C7A4A"><svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>`:''}
@@ -6114,7 +6114,7 @@ function tp_openDetail(id){
             <div class="od-card-chip">Equipo</div>
             <div class="od-card-name">${o.modelo}</div>
             ${o.color?`<div class="od-card-row">${o.color}</div>`:''}
-            ${o.serie?`<div class="od-card-row" style="font-family:'DM Mono';font-size:11px">${o.serie}</div>`:''}
+            ${o.serie?`<div class="od-card-row" style="font-size:11px">${o.serie}</div>`:''}
             ${o.pin?`<div class="od-card-row">${o.pinType==='pattern'?o.pin:'••••'}</div>`:''}
           </div>
           <div class="od-card-actions">
@@ -6143,8 +6143,8 @@ function tp_openDetail(id){
             ${o.estadoFisico?`<div class="od-info-row"><span class="od-info-label" style="min-width:110px">Estado físico</span><span class="od-info-val" style="font-size:12px">${o.estadoFisico}</span></div>`:''}
           </div>
           <div class="od-info-col">
-            <div class="od-info-row"><span class="od-info-label" style="min-width:100px">Presupuesto</span><span class="od-info-val" style="font-weight:700;font-family:'DM Mono'">${tp_fmtMoney(o.presup)}</span></div>
-            <div class="od-info-row"><span class="od-info-label" style="min-width:100px">Costo real</span><span class="od-info-val" style="font-weight:700;font-family:'DM Mono';color:var(--green)">${tp_fmtMoney(o.costo)}</span></div>
+            <div class="od-info-row"><span class="od-info-label" style="min-width:100px">Presupuesto</span><span class="od-info-val" style="font-weight:700">${tp_fmtMoney(o.presup)}</span></div>
+            <div class="od-info-row"><span class="od-info-label" style="min-width:100px">Costo real</span><span class="od-info-val" style="font-weight:700;color:var(--green)">${tp_fmtMoney(o.costo)}</span></div>
             ${o.observSalida?`<div class="od-info-row"><span class="od-info-label" style="min-width:100px">Obs. salida</span><span class="od-info-val" style="font-size:12px">${o.observSalida}</span></div>`:''}
           </div>
         </div>
@@ -6256,7 +6256,7 @@ function tp_buildRepHtml(o){
   const totalCost = o.repuestos.reduce((s,r)=>s+(r.precio?r.precio*r.qty:0),0);
   const totalRow = totalCost>0?`<div style="display:grid;grid-template-columns:1fr 56px 90px 32px;padding:8px 10px 4px;border-top:1px solid var(--border);margin-top:2px">
     <div></div><div></div>
-    <div style="text-align:right;font-family:'DM Mono',monospace;font-size:12.5px;font-weight:700;color:var(--text);padding-right:4px">${tp_fmtMoney(totalCost)}</div>
+    <div style="text-align:right;font-size:12.5px;font-weight:700;color:var(--text);padding-right:4px">${tp_fmtMoney(totalCost)}</div>
     <div></div>
   </div>`:'';
   return `<div class="rep-table-head"><span>Repuesto</span><span>Cant.</span><span style="text-align:right;padding-right:4px">Subtotal</span><span></span></div>${rows}${totalRow}`;
@@ -6344,7 +6344,7 @@ function tp_printOrder(id){
   const chk=(arr,label)=>!arr?.length?'':`<h2>${label}</h2><table>${arr.map(c=>`<tr><td>${c.checked?'✓':'✗'}</td><td>${c.label}</td></tr>`).join('')}</table>`;
   const ph=(arr,label)=>!arr?.length?'':`<h2>${label}</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${arr.map(s=>`<img src="${s}" style="height:90px;border-radius:6px;border:1px solid #ddd">`).join('')}</div>`;
   const w=window.open('','_blank');
-  w.document.write(`<html><head><title>Orden #${o.num}</title><style>body{font-family:Arial,sans-serif;padding:2rem;max-width:640px;margin:0 auto;font-size:13px}h1{font-size:18px;margin-bottom:4px}h2{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#666;margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px}table{width:100%;border-collapse:collapse}td{padding:5px 0;vertical-align:top}td:first-child{color:#666;width:42%}.footer{margin-top:2rem;border-top:1px solid #ddd;padding-top:1rem;color:#999;font-size:11px;text-align:center}</style></head><body>
+  w.document.write(`<html><head><title>Orden #${o.num}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:2rem;max-width:640px;margin:0 auto;font-size:13px}h1{font-size:18px;margin-bottom:4px}h2{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#666;margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px}table{width:100%;border-collapse:collapse}td{padding:5px 0;vertical-align:top}td:first-child{color:#666;width:42%}.footer{margin-top:2rem;border-top:1px solid #ddd;padding-top:1rem;color:#999;font-size:11px;text-align:center}</style></head><body>
     <h1>Taller — Orden #${o.num}</h1><p style="color:#666;font-size:12px">Emitida ${new Date().toLocaleDateString('es-CL')}</p>
     <h2>Cliente</h2><table><tr><td>Nombre</td><td>${o.nombre}</td></tr><tr><td>Teléfono</td><td>${o.tel||'—'}</td></tr><tr><td>Correo</td><td>${o.email||'—'}</td></tr></table>
     <h2>Equipo</h2><table><tr><td>Modelo</td><td>${o.modelo}</td></tr><tr><td>N° serie/IMEI</td><td>${o.serie||'—'}</td></tr><tr><td>Color</td><td>${o.color||'—'}</td></tr><tr><td>Estado físico</td><td>${o.estadoFisico||'—'}</td></tr></table>
@@ -6423,7 +6423,7 @@ function tp_renderStats(){
   const ct=document.getElementById('ch-timeline');
   if(ct){const ctx3=ct.getContext('2d');tp_chartInstances['ch-timeline']=new Chart(ctx3,{type:'line',data:{labels:tl,datasets:[{data:td,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:.35,pointRadius:3,pointBackgroundColor:'#2563eb'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{stepSize:1}}}}});}
   const topM=document.getElementById('top-models');if(topM)topM.innerHTML=tm.length?tm.map((x,i)=>`<div class="top-item"><span class="top-item-rank">#${i+1}</span><span style="flex:1">${x[0]}</span><span class="top-item-val">${x[1]}</span></div>`).join(''):'<div style="padding:8px;color:var(--text3);font-size:12.5px;text-align:center">Sin datos</div>';
-  const topF=document.getElementById('top-faults');if(topF)topF.innerHTML=tf.length?tf.map((x,i)=>`<div class="top-item" style="flex-direction:column;align-items:stretch;gap:2px;padding:7px 0"><div style="display:flex;align-items:center;gap:8px"><span class="top-item-rank">#${i+1}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:500">${x[0]}</span><span style="font-family:'DM Mono';font-size:12.5px;font-weight:600;color:var(--green)">$${Number(x[1]).toLocaleString('es-CL')}</span></div><div style="padding-left:28px;font-size:11px;color:var(--text3)">${x[2]} unidad${x[2]!==1?'es':''}</div></div>`).join(''):'<div style="padding:16px;color:var(--text3);font-size:12.5px;text-align:center">Aún no hay repuestos en órdenes</div>';
+  const topF=document.getElementById('top-faults');if(topF)topF.innerHTML=tf.length?tf.map((x,i)=>`<div class="top-item" style="flex-direction:column;align-items:stretch;gap:2px;padding:7px 0"><div style="display:flex;align-items:center;gap:8px"><span class="top-item-rank">#${i+1}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:500">${x[0]}</span><span style="font-size:12.5px;font-weight:600;color:var(--green)">$${Number(x[1]).toLocaleString('es-CL')}</span></div><div style="padding-left:28px;font-size:11px;color:var(--text3)">${x[2]} unidad${x[2]!==1?'es':''}</div></div>`).join(''):'<div style="padding:16px;color:var(--text3);font-size:12.5px;text-align:center">Aún no hay repuestos en órdenes</div>';
 }
 
 // ─── INVENTORY ───
@@ -6451,13 +6451,13 @@ function tp_renderInventory(){
     let mh='—';
     if(cn>0&&precio>0){const pct=Math.round((precio-cn)/precio*100);mh=`<span class="profit-chip ${pct>=30?'profit-pos':''}">${pct}%</span>`;}
     return `<tr>
-      <td style="font-family:'DM Mono';font-size:11.5px;color:var(--text2)">${p.sku||'—'}</td>
+      <td style="font-size:11.5px;color:var(--text2)">${p.sku||'—'}</td>
       <td><div style="font-weight:500">${p.nombre}</div>${p.compat?`<div style="font-size:11px;color:var(--text3)">${p.compat}</div>`:''}</td>
       <td><span class="cat-chip ${tp_catChipClass(p.categoria)}">${p.categoria||'—'}</span>${p.subcategoria?`<div style="font-size:10.5px;color:var(--text3);margin-top:1px">${p.subcategoria}</div>`:''}</td>
-      <td style="font-family:'DM Mono';font-size:12.5px;color:var(--text2)">${cn>0?'$'+cn.toLocaleString('es-CL'):'—'}</td>
-      <td style="font-family:'DM Mono';font-size:12.5px;font-weight:500">${precio>0?'$'+precio.toLocaleString('es-CL'):'—'}</td>
+      <td style="font-size:12.5px;color:var(--text2)">${cn>0?'$'+cn.toLocaleString('es-CL'):'—'}</td>
+      <td style="font-size:12.5px;font-weight:500">${precio>0?'$'+precio.toLocaleString('es-CL'):'—'}</td>
       <td>${mh}</td>
-      <td class="${Number(p.stock||0)<=3?'stock-low':''}" style="font-family:'DM Mono';font-size:12.5px">${p.stock||0}${Number(p.stock||0)<=3?' ⚠':''}${Number(p.stock||0)===0?' · Sin stock':''}</td>
+      <td class="${Number(p.stock||0)<=3?'stock-low':''}" style="font-size:12.5px">${p.stock||0}${Number(p.stock||0)<=3?' ⚠':''}${Number(p.stock||0)===0?' · Sin stock':''}</td>
       <td style="display:flex;gap:4px">
         <button class="icon-btn" onclick="tp_openEditProduct('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         <button class="icon-btn" style="color:var(--red)" onclick="tp_deleteProduct('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
@@ -6588,7 +6588,7 @@ function tp_processExcel(file){
       const cols={nombre:find(['nombre','name','producto']),sku:find(['sku','codigo','code']),costoNeto:find(['costoneto','costo_neto','costo neto','costo','cost']),precio:find(['precio','price','valor']),stock:find(['stock','cantidad','qty']),cat:find(['categoria','categoría','category','cat']),subcat:find(['subcategoria','subcategoría','subcategory','subcat']),compat:find(['compatible','compat']),desc:find(['descripcion','descripción','description'])};
       tp_pendingImport=data.map(row=>{const g=f=>cols[f]?String(row[Object.keys(row).find(k=>k.toLowerCase().trim()===cols[f])]||'').trim():'';return{nombre:g('nombre'),sku:g('sku'),costoNeto:g('costoNeto'),precio:g('precio'),stock:g('stock'),cat:g('cat')||'Accesorio',subcat:g('subcat'),compat:g('compat'),desc:g('desc')};}).filter(p=>p.nombre);
       const pv=document.getElementById('upload-preview');
-      if(pv)pv.innerHTML=`<div style="font-size:12.5px;color:var(--text2);margin-bottom:8px;font-weight:500">${tp_pendingImport.length} productos encontrados</div><div style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);font-size:12px"><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;padding:5px 10px;background:var(--bg);font-weight:600;font-size:10.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px"><span>Nombre</span><span>Categoría</span><span>Costo</span><span>Precio</span></div>${tp_pendingImport.slice(0,15).map(p=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);align-items:center"><span>${p.nombre}</span><span style="color:var(--text2)">${p.cat}</span><span style="font-family:'DM Mono';color:var(--text2)">$${Number(p.costoNeto||0).toLocaleString('es-CL')}</span><span style="font-family:'DM Mono';font-weight:600">$${Number(p.precio||0).toLocaleString('es-CL')}</span></div>`).join('')}${tp_pendingImport.length>15?`<div style="padding:6px 10px;color:var(--text3);font-size:11.5px">...y ${tp_pendingImport.length-15} más</div>`:''}</div>`;
+      if(pv)pv.innerHTML=`<div style="font-size:12.5px;color:var(--text2);margin-bottom:8px;font-weight:500">${tp_pendingImport.length} productos encontrados</div><div style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);font-size:12px"><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;padding:5px 10px;background:var(--bg);font-weight:600;font-size:10.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px"><span>Nombre</span><span>Categoría</span><span>Costo</span><span>Precio</span></div>${tp_pendingImport.slice(0,15).map(p=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);align-items:center"><span>${p.nombre}</span><span style="color:var(--text2)">${p.cat}</span><span style="color:var(--text2)">$${Number(p.costoNeto||0).toLocaleString('es-CL')}</span><span style="font-weight:600">$${Number(p.precio||0).toLocaleString('es-CL')}</span></div>`).join('')}${tp_pendingImport.length>15?`<div style="padding:6px 10px;color:var(--text3);font-size:11.5px">...y ${tp_pendingImport.length-15} más</div>`:''}</div>`;
       const ua=document.getElementById('upload-actions');if(ua)ua.style.display='flex';
       const ib=document.getElementById('import-btn');if(ib)ib.textContent=`Importar ${tp_pendingImport.length} productos`;
     }catch(err){const pv=document.getElementById('upload-preview');if(pv)pv.innerHTML=`<p style="color:var(--red);font-size:12px">Error: ${err.message}</p>`;}
@@ -6630,11 +6630,11 @@ function tp_renderClients(){
     const editData=JSON.stringify({nombre:c.nombre,tel:c.tel||'',rut:c.rut||'',email:c.email||'',orders:[]}).replace(/"/g,'&quot;');
     return `<tr style="cursor:pointer" onclick="tp_openClientSearch('${c.nombre.replace(/'/g,"\\'")}')">
       <td><div style="display:flex;align-items:center;gap:9px"><div style="width:32px;height:32px;border-radius:50%;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex-shrink:0">${initials||'?'}</div><span style="font-weight:500">${c.nombre}</span></div></td>
-      <td style="font-family:'DM Mono';font-size:12px;color:var(--text2)">${c.rut||'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${c.rut||'—'}</td>
       <td style="font-size:12.5px">${c.tel||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${c.email||'—'}</td>
       <td>${sh}</td>
-      <td style="font-family:'DM Mono';font-size:12px;color:var(--text3)">${c.lastFecha?tp_fmtDate(c.lastFecha):'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${c.lastFecha?tp_fmtDate(c.lastFecha):'—'}</td>
       <td style="display:flex;gap:5px;align-items:center">
         <button class="btn btn-default btn-sm" onclick="event.stopPropagation();tp_openClientSearch('${c.nombre.replace(/'/g,"\\'")}')">Ver órdenes</button>
         <button class="icon-btn" onclick="event.stopPropagation();tp_openEditClient(${editData})" style="color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -6700,7 +6700,7 @@ function tp_handleSearchInput(q){
   let html='';
   for(const[name,data]of Object.entries(byClient)){
     const oc=data.orders.length;const meta=[data.tel,data.email].filter(Boolean).join(' · ');
-    html+=`<div class="search-client-row" onclick="tp_openClientHistory('${name.replace(/'/g,"\\'")}')"><div style="display:flex;align-items:center;justify-content:space-between"><div><div class="search-client-name">${name}</div><div class="search-client-meta">${meta||''} · ${oc} orden${oc!==1?'es':''}</div></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg></div></div><div style="background:var(--bg)">${data.orders.map(o=>`<div class="search-order-row" onclick="event.stopPropagation();tp_openClientHistory('${name.replace(/'/g,"\\'")}')"><span style="font-family:'DM Mono';font-size:11px;color:var(--text3)">#${o.num}</span>${tp_badge(o.status)}<span style="flex:1;font-size:12.5px">${o.modelo}</span><span style="font-size:11.5px;color:var(--text2)">${o.fecha?tp_fmtDate(o.fecha):'—'}</span></div>`).join('')}</div>`;
+    html+=`<div class="search-client-row" onclick="tp_openClientHistory('${name.replace(/'/g,"\\'")}')"><div style="display:flex;align-items:center;justify-content:space-between"><div><div class="search-client-name">${name}</div><div class="search-client-meta">${meta||''} · ${oc} orden${oc!==1?'es':''}</div></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg></div></div><div style="background:var(--bg)">${data.orders.map(o=>`<div class="search-order-row" onclick="event.stopPropagation();tp_openClientHistory('${name.replace(/'/g,"\\'")}')"><span style="font-size:11px;color:var(--text3)">#${o.num}</span>${tp_badge(o.status)}<span style="flex:1;font-size:12.5px">${o.modelo}</span><span style="font-size:11.5px;color:var(--text2)">${o.fecha?tp_fmtDate(o.fecha):'—'}</span></div>`).join('')}</div>`;
   }
   body.innerHTML=html;panel.style.display='block';
 }
