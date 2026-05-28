@@ -240,7 +240,7 @@ select{cursor:pointer}
 
 /* PRODUCT FILTERS */
 /* PRODUCT FILTER BAR */
-.prod-filter-bar{display:flex;align-items:center;gap:6px;padding:10px 20px 12px;border-bottom:1px solid var(--gray-100);flex-wrap:nowrap;overflow-x:auto}
+.prod-filter-bar{display:flex;align-items:center;gap:6px;padding:10px 20px 12px;border-bottom:1px solid var(--gray-100);flex-wrap:nowrap;overflow:visible}
 .prod-filter-bar::-webkit-scrollbar{display:none}
 .pf-btn{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12.5px;font-weight:500;color:var(--gray-600);background:var(--gray-50);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .pf-btn:hover{border-color:var(--gray-400);background:#fff}
@@ -249,12 +249,13 @@ select{cursor:pointer}
 .pf-btn svg{pointer-events:none;flex-shrink:0}
 .pf-btn .pf-caret{transition:transform .15s}
 .pf-btn.open .pf-caret{transform:rotate(180deg)}
-.pf-dropdown{position:absolute;top:calc(100% + 4px);left:0;min-width:200px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.10);z-index:400;overflow:hidden;display:none}
+.pf-dropdown{position:absolute;top:calc(100% + 6px);left:0;min-width:210px;max-height:280px;overflow-y:auto;background:#fff;border:1px solid var(--gray-200);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.14);z-index:9999;display:none}
 .pf-dropdown.open{display:block}
 .pf-dropdown-item{padding:8px 14px;font-size:13px;color:var(--gray-700);cursor:pointer;transition:background .1s;white-space:nowrap}
 .pf-dropdown-item:hover{background:var(--gray-50)}
 .pf-dropdown-item.selected{background:var(--primary-light);color:var(--primary);font-weight:600}
-.pf-wrap{position:relative;flex-shrink:0}
+.pf-wrap{position:relative;flex-shrink:0;z-index:300}
+.pf-wrap:has(.pf-dropdown.open){z-index:400}
 .pf-divider{width:1px;height:18px;background:var(--gray-200);flex-shrink:0;margin:0 2px}
 .pf-clear{height:30px;padding:0 10px;border:none;background:none;font-size:12px;color:var(--gray-400);cursor:pointer;border-radius:6px;display:none;align-items:center;gap:4px;white-space:nowrap}
 .pf-clear:hover{color:var(--danger);background:var(--danger-light)}
