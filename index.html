@@ -2072,6 +2072,74 @@ function eliminarTraslado(id){
 }
 
 // ─── TRASLADOS DESDE TALLER ───
+function tp_abrirTraslados(orderId){
+  const o=tp_orders.find(x=>x.id===orderId);
+  if(!o) return;
+  const traslados=getTraslados().filter(t=>t.order_id===orderId);
+  const estadoLabel={'enviado':'📤 Enviado','en-revision':'🔍 En revisión','listo':'✅ Listo','retornado':'↩️ Retornado','con-problema':'⚠️ Con problema'};
+  const condColor={'bueno':'background:#dcfce7;color:#166534','regular':'background:#fef9c3;color:#854d0e','dañado':'background:#fee2e2;color:#991b1b'};
+
+  const tslHtml=traslados.length?traslados.map(t=>`
+    <div style="border:1.5px solid var(--gray-200);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <span style="font-weight:700;font-size:13px">${t.tecnico||'Sin técnico'}</span>
+          ${t.tecnico_tel?`<span style="font-size:12px;color:var(--gray-400);margin-left:8px">${t.tecnico_tel}</span>`:''}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select onchange="tp_cambiarEstadoTsl('${t.id}',this.value)"
+            style="border:1.5px solid var(--gray-200);border-radius:7px;padding:3px 8px;font-size:12px;background:#fff;cursor:pointer">
+            <option value="enviado" ${t.estado==='enviado'?'selected':''}>📤 Enviado</option>
+            <option value="en-revision" ${t.estado==='en-revision'?'selected':''}>🔍 En revisión</option>
+            <option value="listo" ${t.estado==='listo'?'selected':''}>✅ Listo</option>
+            <option value="con-problema" ${t.estado==='con-problema'?'selected':''}>⚠️ Con problema</option>
+            <option value="retornado" ${t.estado==='retornado'?'selected':''}>↩️ Retornado</option>
+          </select>
+          <button onclick="tp_editarTraslado('${t.id}')" style="background:none;border:1.5px solid var(--gray-200);border-radius:7px;padding:3px 10px;font-size:12px;cursor:pointer">✏️</button>
+          <button onclick="_eliminarTslDesdePopup('${t.id}','${orderId}')" style="background:none;border:1.5px solid #fecaca;border-radius:7px;padding:3px 8px;font-size:12px;color:#dc2626;cursor:pointer">🗑</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;color:var(--gray-600)">
+        ${t.condicion?`<div><span style="font-weight:500">Condición:</span> <span style="padding:1px 7px;border-radius:5px;font-size:11px;font-weight:600;${condColor[t.condicion]||''}">${t.condicion}</span></div>`:''}
+        ${t.fecha_envio?`<div><span style="font-weight:500">Envío:</span> ${t.fecha_envio}</div>`:''}
+        ${t.fecha_retorno_est?`<div><span style="font-weight:500">Retorno est.:</span> ${t.fecha_retorno_est}</div>`:''}
+        ${t.motivo?`<div style="grid-column:1/-1"><span style="font-weight:500">Motivo:</span> ${t.motivo}</div>`:''}
+        ${t.notas?`<div style="grid-column:1/-1"><span style="font-weight:500">Notas:</span> ${t.notas}</div>`:''}
+      </div>
+    </div>`).join('')
+  :`<div style="text-align:center;padding:24px 0;color:var(--gray-400)">
+      <div style="font-size:32px;margin-bottom:8px">🔄</div>
+      <div style="font-size:13px">No hay técnicos externos asignados a esta orden</div>
+    </div>`;
+
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3>Traslados</h3>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:2px">${o.modelo||''} · ${o.nombre||''}</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="tsl-popup-body">
+      ${tslHtml}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+      <button class="btn btn-primary" onclick="closeModal();tp_derivarOrden('${orderId}')">➕ Agregar técnico externo</button>
+    </div>
+  </div></div>`);
+}
+
+function _eliminarTslDesdePopup(tslId, orderId){
+  if(!confirm('¿Eliminar este traslado?')) return;
+  setTraslados(getTraslados().filter(t=>t.id!==tslId));
+  toast('Traslado eliminado');
+  closeModal();
+  tp_openDetail(orderId);
+}
+
 function tp_derivarOrden(orderId){
   const o=tp_orders.find(x=>x.id===orderId);
   if(!o) return;
@@ -2121,7 +2189,7 @@ function _modalTrasladoDesdeOrden(t){
   <div class="modal">
     <div class="modal-header">
       <div>
-        <h3>${editId?'Editar derivación':'Derivar a técnico externo'}</h3>
+        <h3>${editId?'Editar traslado':'Agregar técnico externo'}</h3>
         <div style="font-size:12px;color:var(--gray-400);margin-top:2px">${t.equipo||''}</div>
       </div>
       <button class="close-btn" onclick="closeModal()">×</button>
@@ -2199,7 +2267,7 @@ function _modalTrasladoDesdeOrden(t){
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="_guardarTrasladoDesdeOrden('${editId}')">
-        ${editId?'💾 Guardar cambios':'🔄 Derivar equipo'}
+        ${editId?'💾 Guardar cambios':'🔄 Guardar traslado'}
       </button>
     </div>
   </div></div>`);
@@ -7207,9 +7275,7 @@ function tp_openDetail(id){
       <button class="btn btn-default btn-sm" onclick="tp_printOrder('${o.id}')">Imprimir</button>
       <div class="ml-auto"></div>
       ${(()=>{const tsl=getTraslados().find(t=>t.order_id===o.id&&t.estado!=='retornado');
-        return tsl
-          ? `<button class="btn btn-sm" style="background:#fef9c3;color:#854d0e;border:1.5px solid #fde68a;font-weight:600" onclick="tp_verTraslado('${tsl.id}')">🔄 Derivado · ${({enviado:'Enviado','en-revision':'En revisión',listo:'Listo',retornado:'Retornado','con-problema':'Con problema'})[tsl.estado]||tsl.estado}</button>`
-          : `<button class="btn btn-default btn-sm" onclick="tp_derivarOrden('${o.id}')">🔄 Derivar externamente</button>`;
+        return `<button class="btn btn-default btn-sm" onclick="tp_abrirTraslados('${o.id}')">🔄 Traslado${tsl?' · '+({enviado:'Enviado','en-revision':'En revisión',listo:'Listo',retornado:'Retornado','con-problema':'Con problema'})[tsl.estado]:''}</button>`;
       })()}
       <button class="btn btn-default btn-sm" onclick="tp_closeModal('mod-detail')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
