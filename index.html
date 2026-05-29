@@ -1652,6 +1652,10 @@ function autoCapNombre(inp){
   const words=inp.value.split(' ');
   inp.value=words.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
 }
+function autoCapFirst(inp){
+  if(inp.value.length===1) inp.value=inp.value.toUpperCase();
+  else if(inp.value.length>0) inp.value=inp.value.charAt(0).toUpperCase()+inp.value.slice(1);
+}
 
 
 // ─────────────────────────────────────────────
@@ -6392,7 +6396,46 @@ function renderTaller() {
       <button class="btn btn-ghost btn-sm modal-close" onclick="tp_closeModal('mod-order')">✕</button>
     </div>
     <div class="modal-body" style="max-height:75vh;overflow-y:auto">
-      <div class="form-section-title">Datos del cliente</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="form-section-title" style="margin-bottom:0">Datos del cliente</div>
+        <button type="button" onclick="tp_toggleNuevoClienteInline()" id="btn-nuevo-cli"
+          style="display:flex;align-items:center;gap:5px;padding:5px 12px;border:1.5px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s"
+          onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='transparent'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo cliente
+        </button>
+      </div>
+
+      <!-- Inline nuevo cliente -->
+      <div id="nuevo-cli-inline" style="display:none;background:var(--surface);border:1.5px solid var(--accent);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;letter-spacing:.3px">CREAR NUEVO CLIENTE</div>
+        <div class="form-grid">
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Nombre completo *</label>
+            <input class="form-input" id="nc-nombre" placeholder="Ej: Juan Pérez" oninput="autoCapNombre(this)">
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Teléfono</label>
+            <div style="display:flex;align-items:center;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;height:38px">
+              <span style="padding:0 10px;background:var(--surface2);color:var(--text2);font-size:13px;border-right:1.5px solid var(--border);height:100%;display:flex;align-items:center">+56</span>
+              <input id="nc-tel" type="tel" placeholder="9 1234 5678" style="border:none;outline:none;flex:1;padding:0 10px;font-size:14px;height:100%;background:transparent">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">Correo electrónico</label>
+            <input class="form-input" id="nc-email" type="email" placeholder="correo@ejemplo.com">
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label">RUT</label>
+            <input class="form-input" id="nc-rut" placeholder="12.345.678-9" oninput="tp_formatRutInput(this)">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+          <button type="button" onclick="tp_toggleNuevoClienteInline()" style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:none;font-size:12.5px;cursor:pointer;font-family:inherit;color:var(--text2)">Cancelar</button>
+          <button type="button" onclick="tp_crearClienteInline()" style="padding:6px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">✓ Crear y seleccionar</button>
+        </div>
+      </div>
+
       <div class="form-grid">
         <div class="form-group" style="position:relative">
           <label class="form-label">Nombre completo *</label>
@@ -6453,11 +6496,11 @@ function renderTaller() {
           <select class="form-input" id="f-status"><option>Chequeo</option><option>Reparación</option><option>Listo</option><option>Entregado</option></select>
         </div>
         <div class="form-group"><label class="form-label">Fecha recepción</label><input type="date" class="form-input" id="f-fecha"></div>
-        <div class="form-group span3"><label class="form-label">Estado físico del equipo</label><textarea class="form-input" id="f-estadofisico" placeholder="Rayones, grietas, daños visibles..."></textarea></div>
+        <div class="form-group span3"><label class="form-label">Estado físico del equipo</label><textarea class="form-input" id="f-estadofisico" placeholder="Rayones, grietas, daños visibles..." oninput="autoCapFirst(this)"></textarea></div>
       </div>
       <div class="form-section-title">Trabajo a realizar</div>
       <div class="form-grid">
-        <div class="form-group span2"><label class="form-label">Descripción del trabajo *</label><textarea class="form-input" id="f-trabajo" placeholder="Ej: Cambio de pantalla, reparación de conector de carga..."></textarea></div>
+        <div class="form-group span2"><label class="form-label">Descripción del trabajo *</label><textarea class="form-input" id="f-trabajo" placeholder="Ej: Cambio de pantalla, reparación de conector de carga..." oninput="autoCapFirst(this)"></textarea></div>
         <div class="form-group"><label class="form-label">Presupuesto estimado ($)</label><input type="number" class="form-input" id="f-presup" placeholder="0"></div>
         <div class="form-group"><label class="form-label">Costo real ($)</label><input type="number" class="form-input" id="f-costo" placeholder="0"></div>
       </div>
@@ -7119,12 +7162,52 @@ function tp_renderOrders(){
 function tp_renderAll(){tp_updateHeader();tp_renderOrders();tp_updateNotifBadge();}
 
 // ─── NEW / EDIT ORDER ───
+function tp_toggleNuevoClienteInline(){
+  const panel=document.getElementById('nuevo-cli-inline');
+  if(!panel) return;
+  const isOpen=panel.style.display!=='none';
+  panel.style.display=isOpen?'none':'block';
+  if(!isOpen){
+    ['nc-nombre','nc-tel','nc-email','nc-rut'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    setTimeout(()=>document.getElementById('nc-nombre')?.focus(),50);
+  }
+}
+
+function tp_crearClienteInline(){
+  const nombre=(document.getElementById('nc-nombre')?.value||'').trim();
+  if(!nombre){ toast('El nombre es requerido','error'); return; }
+  const telRaw=(document.getElementById('nc-tel')?.value||'').replace(/\s/g,'');
+  const tel=telRaw?'+56'+telRaw:'';
+  const email=document.getElementById('nc-email')?.value||'';
+  const rut=document.getElementById('nc-rut')?.value||'';
+
+  // Guardar en DB de clientes
+  const clis=getClientes();
+  const existe=clis.find(c=>(c.nombre+' '+(c.apellido||'')).trim().toLowerCase()===nombre.toLowerCase()||(rut&&c.rut===rut));
+  if(!existe){
+    const partes=nombre.split(' ');
+    clis.push({id:'cli-'+Date.now(),nombre:partes[0]||nombre,apellido:partes.slice(1).join(' ')||'',rut,email,tel,fecha_creacion:today()});
+    setClientes(clis);
+  }
+
+  // Rellenar campos del formulario de la orden
+  const fn=document.getElementById('f-nombre');if(fn)fn.value=nombre;
+  const ft=document.getElementById('f-tel');if(ft)ft.value=tel;
+  const fe=document.getElementById('f-email');if(fe)fe.value=email;
+  const fr=document.getElementById('f-rut');if(fr)fr.value=rut;
+
+  // Cerrar panel
+  const panel=document.getElementById('nuevo-cli-inline');if(panel)panel.style.display='none';
+  toast('Cliente creado y seleccionado','success');
+}
+
 function tp_openNewOrder(){
   tp_editingOrderId=null;tp_currentRepuestos=[];tp_photoBuffers={ingreso:[],salida:[]};
   const t=document.getElementById('order-modal-title');if(t)t.textContent='Nueva orden de trabajo';
   const s=document.getElementById('order-modal-sub');if(s)s.textContent='Completa los datos del cliente y equipo';
   const sb=document.getElementById('save-order-btn');if(sb)sb.textContent='Guardar orden';
   ['f-nombre','f-tel','f-email','f-rut','f-serie','f-pin','f-color','f-estadofisico','f-trabajo','f-presup','f-costo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const nci=document.getElementById('nuevo-cli-inline');if(nci)nci.style.display='none';
   tp_setPinMode('text');
   tp_clearModelo();
   const fs=document.getElementById('f-status');if(fs)fs.value='Chequeo';
@@ -7450,12 +7533,14 @@ function tp_renderModeloList(q){
   if(tp_modeloACCat&&tp_modeloACCat!=='Todos') list=list.filter(e=>(e.categoria||'Otros')===tp_modeloACCat);
   if(q){const lq=q.toLowerCase();list=list.filter(e=>(e.marca+' '+e.modelo).toLowerCase().includes(lq));}
   if(!list.length){cont.innerHTML=`<div class="modelo-ac-empty">No se encontraron equipos${q?` para "<strong>${q}</strong>"`:''}</div>`;return;}
-  cont.innerHTML=list.map(e=>`
-    <div class="modelo-ac-item" onclick="tp_selectModelo('${(e.marca+' '+e.modelo).replace(/'/g,"\\'")}')">
+  cont.innerHTML=list.map(e=>{
+    const displayName=`${e.modelo} [${e.marca}]`;
+    return `<div class="modelo-ac-item" onclick="tp_selectModelo('${displayName.replace(/'/g,"\\'")}')">
       <div class="modelo-ac-icon">${tp_getEquipoIcon(e.categoria)}</div>
-      <div class="modelo-ac-name">${e.marca} ${e.modelo}</div>
+      <div class="modelo-ac-name">${e.modelo} <span style="color:var(--text3);font-weight:400;font-size:12px">[${e.marca}]</span></div>
       ${e.categoria?`<div class="modelo-ac-cat-badge">${e.categoria}</div>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function tp_selectModelo(val){
   const inp=document.getElementById('f-modelo');if(inp)inp.value=val;
