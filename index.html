@@ -1948,7 +1948,7 @@ function modalNuevoTraslado(editId){
         </div>
         <div class="form-group" style="margin-bottom:0">
           <label>Precio acordado ($)</label>
-          <input id="tsl-precio-acordado" type="number" min="0" step="1" placeholder="0" value="${t.precio_acordado||''}">
+          <input id="tsl-precio-acordado" type="text" inputmode="numeric" placeholder="0" autocomplete="off" oninput="tp_formatPrecio(this)" value="${t.precio_acordado?parseInt(t.precio_acordado).toLocaleString('es-CL'):''}">
         </div>
       </div>
 
@@ -1998,7 +1998,7 @@ function guardarTraslado(editId){
     all[idx]={...all[idx],equipo,cliente:document.getElementById('tsl-cliente')?.value||'',
       tecnico,tecnico_tel:telRaw?'+56'+telRaw:'',
       condicion:document.getElementById('tsl-condicion')?.value||'enciende',
-      precio_acordado:parseFloat(document.getElementById('tsl-precio-acordado')?.value||'0')||0,
+      precio_acordado:parseInt((document.getElementById('tsl-precio-acordado')?.value||'0').replace(/\./g,''),10)||0,
       estado:all[idx].estado||'enviado',
       fecha_envio:document.getElementById('tsl-fecha-envio')?.value||today(),
       fecha_retorno_est:document.getElementById('tsl-fecha-retorno-est')?.value||'',
@@ -2012,7 +2012,7 @@ function guardarTraslado(editId){
       cliente:document.getElementById('tsl-cliente')?.value||'',
       tecnico,tecnico_tel:telRaw?'+56'+telRaw:'',
       condicion:document.getElementById('tsl-condicion')?.value||'enciende',
-      precio_acordado:parseFloat(document.getElementById('tsl-precio-acordado')?.value||'0')||0,
+      precio_acordado:parseInt((document.getElementById('tsl-precio-acordado')?.value||'0').replace(/\./g,''),10)||0,
       estado:'enviado',
       fecha_envio:document.getElementById('tsl-fecha-envio')?.value||today(),
       fecha_retorno_est:document.getElementById('tsl-fecha-retorno-est')?.value||'',
@@ -2338,7 +2338,7 @@ function _modalTrasladoDesdeOrden(t){
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Precio acordado ($)</label>
-            <input class="form-input" id="tsl-precio-acordado" type="number" min="0" step="1" placeholder="0" value="${t.precio_acordado||''}">
+            <input class="form-input" id="tsl-precio-acordado" type="text" inputmode="numeric" placeholder="0" autocomplete="off" oninput="tp_formatPrecio(this)" value="${t.precio_acordado?parseInt(t.precio_acordado).toLocaleString('es-CL'):''}">
           </div>
         </div>
 
@@ -2443,6 +2443,17 @@ function tp_showTechDropdown(){
 function tp_hideTechDropdown(){
   const dd=document.getElementById('tsl-tech-dropdown');
   if(dd) dd.style.display='none';
+}
+
+function tp_formatPrecio(inp){
+  const pos=inp.selectionStart;
+  const prevLen=inp.value.length;
+  const raw=inp.value.replace(/\D/g,'');
+  if(!raw){ inp.value=''; return; }
+  const formatted=parseInt(raw,10).toLocaleString('es-CL');
+  inp.value=formatted;
+  const diff=formatted.length-prevLen;
+  inp.setSelectionRange(pos+diff,pos+diff);
 }
 
 function tp_filterTecnicos(){
