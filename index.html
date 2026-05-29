@@ -738,7 +738,6 @@ select{cursor:pointer}
     <div class="nav-subitem" id="nav-categorias" onclick="nav('categorias')"><span class="icon">🏷️</span> Categorías</div>
   </div>
   <div class="nav-item" id="nav-kits" onclick="nav('kits')"><span class="icon">🔧</span> Kits / Equipos</div>
-  <div class="nav-item" id="nav-traslados" onclick="nav('traslados')"><span class="icon">🔄</span> Traslados</div>
   <div class="nav-item" id="nav-bodegas" onclick="nav('bodegas')"><span class="icon">🏭</span> Bodegas / Sucursales</div>
   <div class="nav-item" id="nav-estadisticas" onclick="nav('estadisticas')"><span class="icon">📈</span> Estadísticas</div>
   <div style="border-top:1px solid rgba(255,255,255,.1);margin:8px 16px"></div>
@@ -2070,6 +2069,172 @@ function eliminarTraslado(id){
   setTraslados(getTraslados().filter(t=>t.id!==id));
   _renderTrasladosContent();
   toast('Traslado eliminado');
+}
+
+// ─── TRASLADOS DESDE TALLER ───
+function tp_derivarOrden(orderId){
+  const o=tp_orders.find(x=>x.id===orderId);
+  if(!o) return;
+  // Si ya tiene un traslado activo, abrir el modal de edición
+  const existing=getTraslados().find(t=>t.order_id===orderId&&t.estado!=='retornado');
+  if(existing){ tp_editarTraslado(existing.id); return; }
+  // Pre-llenar con datos de la orden
+  const pseudo={
+    equipo:[o.modelo,o.color].filter(Boolean).join(' · ')+(o.serie?` · Serie: ${o.serie}`:''),
+    cliente:o.nombre||'',
+    motivo:o.trabajo||'',
+    notas:o.estadofisico?`Estado físico: ${o.estadofisico}`:'',
+    condicion:'regular',
+    estado:'enviado',
+    fecha_envio:today(),
+    _order_id:orderId
+  };
+  _modalTrasladoDesdeOrden(pseudo);
+}
+
+function tp_editarTraslado(tslId){
+  const t=getTraslados().find(x=>x.id===tslId);
+  if(!t) return;
+  _modalTrasladoDesdeOrden({...t, _editId:tslId});
+}
+
+function tp_cambiarEstadoTsl(tslId, nuevoEstado){
+  const all=getTraslados();
+  const idx=all.findIndex(t=>t.id===tslId);
+  if(idx<0) return;
+  all[idx].estado=nuevoEstado;
+  if(nuevoEstado==='retornado'&&!all[idx].fecha_retorno) all[idx].fecha_retorno=today();
+  setTraslados(all);
+  // Refrescar el detalle de la orden actual
+  const orderId=all[idx].order_id;
+  if(orderId) tp_openDetail(orderId);
+  toast('Estado actualizado','success');
+}
+
+function tp_verTraslado(tslId){ tp_editarTraslado(tslId); }
+
+function _modalTrasladoDesdeOrden(t){
+  const editId=t._editId||'';
+  const orderId=t._order_id||t.order_id||'';
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3>${editId?'Editar derivación':'Derivar a técnico externo'}</h3>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:2px">${t.equipo||''}</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tsl-order-id" value="${orderId}">
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Equipo <span style="color:var(--danger)">*</span></label>
+          <input id="tsl-equipo" type="text" value="${t.equipo||''}" placeholder="Modelo, color, serie…">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Cliente</label>
+          <input id="tsl-cliente" type="text" value="${t.cliente||''}" placeholder="Nombre del dueño">
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Técnico externo <span style="color:var(--danger)">*</span></label>
+          <input id="tsl-tecnico" type="text" value="${t.tecnico||''}" placeholder="Nombre o empresa">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Teléfono técnico</label>
+          <div style="display:flex;align-items:center;border:1.5px solid var(--gray-300);border-radius:7px;overflow:hidden;height:38px">
+            <span style="padding:0 10px;background:var(--gray-50);color:var(--gray-500);font-size:13px;border-right:1.5px solid var(--gray-200);height:100%;display:flex;align-items:center">+56</span>
+            <input id="tsl-tecnico-tel" type="tel" value="${(t.tecnico_tel||'').replace(/^\+56/,'')}" placeholder="9 1234 5678"
+              style="border:none;outline:none;flex:1;padding:0 10px;font-size:14px;height:100%">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Condición al enviar</label>
+          <select id="tsl-condicion">
+            <option value="bueno" ${(t.condicion||'')==='bueno'?'selected':''}>✅ Bueno</option>
+            <option value="regular" ${(t.condicion||'regular')==='regular'?'selected':''}>⚠️ Regular</option>
+            <option value="dañado" ${t.condicion==='dañado'?'selected':''}>❌ Dañado</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Estado</label>
+          <select id="tsl-estado">
+            <option value="enviado" ${(t.estado||'enviado')==='enviado'?'selected':''}>📤 Enviado</option>
+            <option value="en-revision" ${t.estado==='en-revision'?'selected':''}>🔍 En revisión</option>
+            <option value="listo" ${t.estado==='listo'?'selected':''}>✅ Listo para retirar</option>
+            <option value="con-problema" ${t.estado==='con-problema'?'selected':''}>⚠️ Con problema</option>
+            <option value="retornado" ${t.estado==='retornado'?'selected':''}>↩️ Retornado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Fecha de envío</label>
+          <input id="tsl-fecha-envio" type="date" value="${t.fecha_envio||today()}" onclick="this.showPicker()" style="cursor:pointer">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Fecha estimada de retorno</label>
+          <input id="tsl-fecha-retorno-est" type="date" value="${t.fecha_retorno_est||''}" onclick="this.showPicker()" style="cursor:pointer">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:10px">
+        <label>Problema / motivo del traslado</label>
+        <textarea id="tsl-motivo" rows="2" placeholder="Qué falla tiene y qué se espera del técnico…">${t.motivo||''}</textarea>
+      </div>
+      <div class="form-group">
+        <label>Notas adicionales</label>
+        <textarea id="tsl-notas" rows="2" placeholder="Accesorios incluidos, precio acordado, observaciones…">${t.notas||''}</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="_guardarTrasladoDesdeOrden('${editId}')">
+        ${editId?'💾 Guardar cambios':'🔄 Derivar equipo'}
+      </button>
+    </div>
+  </div></div>`);
+}
+
+function _guardarTrasladoDesdeOrden(editId){
+  const equipo=(document.getElementById('tsl-equipo')?.value||'').trim();
+  const tecnico=(document.getElementById('tsl-tecnico')?.value||'').trim();
+  if(!equipo){ toast('Ingresa descripción del equipo','error'); return; }
+  if(!tecnico){ toast('Ingresa el técnico externo','error'); return; }
+  const orderId=document.getElementById('tsl-order-id')?.value||'';
+  const telRaw=(document.getElementById('tsl-tecnico-tel')?.value||'').replace(/\s/g,'');
+  const data={
+    equipo, cliente:document.getElementById('tsl-cliente')?.value||'',
+    tecnico, tecnico_tel:telRaw?'+56'+telRaw:'',
+    condicion:document.getElementById('tsl-condicion')?.value||'regular',
+    estado:document.getElementById('tsl-estado')?.value||'enviado',
+    fecha_envio:document.getElementById('tsl-fecha-envio')?.value||today(),
+    fecha_retorno_est:document.getElementById('tsl-fecha-retorno-est')?.value||'',
+    motivo:document.getElementById('tsl-motivo')?.value||'',
+    notas:document.getElementById('tsl-notas')?.value||'',
+    order_id:orderId
+  };
+  const all=getTraslados();
+  if(editId){
+    const idx=all.findIndex(t=>t.id===editId);
+    if(idx>=0){ all[idx]={...all[idx],...data}; setTraslados(all); toast('Derivación actualizada','success'); }
+  } else {
+    const num=(all.length?Math.max(...all.map(t=>t.numero||0))+1:1);
+    all.push({id:uid(),numero:num,...data,fecha_retorno:''});
+    setTraslados(all);
+    toast('Equipo derivado correctamente','success');
+  }
+  closeModal();
+  if(orderId) tp_openDetail(orderId);
 }
 
 function modalNuevoKit(editId){
@@ -7005,11 +7170,47 @@ function tp_openDetail(id){
         ${checkHtml(o.checkSalida,'Checklist de salida')}
         ${photosHtml(o.photosSalida,'Fotos de salida')}
       </div>`:''}
+      ${(()=>{
+        const tsl=getTraslados().find(t=>t.order_id===o.id);
+        if(!tsl) return '';
+        const estadoLabel={'enviado':'📤 Enviado','en-revision':'🔍 En revisión','listo':'✅ Listo para retirar','retornado':'↩️ Retornado','con-problema':'⚠️ Con problema'};
+        const condColor={'bueno':'#dcfce7;color:#166534','regular':'#fef9c3;color:#854d0e','dañado':'#fee2e2;color:#991b1b'};
+        return `<div class="od-section" style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:14px 16px;margin-top:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-weight:700;font-size:13px;color:#92400e">🔄 Derivado externamente</span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <select onchange="tp_cambiarEstadoTsl('${tsl.id}',this.value)"
+                style="border:1.5px solid #fde68a;border-radius:8px;padding:3px 8px;font-size:12px;background:#fffbeb;color:#92400e;cursor:pointer">
+                <option value="enviado" ${tsl.estado==='enviado'?'selected':''}>📤 Enviado</option>
+                <option value="en-revision" ${tsl.estado==='en-revision'?'selected':''}>🔍 En revisión</option>
+                <option value="listo" ${tsl.estado==='listo'?'selected':''}>✅ Listo</option>
+                <option value="con-problema" ${tsl.estado==='con-problema'?'selected':''}>⚠️ Con problema</option>
+                <option value="retornado" ${tsl.estado==='retornado'?'selected':''}>↩️ Retornado</option>
+              </select>
+              <button onclick="tp_editarTraslado('${tsl.id}')" style="background:none;border:1.5px solid #fde68a;border-radius:7px;padding:3px 10px;font-size:12px;color:#92400e;cursor:pointer">✏️ Editar</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:12.5px">
+            <div><span style="color:#a16207;font-weight:500">Técnico:</span> ${tsl.tecnico||'—'}</div>
+            <div><span style="color:#a16207;font-weight:500">Teléfono:</span> ${tsl.tecnico_tel||'—'}</div>
+            <div><span style="color:#a16207;font-weight:500">Fecha envío:</span> ${tsl.fecha_envio||'—'}</div>
+            <div><span style="color:#a16207;font-weight:500">Retorno estimado:</span> ${tsl.fecha_retorno_est||'—'}</div>
+            ${tsl.condicion?`<div><span style="color:#a16207;font-weight:500">Condición:</span> <span style="background:${condColor[tsl.condicion]||'#f1f5f9;color:#475569'};padding:1px 7px;border-radius:6px;font-size:11px;font-weight:600">${tsl.condicion}</span></div>`:''}
+            ${tsl.motivo?`<div style="grid-column:1/-1"><span style="color:#a16207;font-weight:500">Motivo:</span> ${tsl.motivo}</div>`:''}
+            ${tsl.notas?`<div style="grid-column:1/-1"><span style="color:#a16207;font-weight:500">Notas:</span> ${tsl.notas}</div>`:''}
+          </div>
+        </div>`;
+      })()}
     </div>
     <div class="od-footer">
       <button class="btn btn-danger btn-sm" onclick="tp_deleteOrder('${o.id}')">Eliminar</button>
       <button class="btn btn-default btn-sm" onclick="tp_printOrder('${o.id}')">Imprimir</button>
       <div class="ml-auto"></div>
+      ${(()=>{const tsl=getTraslados().find(t=>t.order_id===o.id&&t.estado!=='retornado');
+        return tsl
+          ? `<button class="btn btn-sm" style="background:#fef9c3;color:#854d0e;border:1.5px solid #fde68a;font-weight:600" onclick="tp_verTraslado('${tsl.id}')">🔄 Derivado · ${({enviado:'Enviado','en-revision':'En revisión',listo:'Listo',retornado:'Retornado','con-problema':'Con problema'})[tsl.estado]||tsl.estado}</button>`
+          : `<button class="btn btn-default btn-sm" onclick="tp_derivarOrden('${o.id}')">🔄 Derivar externamente</button>`;
+      })()}
       <button class="btn btn-default btn-sm" onclick="tp_closeModal('mod-detail')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         Editar orden
