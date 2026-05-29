@@ -2169,8 +2169,8 @@ function tp_derivarOrden(orderId){
   const pseudo={
     equipo:[o.modelo,o.color].filter(Boolean).join(' · ')+(o.serie?` · Serie: ${o.serie}`:''),
     cliente:o.nombre||'',
-    motivo:o.trabajo||'',
-    notas:o.estadofisico?`Estado físico: ${o.estadofisico}`:'',
+    motivo:'',
+    notas:'',
     condicion:'enciende',
     precio_acordado:0,
     estado:'enviado',
