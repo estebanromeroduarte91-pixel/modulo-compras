@@ -2239,21 +2239,6 @@ function _modalTrasladoDesdeOrden(t){
   const tecnicos=getTecnicosExt();
   const tecSelId=t.tecnico_ext_id||'';
 
-  // Renderizar lista de técnicos guardados
-  const techListHtml=tecnicos.length
-    ? tecnicos.map(tc=>`
-      <div id="tech-card-${tc.id}" onclick="tp_seleccionarTecnico('${tc.id}')"
-        style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1.5px solid ${tecSelId===tc.id?'var(--accent)':'var(--border)'};border-radius:10px;cursor:pointer;background:${tecSelId===tc.id?'rgba(99,102,241,.06)':'var(--surface)'};transition:all .15s;margin-bottom:6px">
-        <div style="width:36px;height:36px;border-radius:50%;background:${tecSelId===tc.id?'var(--accent)':'var(--surface2)'};color:${tecSelId===tc.id?'#fff':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
-          ${tc.nombre.charAt(0).toUpperCase()}
-        </div>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:13px">${tc.nombre}</div>
-          <div style="font-size:11.5px;color:var(--text2)">${tc.tel||'Sin teléfono'}${tc.notas?` · ${tc.notas}`:''}</div>
-        </div>
-        ${tecSelId===tc.id?`<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>`:''}
-      </div>`).join('')
-    : `<div style="text-align:center;padding:20px 0;color:var(--text2);font-size:13px">Sin técnicos guardados aún</div>`;
 
   document.getElementById('mod-tsl-inner').innerHTML=`
     <div class="modal-header">
@@ -2283,8 +2268,34 @@ function _modalTrasladoDesdeOrden(t){
           </button>
         </div>
 
+        <!-- Buscador de técnico con dropdown flotante -->
+        <div style="position:relative;margin-bottom:10px" id="tsl-tech-search-wrap">
+          <div style="display:flex;align-items:center;border:1.5px solid var(--border);border-radius:9px;overflow:hidden;height:38px;background:var(--surface);transition:border-color .15s" id="tsl-tech-search-box">
+            <span style="padding:0 10px;color:var(--text3);display:flex;align-items:center;flex-shrink:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input type="text" id="tsl-tech-search" placeholder="Buscar técnico por nombre o empresa…" autocomplete="off"
+              oninput="tp_filterTecnicos()"
+              onfocus="tp_showTechDropdown()"
+              style="border:none;outline:none;flex:1;padding:0 10px 0 0;font-size:13px;background:transparent;color:var(--text1);font-family:inherit">
+          </div>
+        </div>
+
+        <!-- Chip del técnico seleccionado -->
+        <div id="tsl-tech-selected" style="display:${tecSelId?'flex':'none'};align-items:center;gap:10px;padding:9px 12px;border:1.5px solid var(--accent);border-radius:10px;background:rgba(99,102,241,.06);margin-bottom:2px">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0" id="tsl-tech-avatar">
+            ${tecSelId?(getTecnicosExt().find(t=>t.id===tecSelId)?.nombre||'?').charAt(0).toUpperCase():''}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--text1)" id="tsl-tech-name">${tecSelId?(getTecnicosExt().find(t=>t.id===tecSelId)?.nombre||''):'—'}</div>
+            <div style="font-size:11px;color:var(--text3)" id="tsl-tech-sub">${tecSelId?(()=>{const tc=getTecnicosExt().find(t=>t.id===tecSelId);return [tc?.tel,tc?.notas].filter(Boolean).join(' · ');})():''}</div>
+          </div>
+          <button type="button" onclick="tp_deseleccionarTecnico()" title="Cambiar técnico"
+            style="padding:3px;border:none;background:none;cursor:pointer;color:var(--text3);line-height:1;font-size:16px">✕</button>
+        </div>
+
         <!-- Form nuevo técnico (inline colapsable) -->
-        <div id="nuevo-tec-form" style="display:none;background:var(--bg);border:1.5px solid var(--accent);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+        <div id="nuevo-tec-form" style="display:none;background:var(--bg);border:1.5px solid var(--accent);border-radius:10px;padding:12px 14px;margin-top:10px">
           <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:10px;letter-spacing:.5px">AGREGAR TÉCNICO AL CATÁLOGO</div>
           <div class="form-row" style="margin-bottom:10px">
             <div class="form-group" style="margin-bottom:0">
@@ -2308,9 +2319,6 @@ function _modalTrasladoDesdeOrden(t){
             <button type="button" onclick="tp_guardarNuevoTecnico()" style="padding:5px 14px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✓ Guardar técnico</button>
           </div>
         </div>
-
-        <!-- Lista de técnicos guardados -->
-        <div id="tsl-tech-list">${techListHtml}</div>
       </div>
 
       <!-- SECCIÓN 2: DETALLE DE LA DERIVACIÓN -->
@@ -2406,25 +2414,90 @@ function tp_guardarNuevoTecnico(){
 
 function tp_seleccionarTecnico(id){
   document.getElementById('tsl-tecnico-ext-id').value=id;
-  _refreshTechList(id, getTecnicosExt());
+  tp_hideTechDropdown();
+  const inp=document.getElementById('tsl-tech-search');
+  if(inp) inp.value='';
+  _refreshTechChip(id);
+}
+
+function tp_deseleccionarTecnico(){
+  document.getElementById('tsl-tecnico-ext-id').value='';
+  const chip=document.getElementById('tsl-tech-selected');
+  if(chip) chip.style.display='none';
+  const inp=document.getElementById('tsl-tech-search');
+  if(inp){ inp.value=''; inp.focus(); }
+}
+
+function tp_showTechDropdown(){
+  const inp=document.getElementById('tsl-tech-search');
+  if(!inp) return;
+  const dd=document.getElementById('tsl-tech-dropdown');
+  if(!dd) return;
+  const rect=inp.getBoundingClientRect();
+  dd.style.top=(rect.bottom+6)+'px';
+  dd.style.left=rect.left+'px';
+  dd.style.width=rect.width+'px';
+  tp_filterTecnicos();
+}
+
+function tp_hideTechDropdown(){
+  const dd=document.getElementById('tsl-tech-dropdown');
+  if(dd) dd.style.display='none';
+}
+
+function tp_filterTecnicos(){
+  const dd=document.getElementById('tsl-tech-dropdown');
+  if(!dd) return;
+  const q=(document.getElementById('tsl-tech-search')?.value||'').toLowerCase().trim();
+  const tecnicos=getTecnicosExt();
+  const filtered=q?tecnicos.filter(tc=>tc.nombre.toLowerCase().includes(q)||(tc.notas||'').toLowerCase().includes(q)):tecnicos;
+  if(!filtered.length){
+    dd.innerHTML=`<div style="padding:14px 16px;font-size:13px;color:var(--text3)">Sin resultados</div>`;
+    dd.style.display='block'; return;
+  }
+  dd.innerHTML=filtered.map(tc=>`
+    <div onmousedown="tp_seleccionarTecnico('${tc.id}')"
+      style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
+      <div style="width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${tc.nombre.charAt(0).toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text1)">${tc.nombre}</div>
+        <div style="font-size:11px;color:var(--text3)">${[tc.tel,tc.notas].filter(Boolean).join(' · ')}</div>
+      </div>
+    </div>`).join('');
+  dd.style.display='block';
+}
+
+function _refreshTechChip(selId){
+  const chip=document.getElementById('tsl-tech-selected');
+  if(!chip) return;
+  if(!selId){ chip.style.display='none'; return; }
+  const tc=getTecnicosExt().find(t=>t.id===selId);
+  if(!tc){ chip.style.display='none'; return; }
+  chip.style.display='flex';
+  const av=document.getElementById('tsl-tech-avatar');
+  const nm=document.getElementById('tsl-tech-name');
+  const sb=document.getElementById('tsl-tech-sub');
+  if(av) av.textContent=tc.nombre.charAt(0).toUpperCase();
+  if(nm) nm.textContent=tc.nombre;
+  if(sb) sb.textContent=[tc.tel,tc.notas].filter(Boolean).join(' · ');
 }
 
 function _refreshTechList(selId, tecnicos){
+  _refreshTechChip(selId);
+  if(selId){
+    const inp=document.getElementById('tsl-tech-search');
+    if(inp) inp.value='';
+    tp_hideTechDropdown();
+  }
+  const hidden=document.getElementById('tsl-tecnico-ext-id');
+  if(hidden) hidden.value=selId||'';
+  // legacy compat — no-op if list container gone
   const cont=document.getElementById('tsl-tech-list');
   if(!cont) return;
-  cont.innerHTML=tecnicos.map(tc=>`
-    <div id="tech-card-${tc.id}" onclick="tp_seleccionarTecnico('${tc.id}')"
-      style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1.5px solid ${selId===tc.id?'var(--accent)':'var(--border)'};border-radius:10px;cursor:pointer;background:${selId===tc.id?'rgba(99,102,241,.06)':'var(--surface)'};transition:all .15s;margin-bottom:6px">
-      <div style="width:36px;height:36px;border-radius:50%;background:${selId===tc.id?'var(--accent)':'var(--surface2)'};color:${selId===tc.id?'#fff':'var(--text2)'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
-        ${tc.nombre.charAt(0).toUpperCase()}
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:13px">${tc.nombre}</div>
-        <div style="font-size:11.5px;color:var(--text2)">${tc.tel||'Sin teléfono'}${tc.notas?` · ${tc.notas}`:''}</div>
-      </div>
-      ${selId===tc.id?`<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>`:''}
-    </div>`).join('');
+  cont.innerHTML='';
 }
+
 
 function _guardarTrasladoDesdeOrden(editId){
   const equipo=(document.getElementById('tsl-equipo')?.value||'').trim();
@@ -6646,6 +6719,9 @@ function renderTaller() {
     <div class="modal" style="width:520px;max-width:96vw"><div id="mod-tsl-inner"></div></div>
   </div>
 
+  <!-- DROPDOWN FLOTANTE TÉCNICOS (fuera del modal para sobreponer) -->
+  <div id="tsl-tech-dropdown" style="display:none;position:fixed;z-index:99999;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:220px;overflow-y:auto;min-width:240px"></div>
+
   <!-- ADD REPUESTO -->
   <div class="overlay" id="mod-repuesto">
   <div class="modal" style="width:420px">
@@ -8335,6 +8411,12 @@ function tp_addListeners(){
   document.addEventListener('click',function(e){
     const panel=document.getElementById('notif-panel');const btn=document.getElementById('notif-btn');
     if(panel&&panel.style.display!=='none'&&!panel.contains(e.target)&&btn&&!btn.contains(e.target))panel.style.display='none';
+  });
+  // Close tech dropdown on outside click
+  document.addEventListener('click',function(e){
+    const dd=document.getElementById('tsl-tech-dropdown');
+    const wrap=document.getElementById('tsl-tech-search-wrap');
+    if(dd&&dd.style.display!=='none'&&!dd.contains(e.target)&&wrap&&!wrap.contains(e.target)) tp_hideTechDropdown();
   });
   // Close modals on overlay click
   ['mod-order','mod-detail','mod-salida','mod-send','mod-product','mod-upload','mod-repuesto','mod-branch','mod-edit-client','mod-pattern','mod-client-history','mod-equipo','mod-equipo-upload'].forEach(id=>{
