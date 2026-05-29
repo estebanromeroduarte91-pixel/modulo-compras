@@ -7488,7 +7488,25 @@ function tp_openDetail(id){
   const statuses=['Chequeo','Reparación','Listo','Entregado'];
   const si=statuses.indexOf(o.status);
   const pipelineHtml=statuses.map((s,i)=>`<button class="od-pipe-step ${i<si?'done':i===si?'active':''}" onclick="tp_updateStatus('${o.id}','${s}')">${s}</button>`).join('');
-  const checkHtml=(arr,label)=>!arr?.length?'':`<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">${label}</div>${arr.map(c=>`<div class="detail-checklist-item">${c.checked?'<span class="check-ok">✓</span>':'<span class="check-fail">✗</span>'}<span>${c.label}</span></div>`).join('')}`;
+  const checkHtml=(arr,label)=>{
+    if(!arr?.length) return '';
+    const ok=arr.filter(c=>c.checked).length;
+    const total=arr.length;
+    const uid_cl='cl-'+Math.random().toString(36).slice(2,7);
+    return `<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div onclick="(function(el){const b=el.querySelector('.cl-body');const arr=el.querySelector('.cl-arrow');const open=b.style.display!=='none';b.style.display=open?'none':'block';arr.style.transform=open?'rotate(0deg)':'rotate(180deg)';})(this.closest('.cl-wrap'))"
+        style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer;background:var(--surface);user-select:none" class="cl-wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${label}</span>
+          <span style="font-size:11px;padding:1px 7px;border-radius:10px;font-weight:600;background:${ok===total?'var(--green-bg)':'var(--orange-bg)'};color:${ok===total?'var(--green)':'var(--orange)'}">${ok}/${total}</span>
+        </div>
+        <svg class="cl-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;color:var(--text3);transition:transform .2s;transform:rotate(0deg)"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="cl-body" style="display:none;border-top:1px solid var(--border)">
+        ${arr.map(c=>`<div class="detail-checklist-item" style="padding:7px 14px">${c.checked?'<span class="check-ok">✓</span>':'<span class="check-fail">✗</span>'}<span>${c.label}</span></div>`).join('')}
+      </div>
+    </div>`;
+  };
   const photosHtml=(arr,label)=>!arr?.length?'':`<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">${label}</div><div class="detail-photos">${arr.map(src=>`<img src="${src}">`).join('')}</div>`;
   const repHtml=tp_buildRepHtml(o);
   const initials=o.nombre.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
