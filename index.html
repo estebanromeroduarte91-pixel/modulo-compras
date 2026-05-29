@@ -2112,6 +2112,9 @@ function _renderTslPopup(orderId){
         ${t.motivo?`<div style="grid-column:1/-1"><span style="font-weight:500">Motivo:</span> ${t.motivo}</div>`:''}
         ${t.notas?`<div style="grid-column:1/-1"><span style="font-weight:500">Notas:</span> ${t.notas}</div>`:''}
       </div>
+      ${t.fotos?.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+        ${t.fotos.map(src=>`<img src="${src}" style="width:64px;height:64px;object-fit:cover;border-radius:7px;border:1.5px solid var(--border);cursor:pointer" onclick="tp_verFotoTsl('${src}')">`).join('')}
+      </div>`:''}
     </div>`).join('')
   :`<div style="text-align:center;padding:28px 0;color:var(--text2)">
       <div style="font-size:36px;margin-bottom:10px">🔄</div>
@@ -2179,6 +2182,39 @@ function tp_editarTraslado(tslId){
   const t=getTraslados().find(x=>x.id===tslId);
   if(!t) return;
   _modalTrasladoDesdeOrden({...t, _editId:tslId});
+}
+
+function tp_verFotoTsl(src){
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:pointer';
+  ov.onclick=()=>ov.remove();
+  ov.innerHTML=`<img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)">`;
+  document.body.appendChild(ov);
+}
+
+function tp_handleTslPhotos(inp){
+  const files=Array.from(inp.files);
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=e=>{ tp_tslPhotoBuffer.push(e.target.result); _renderTslPhotosGrid(); };
+    r.readAsDataURL(f);
+  });
+  inp.value='';
+}
+
+function _renderTslPhotosGrid(){
+  const grid=document.getElementById('tsl-photos-grid');
+  if(!grid) return;
+  grid.innerHTML=tp_tslPhotoBuffer.map((src,i)=>`
+    <div style="position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border)">
+      <img src="${src}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="tp_removeTslPhoto(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>`).join('');
+}
+
+function tp_removeTslPhoto(idx){
+  tp_tslPhotoBuffer.splice(idx,1);
+  _renderTslPhotosGrid();
 }
 
 function tp_cambiarEstadoTsl(tslId, nuevoEstado){
@@ -2275,6 +2311,16 @@ function _modalTrasladoDesdeOrden(t){
         <label class="form-label">Notas adicionales</label>
         <textarea class="form-input" id="tsl-notas" rows="2" placeholder="Accesorios incluidos, precio acordado, observaciones…">${t.notas||''}</textarea>
       </div>
+
+      <div class="form-group" style="margin-top:4px">
+        <label class="form-label">Fotos del estado al enviar</label>
+        <div id="tsl-photos-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
+        <button type="button" onclick="document.getElementById('tsl-photo-inp').click()"
+          style="margin-top:8px;display:flex;align-items:center;gap:6px;border:1.5px dashed var(--border);border-radius:8px;padding:7px 14px;background:none;cursor:pointer;color:var(--text2);font-size:13px;font-family:inherit">
+          📷 Agregar fotos
+        </button>
+        <input type="file" id="tsl-photo-inp" accept="image/*" multiple style="display:none" onchange="tp_handleTslPhotos(this)">
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost btn-sm" onclick="tp_closeModal('mod-tsl')">Cancelar</button>
@@ -2282,7 +2328,10 @@ function _modalTrasladoDesdeOrden(t){
         ${editId?'💾 Guardar cambios':'🔄 Guardar traslado'}
       </button>
     </div>`;
+  // Cargar fotos existentes del traslado si está editando
+  tp_tslPhotoBuffer=[...(t.fotos||[])];
   document.getElementById('mod-tsl').classList.add('open');
+  setTimeout(()=>_renderTslPhotosGrid(),50);
 }
 
 function _guardarTrasladoDesdeOrden(editId){
@@ -2301,6 +2350,7 @@ function _guardarTrasladoDesdeOrden(editId){
     fecha_retorno_est:document.getElementById('tsl-fecha-retorno-est')?.value||'',
     motivo:document.getElementById('tsl-motivo')?.value||'',
     notas:document.getElementById('tsl-notas')?.value||'',
+    fotos:[...tp_tslPhotoBuffer],
     order_id:orderId
   };
   const all=getTraslados();
@@ -6171,6 +6221,7 @@ function renderTaller() {
       <button class="pipeline-tab" onclick="tp_filterOrders('Chequeo',this)">Entrada <span class="count" id="cnt-chequeo">0</span></button>
       <button class="pipeline-tab" onclick="tp_filterOrders('Reparación',this)">Reparación <span class="count" id="cnt-rep">0</span></button>
       <button class="pipeline-tab" onclick="tp_filterOrders('Listo',this)">Salida <span class="count" id="cnt-listo">0</span></button>
+      <button class="pipeline-tab" id="btn-tab-derivado" onclick="tp_filterOrders('Derivado',this)" style="color:#92400e">🔄 Derivados <span class="count" id="cnt-derivado" style="background:#fef3c7;color:#92400e">0</span></button>
       <button class="pipeline-tab pipeline-tab-archive" id="btn-tab-archivo" onclick="tp_filterOrders('Entregado',this)" style="margin-left:auto;color:var(--text3);border-left:1px solid var(--border);padding-left:14px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-right:4px;vertical-align:-1px"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
         Órdenes entregadas <span class="count" id="cnt-ent" style="background:var(--surface2);color:var(--text2)">0</span>
@@ -6855,6 +6906,7 @@ let tp_currentBranchId=null, tp_editingBranchId=null;
 let tp_editingOrderId=null, tp_editingProductId=null;
 let tp_salidasOrderId=null, tp_currentFilter='todos';
 let tp_photoBuffers={ingreso:[],salida:[]};
+let tp_tslPhotoBuffer=[];
 let tp_pendingImport=[], tp_currentRepuestos=[];
 let tp_selectedRepProduct=null, tp_chartInstances={};
 let tp_checklistIngreso=[], tp_checklistSalida=[];
@@ -7001,17 +7053,24 @@ function tp_updateHeader(){
   const el_mi=document.getElementById('monthly-income');if(el_mi)el_mi.textContent='$'+inc.toLocaleString('es-CL');
   const el_il=document.getElementById('income-orders-lbl');if(el_il)el_il.textContent=mo.length+' orden'+(mo.length!==1?'es':'')+' este mes';
   const el_te=document.getElementById('taller-estado');if(el_te)el_te.textContent=open===0?'Todo en orden':open+' en proceso';
-  ['todos','chequeo','rep','listo','ent'].forEach(k=>{
+  const derivadoIds=new Set(getTraslados().filter(t=>t.estado!=='retornado'&&t.order_id).map(t=>t.order_id));
+  ['todos','chequeo','rep','listo','derivado','ent'].forEach(k=>{
     const el=document.getElementById('cnt-'+k);if(!el)return;
     const map={chequeo:'Chequeo',rep:'Reparación',listo:'Listo',ent:'Entregado'};
-    el.textContent=k==='todos'?bo.filter(o=>o.status!=='Entregado').length:bo.filter(o=>o.status===map[k]).length;
+    if(k==='todos') el.textContent=bo.filter(o=>o.status!=='Entregado').length;
+    else if(k==='derivado') el.textContent=bo.filter(o=>o.status!=='Entregado'&&derivadoIds.has(o.id)).length;
+    else el.textContent=bo.filter(o=>o.status===map[k]).length;
   });
 }
 function tp_getFiltered(){
   const archiveQ=tp_currentFilter==='Entregado'?(document.getElementById('archivo-search')?.value||'').trim().toLowerCase():'';
+  const derivadoIds=tp_currentFilter==='Derivado'?new Set(getTraslados().filter(t=>t.estado!=='retornado'&&t.order_id).map(t=>t.order_id)):null;
   return tp_orders.filter(o=>{
     const branchOk=!tp_currentBranchId||o.branchId===tp_currentBranchId;
-    const statusOk=tp_currentFilter==='todos'?o.status!=='Entregado':o.status===tp_currentFilter;
+    let statusOk;
+    if(tp_currentFilter==='todos') statusOk=o.status!=='Entregado';
+    else if(tp_currentFilter==='Derivado') statusOk=o.status!=='Entregado'&&derivadoIds.has(o.id);
+    else statusOk=o.status===tp_currentFilter;
     if(!branchOk||!statusOk)return false;
     if(archiveQ){const num=(o.num||'').toString().toLowerCase();const nombre=(o.nombre||'').toLowerCase();const rut=(o.rut||'').toLowerCase();return num.includes(archiveQ)||nombre.includes(archiveQ)||rut.includes(archiveQ);}
     return true;
@@ -7021,7 +7080,7 @@ function tp_filterOrders(f,btn){
   tp_currentFilter=f;
   document.querySelectorAll('.pipeline-tab').forEach(t=>t.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  const titles={todos:'Órdenes activas',Chequeo:'Entrada — Chequeo',Reparación:'En reparación',Listo:'Salida — Listos para entregar',Entregado:'Archivo — Órdenes entregadas'};
+  const titles={todos:'Órdenes activas',Chequeo:'Entrada — Chequeo',Reparación:'En reparación',Listo:'Salida — Listos para entregar',Derivado:'🔄 Equipos derivados externamente',Entregado:'Archivo — Órdenes entregadas'};
   const el_tt=document.getElementById('table-title');if(el_tt)el_tt.textContent=titles[f]||f;
   const banner=document.getElementById('archive-banner');
   if(banner)banner.style.display=f==='Entregado'?'flex':'none';
@@ -7033,15 +7092,18 @@ function tp_renderOrders(){
   const el_tc=document.getElementById('table-count');if(el_tc)el_tc.textContent=list.length+' registro'+(list.length!==1?'s':'');
   const tbody=document.getElementById('orders-tbody');if(!tbody)return;
   if(!list.length){tbody.innerHTML='<tr class="empty-row"><td colspan="8">No hay órdenes para mostrar. Crea la primera con "+ Crear".</td></tr>';return;}
+  const _derivadoIds=new Set(getTraslados().filter(t=>t.estado!=='retornado'&&t.order_id).map(t=>t.order_id));
   tbody.innerHTML=list.map(o=>{
     const age=tp_getOrderAge(o);
     const rowClass=o.status!=='Entregado'?(age>14?'row-late':age>7?'row-warn':''):'';
     const ageClass=o.status==='Entregado'?'age-ok':(age>14?'age-late':age>7?'age-warn':'age-ok');
     const ageLabel=o.status==='Entregado'?'Entregado':(age===0?'Hoy':age===1?'1 día':age+' días');
+    const isDerived=_derivadoIds.has(o.id);
+    const derivedTsl=isDerived?getTraslados().find(t=>t.order_id===o.id&&t.estado!=='retornado'):null;
     return `<tr class="${rowClass}" onclick="tp_openDetail('${o.id}')">
       <td><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></td>
       <td class="num-cell">${o.num}</td>
-      <td>${tp_badge(o.status)}</td>
+      <td>${tp_badge(o.status)}${isDerived?`<span style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 7px;font-size:10.5px;font-weight:600;margin-left:4px">🔄 ${derivedTsl?.tecnico||'Derivado'}</span>`:''}</td>
       <td class="model-cell"><div class="model-name">${o.modelo}</div><div class="model-sub">${o.color||'—'} ${o.serie?'· '+o.serie:''}</div></td>
       <td class="client-cell"><div class="client-name">${o.nombre}</div><div class="client-contact">${o.tel||o.email||'—'}</div></td>
       <td><div style="font-size:12px;color:var(--text2)">${o.fecha?tp_fmtDate(o.fecha):'—'}</div><span class="age-chip ${ageClass}">${ageLabel}</span></td>
