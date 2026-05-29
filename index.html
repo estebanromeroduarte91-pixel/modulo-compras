@@ -239,6 +239,21 @@ select{cursor:pointer}
 .search-bar::before{content:'🔍';position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px}
 
 /* PRODUCT FILTERS */
+/* TRASLADOS */
+.tsl-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
+.tsl-stat-card{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.tsl-stat-card .tsl-stat-num{font-size:28px;font-weight:700;line-height:1}
+.tsl-stat-card .tsl-stat-label{font-size:12px;color:var(--gray-400);font-weight:500}
+.tsl-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600}
+.tsl-badge.enviado{background:#fef9c3;color:#854d0e}
+.tsl-badge.en-revision{background:#ede9fe;color:#6d28d9}
+.tsl-badge.listo{background:#dcfce7;color:#166534}
+.tsl-badge.retornado{background:#f1f5f9;color:#475569}
+.tsl-badge.con-problema{background:#fee2e2;color:#991b1b}
+.tsl-cond-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.tsl-cond-badge.bueno{background:#dcfce7;color:#166534}
+.tsl-cond-badge.regular{background:#fef9c3;color:#854d0e}
+.tsl-cond-badge.dañado{background:#fee2e2;color:#991b1b}
 /* PRODUCT FILTER BAR */
 .prod-filter-bar{display:flex;align-items:center;gap:6px;padding:10px 20px 12px;border-bottom:1px solid var(--gray-100);flex-wrap:nowrap;overflow:visible}
 .prod-filter-bar::-webkit-scrollbar{display:none}
@@ -723,6 +738,7 @@ select{cursor:pointer}
     <div class="nav-subitem" id="nav-categorias" onclick="nav('categorias')"><span class="icon">🏷️</span> Categorías</div>
   </div>
   <div class="nav-item" id="nav-kits" onclick="nav('kits')"><span class="icon">🔧</span> Kits / Equipos</div>
+  <div class="nav-item" id="nav-traslados" onclick="nav('traslados')"><span class="icon">🔄</span> Traslados</div>
   <div class="nav-item" id="nav-bodegas" onclick="nav('bodegas')"><span class="icon">🏭</span> Bodegas / Sucursales</div>
   <div class="nav-item" id="nav-estadisticas" onclick="nav('estadisticas')"><span class="icon">📈</span> Estadísticas</div>
   <div style="border-top:1px solid rgba(255,255,255,.1);margin:8px 16px"></div>
@@ -929,6 +945,8 @@ const getClientes = ()=> DB.get('clientes')||[];
 const setClientes = v=> DB.set('clientes',v);
 const getKits = ()=> DB.get('kits')||[];
 const setKits = v=> DB.set('kits',v);
+const getTraslados = ()=>{ try{ return JSON.parse(DB.get('traslados')||'[]'); }catch(e){ return []; } };
+const setTraslados = v=> DB.set('traslados', JSON.stringify(v));
 const getVentas = ()=> DB.get('ventas')||[];
 const setVentas = v=> DB.set('ventas',v);
 const getVentaLog = ()=> DB.get('venta_log')||[];
@@ -1001,7 +1019,7 @@ let currentPage = 'dashboard';
 const pageTitles = {
   dashboard:'Dashboard',oc:'Compras',gastos:'Gastos',contabilidad:'Contabilidad',
   proveedores:'Proveedores',productos:'Productos',categorias:'Categorías',bodegas:'Bodegas',estadisticas:'Estadísticas',
-  taller:'Taller — Órdenes de Servicio'
+  traslados:'Traslados',taller:'Taller — Órdenes de Servicio'
 };
 function toggleTaller(){
   const parent=document.getElementById('nav-taller-parent');
@@ -1076,7 +1094,7 @@ function nav(page){
   // Restaurar topbar al salir de taller
   const tb=document.getElementById('topbar');if(tb)tb.style.display='';
   ({dashboard:renderDashboard,ventas:renderVentas,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
-    productos:renderProductos,categorias:renderCategorias,kits:renderKits,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad
+    productos:renderProductos,categorias:renderCategorias,kits:renderKits,traslados:renderTraslados,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad
   }[page]||renderDashboard)();
 }
 
@@ -1730,6 +1748,328 @@ function crearOCDesdeKit(kitId){
       notas:`Kit: ${kit.nombre}`
     });
   }, 80);
+}
+
+// ─────────────────────────────────────────────
+// TRASLADOS
+// ─────────────────────────────────────────────
+function renderTraslados(){
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-primary" onclick="modalNuevoTraslado()">➕ Nuevo Traslado</button>`;
+  _renderTrasladosContent();
+}
+
+function _renderTrasladosContent(){
+  const all=getTraslados();
+  const activos=all.filter(t=>t.estado!=='retornado');
+  const enviados=activos.filter(t=>t.estado==='enviado').length;
+  const enRevision=activos.filter(t=>t.estado==='en-revision').length;
+  const listos=activos.filter(t=>t.estado==='listo').length;
+  const conProblema=activos.filter(t=>t.estado==='con-problema').length;
+  const retornados=all.filter(t=>t.estado==='retornado').length;
+
+  document.getElementById('page-content').innerHTML=`
+  <div class="tsl-stats">
+    <div class="tsl-stat-card">
+      <span class="tsl-stat-num" style="color:#854d0e">${enviados}</span>
+      <span class="tsl-stat-label">Enviados / Esperando</span>
+    </div>
+    <div class="tsl-stat-card">
+      <span class="tsl-stat-num" style="color:#6d28d9">${enRevision}</span>
+      <span class="tsl-stat-label">En revisión externa</span>
+    </div>
+    <div class="tsl-stat-card">
+      <span class="tsl-stat-num" style="color:#166534">${listos}</span>
+      <span class="tsl-stat-label">Listos para retirar</span>
+    </div>
+    <div class="tsl-stat-card">
+      <span class="tsl-stat-num" style="color:#991b1b">${conProblema}</span>
+      <span class="tsl-stat-label">Con problema</span>
+    </div>
+    <div class="tsl-stat-card">
+      <span class="tsl-stat-num" style="color:var(--gray-400)">${retornados}</span>
+      <span class="tsl-stat-label">Retornados (historial)</span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <h3>Traslados activos <span style="font-size:12px;color:var(--gray-400);font-weight:400">(${activos.length})</span></h3>
+      <div class="search-bar"><input id="tsl-search" placeholder="Buscar equipo, técnico…" oninput="_filtrarTraslados()"></div>
+    </div>
+    <div id="tsl-table-activos">${_renderTslTable(activos)}</div>
+  </div>
+
+  ${retornados>0?`
+  <div class="card">
+    <div class="card-header" style="cursor:pointer" onclick="_toggleTslHistorial()">
+      <h3 style="color:var(--gray-400)">Historial — Retornados <span style="font-size:12px;font-weight:400">(${retornados})</span></h3>
+      <span id="tsl-hist-arrow" style="color:var(--gray-400);font-size:13px">▶ Ver historial</span>
+    </div>
+    <div id="tsl-table-hist" style="display:none">${_renderTslTable(all.filter(t=>t.estado==='retornado'))}</div>
+  </div>`:''}`;
+}
+
+function _toggleTslHistorial(){
+  const el=document.getElementById('tsl-table-hist');
+  const arr=document.getElementById('tsl-hist-arrow');
+  if(!el) return;
+  const isOpen=el.style.display!=='none';
+  el.style.display=isOpen?'none':'block';
+  if(arr) arr.textContent=isOpen?'▶ Ver historial':'▼ Ocultar historial';
+}
+
+function _renderTslTable(traslados){
+  if(!traslados.length) return `<div class="empty-state" style="padding:40px 20px">
+    <div class="empty-icon">🔄</div>
+    <h3>Sin traslados</h3>
+    <p>Los equipos derivados a técnicos externos aparecerán aquí</p>
+  </div>`;
+
+  const estadoLabel={enviado:'Enviado',enRevision:'En revisión','en-revision':'En revisión',listo:'Listo para retirar',retornado:'Retornado','con-problema':'Con problema'};
+  const condLabel={bueno:'Bueno',regular:'Regular','dañado':'Dañado'};
+
+  const diasDesde=(f)=>{
+    if(!f) return '—';
+    const diff=Math.floor((Date.now()-new Date(f).getTime())/(1000*60*60*24));
+    if(diff===0) return 'Hoy';
+    if(diff===1) return '1 día';
+    return diff+' días';
+  };
+
+  return `<table><thead><tr>
+    <th>N°</th><th>Equipo / Descripción</th><th>Técnico externo</th><th>Condición envío</th><th>Fecha envío</th><th>Días fuera</th><th>Estado</th><th>Acciones</th>
+  </tr></thead>
+  <tbody>${traslados.map((t,i)=>`<tr>
+    <td style="font-weight:700;color:var(--primary)">${String(t.numero||i+1).padStart(4,'0')}</td>
+    <td>
+      <div style="font-weight:600;font-size:13px">${t.equipo||'—'}</div>
+      ${t.cliente?`<div style="font-size:11px;color:var(--gray-400)">Cliente: ${t.cliente}</div>`:''}
+    </td>
+    <td>
+      <div style="font-weight:500">${t.tecnico||'—'}</div>
+      ${t.tecnico_tel?`<div style="font-size:11px;color:var(--gray-400)">${t.tecnico_tel}</div>`:''}
+    </td>
+    <td><span class="tsl-cond-badge ${t.condicion||'regular'}">${condLabel[t.condicion]||t.condicion||'—'}</span></td>
+    <td style="font-size:12px;color:var(--gray-500)">${t.fecha_envio||'—'}</td>
+    <td style="font-size:13px;font-weight:${t.estado!=='retornado'?'700':'400'};color:${t.estado!=='retornado'?'var(--primary)':'var(--gray-400)'}">${t.estado!=='retornado'?diasDesde(t.fecha_envio):'—'}</td>
+    <td>
+      <select onchange="cambiarEstadoTraslado('${t.id}',this.value)"
+        style="border:1.5px solid var(--gray-200);border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer;background:#fff">
+        <option value="enviado" ${t.estado==='enviado'?'selected':''}>📤 Enviado</option>
+        <option value="en-revision" ${t.estado==='en-revision'?'selected':''}>🔍 En revisión</option>
+        <option value="listo" ${t.estado==='listo'?'selected':''}>✅ Listo</option>
+        <option value="con-problema" ${t.estado==='con-problema'?'selected':''}>⚠️ Con problema</option>
+        <option value="retornado" ${t.estado==='retornado'?'selected':''}>↩️ Retornado</option>
+      </select>
+    </td>
+    <td>
+      <div style="display:flex;gap:4px">
+        <button class="btn-icon btn-sm" onclick="modalVerTraslado('${t.id}')" title="Ver detalle">👁</button>
+        <button class="btn-icon btn-sm" onclick="modalEditarTraslado('${t.id}')" title="Editar">✏️</button>
+        <button class="btn-icon btn-sm btn-danger-icon" onclick="eliminarTraslado('${t.id}')" title="Eliminar">🗑</button>
+      </div>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function _filtrarTraslados(){
+  const q=(document.getElementById('tsl-search')?.value||'').toLowerCase();
+  const all=getTraslados();
+  const activos=q?all.filter(t=>t.estado!=='retornado'&&(
+    (t.equipo||'').toLowerCase().includes(q)||
+    (t.tecnico||'').toLowerCase().includes(q)||
+    (t.cliente||'').toLowerCase().includes(q)
+  )):all.filter(t=>t.estado!=='retornado');
+  const el=document.getElementById('tsl-table-activos');
+  if(el) el.innerHTML=_renderTslTable(activos);
+}
+
+function cambiarEstadoTraslado(id,nuevoEstado){
+  const all=getTraslados();
+  const idx=all.findIndex(t=>t.id===id);
+  if(idx<0) return;
+  all[idx].estado=nuevoEstado;
+  if(nuevoEstado==='retornado'&&!all[idx].fecha_retorno) all[idx].fecha_retorno=today();
+  setTraslados(all);
+  _renderTrasladosContent();
+  toast('Estado actualizado','success');
+}
+
+function modalNuevoTraslado(editId){
+  const t=editId?getTraslados().find(x=>x.id===editId):{};
+  const isEdit=!!editId;
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>${isEdit?'Editar traslado':'Nuevo traslado'}</h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Equipo / Descripción <span style="color:var(--danger)">*</span></label>
+          <input id="tsl-equipo" type="text" placeholder="Ej: iPhone 13 Pro · Negro · IMEI 12345" value="${t.equipo||''}" oninput="autoCapNombre(this)">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Cliente (opcional)</label>
+          <input id="tsl-cliente" type="text" placeholder="Nombre del dueño del equipo" value="${t.cliente||''}">
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Técnico externo <span style="color:var(--danger)">*</span></label>
+          <input id="tsl-tecnico" type="text" placeholder="Nombre del técnico o empresa" value="${t.tecnico||''}">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Teléfono técnico</label>
+          <div style="display:flex;align-items:center;border:1.5px solid var(--gray-300);border-radius:7px;overflow:hidden;height:38px">
+            <span style="padding:0 10px;background:var(--gray-50);color:var(--gray-500);font-size:13px;border-right:1.5px solid var(--gray-200);height:100%;display:flex;align-items:center">+56</span>
+            <input id="tsl-tecnico-tel" type="tel" value="${(t.tecnico_tel||'').replace(/^\+56/,'')}" placeholder="9 1234 5678"
+              style="border:none;outline:none;flex:1;padding:0 10px;font-size:14px;height:100%">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Condición al enviar <span style="color:var(--danger)">*</span></label>
+          <select id="tsl-condicion">
+            <option value="bueno" ${(t.condicion||'bueno')==='bueno'?'selected':''}>✅ Bueno</option>
+            <option value="regular" ${t.condicion==='regular'?'selected':''}>⚠️ Regular</option>
+            <option value="dañado" ${t.condicion==='dañado'?'selected':''}>❌ Dañado</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Estado inicial</label>
+          <select id="tsl-estado">
+            <option value="enviado" ${(t.estado||'enviado')==='enviado'?'selected':''}>📤 Enviado</option>
+            <option value="en-revision" ${t.estado==='en-revision'?'selected':''}>🔍 En revisión</option>
+            <option value="listo" ${t.estado==='listo'?'selected':''}>✅ Listo para retirar</option>
+            <option value="con-problema" ${t.estado==='con-problema'?'selected':''}>⚠️ Con problema</option>
+            <option value="retornado" ${t.estado==='retornado'?'selected':''}>↩️ Retornado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Fecha de envío</label>
+          <input id="tsl-fecha-envio" type="date" value="${t.fecha_envio||today()}" onclick="this.showPicker()" style="cursor:pointer">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Fecha estimada retorno</label>
+          <input id="tsl-fecha-retorno-est" type="date" value="${t.fecha_retorno_est||''}" onclick="this.showPicker()" style="cursor:pointer">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Descripción del problema / motivo del traslado</label>
+        <textarea id="tsl-motivo" rows="2" placeholder="Describe por qué se deriva externamente y qué se espera...">${t.motivo||''}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Notas adicionales</label>
+        <textarea id="tsl-notas" rows="2" placeholder="Accesorios incluidos, acuerdos, precio acordado, etc...">${t.notas||''}</textarea>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTraslado('${editId||''}')">
+        ${isEdit?'💾 Guardar cambios':'➕ Crear traslado'}
+      </button>
+    </div>
+  </div></div>`);
+}
+
+function modalEditarTraslado(id){ modalNuevoTraslado(id); }
+
+function guardarTraslado(editId){
+  const equipo=(document.getElementById('tsl-equipo')?.value||'').trim();
+  const tecnico=(document.getElementById('tsl-tecnico')?.value||'').trim();
+  if(!equipo){ toast('Ingresa descripción del equipo','error'); return; }
+  if(!tecnico){ toast('Ingresa el técnico externo','error'); return; }
+  const telRaw=(document.getElementById('tsl-tecnico-tel')?.value||'').replace(/\s/g,'');
+  const all=getTraslados();
+  if(editId){
+    const idx=all.findIndex(t=>t.id===editId);
+    if(idx<0) return;
+    all[idx]={...all[idx],equipo,cliente:document.getElementById('tsl-cliente')?.value||'',
+      tecnico,tecnico_tel:telRaw?'+56'+telRaw:'',
+      condicion:document.getElementById('tsl-condicion')?.value||'bueno',
+      estado:document.getElementById('tsl-estado')?.value||'enviado',
+      fecha_envio:document.getElementById('tsl-fecha-envio')?.value||today(),
+      fecha_retorno_est:document.getElementById('tsl-fecha-retorno-est')?.value||'',
+      motivo:document.getElementById('tsl-motivo')?.value||'',
+      notas:document.getElementById('tsl-notas')?.value||''};
+    setTraslados(all);
+    toast('Traslado actualizado','success');
+  } else {
+    const num=(all.length?Math.max(...all.map(t=>t.numero||0))+1:1);
+    all.push({id:uid(),numero:num,equipo,
+      cliente:document.getElementById('tsl-cliente')?.value||'',
+      tecnico,tecnico_tel:telRaw?'+56'+telRaw:'',
+      condicion:document.getElementById('tsl-condicion')?.value||'bueno',
+      estado:document.getElementById('tsl-estado')?.value||'enviado',
+      fecha_envio:document.getElementById('tsl-fecha-envio')?.value||today(),
+      fecha_retorno_est:document.getElementById('tsl-fecha-retorno-est')?.value||'',
+      fecha_retorno:'',
+      motivo:document.getElementById('tsl-motivo')?.value||'',
+      notas:document.getElementById('tsl-notas')?.value||''});
+    setTraslados(all);
+    toast('Traslado creado','success');
+  }
+  closeModal();
+  _renderTrasladosContent();
+}
+
+function modalVerTraslado(id){
+  const t=getTraslados().find(x=>x.id===id);
+  if(!t) return;
+  const estadoLabel={'enviado':'📤 Enviado','en-revision':'🔍 En revisión','listo':'✅ Listo para retirar','retornado':'↩️ Retornado','con-problema':'⚠️ Con problema'};
+  const condLabel={bueno:'✅ Bueno',regular:'⚠️ Regular','dañado':'❌ Dañado'};
+  const row=(label,val)=>val?`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
+    <span style="font-size:12px;color:var(--gray-400);width:140px;flex-shrink:0">${label}</span>
+    <span style="font-size:13px;font-weight:500">${val}</span>
+  </div>`:'';
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3>${t.equipo}</h3>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:2px">Traslado N° ${String(t.numero||'').padStart(4,'0')}</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      ${row('Estado actual', estadoLabel[t.estado]||t.estado)}
+      ${row('Condición envío', condLabel[t.condicion]||t.condicion)}
+      ${row('Cliente', t.cliente)}
+      ${row('Técnico externo', t.tecnico)}
+      ${row('Teléfono técnico', t.tecnico_tel)}
+      ${row('Fecha de envío', t.fecha_envio)}
+      ${row('Retorno estimado', t.fecha_retorno_est)}
+      ${t.fecha_retorno?row('Fecha retorno real', t.fecha_retorno):''}
+      ${row('Motivo / problema', t.motivo)}
+      ${row('Notas', t.notas)}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+      <button class="btn btn-primary" onclick="closeModal();modalEditarTraslado('${t.id}')">✏️ Editar</button>
+    </div>
+  </div></div>`);
+}
+
+function eliminarTraslado(id){
+  if(!confirm('¿Eliminar este traslado? Esta acción no se puede deshacer.')) return;
+  setTraslados(getTraslados().filter(t=>t.id!==id));
+  _renderTrasladosContent();
+  toast('Traslado eliminado');
 }
 
 function modalNuevoKit(editId){
