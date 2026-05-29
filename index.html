@@ -251,9 +251,8 @@ select{cursor:pointer}
 .tsl-badge.retornado{background:#f1f5f9;color:#475569}
 .tsl-badge.con-problema{background:#fee2e2;color:#991b1b}
 .tsl-cond-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
-.tsl-cond-badge.bueno{background:#dcfce7;color:#166534}
-.tsl-cond-badge.regular{background:#fef9c3;color:#854d0e}
-.tsl-cond-badge.dañado{background:#fee2e2;color:#991b1b}
+.tsl-cond-badge.enciende{background:#dcfce7;color:#166534}
+.tsl-cond-badge.apagado{background:#fee2e2;color:#991b1b}
 /* PRODUCT FILTER BAR */
 .prod-filter-bar{display:flex;align-items:center;gap:6px;padding:10px 20px 12px;border-bottom:1px solid var(--gray-100);flex-wrap:nowrap;overflow:visible}
 .prod-filter-bar::-webkit-scrollbar{display:none}
@@ -1832,7 +1831,7 @@ function _renderTslTable(traslados){
   </div>`;
 
   const estadoLabel={enviado:'Enviado',enRevision:'En revisión','en-revision':'En revisión',listo:'Listo para retirar',retornado:'Retornado','con-problema':'Con problema'};
-  const condLabel={bueno:'Bueno',regular:'Regular','dañado':'Dañado'};
+  const condLabel={enciende:'⚡ Enciende',apagado:'📴 Apagado'};
 
   const diasDesde=(f)=>{
     if(!f) return '—';
@@ -1943,20 +1942,13 @@ function modalNuevoTraslado(editId){
         <div class="form-group" style="margin-bottom:0">
           <label>Condición al enviar <span style="color:var(--danger)">*</span></label>
           <select id="tsl-condicion">
-            <option value="bueno" ${(t.condicion||'bueno')==='bueno'?'selected':''}>✅ Bueno</option>
-            <option value="regular" ${t.condicion==='regular'?'selected':''}>⚠️ Regular</option>
-            <option value="dañado" ${t.condicion==='dañado'?'selected':''}>❌ Dañado</option>
+            <option value="enciende" ${(t.condicion||'enciende')==='enciende'?'selected':''}>⚡ Equipo enciende</option>
+            <option value="apagado" ${t.condicion==='apagado'?'selected':''}>📴 Equipo apagado</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label>Estado inicial</label>
-          <select id="tsl-estado">
-            <option value="enviado" ${(t.estado||'enviado')==='enviado'?'selected':''}>📤 Enviado</option>
-            <option value="en-revision" ${t.estado==='en-revision'?'selected':''}>🔍 En revisión</option>
-            <option value="listo" ${t.estado==='listo'?'selected':''}>✅ Listo para retirar</option>
-            <option value="con-problema" ${t.estado==='con-problema'?'selected':''}>⚠️ Con problema</option>
-            <option value="retornado" ${t.estado==='retornado'?'selected':''}>↩️ Retornado</option>
-          </select>
+          <label>Precio acordado ($)</label>
+          <input id="tsl-precio-acordado" type="number" min="0" step="1" placeholder="0" value="${t.precio_acordado||''}">
         </div>
       </div>
 
@@ -2005,8 +1997,9 @@ function guardarTraslado(editId){
     if(idx<0) return;
     all[idx]={...all[idx],equipo,cliente:document.getElementById('tsl-cliente')?.value||'',
       tecnico,tecnico_tel:telRaw?'+56'+telRaw:'',
-      condicion:document.getElementById('tsl-condicion')?.value||'bueno',
-      estado:document.getElementById('tsl-estado')?.value||'enviado',
+      condicion:document.getElementById('tsl-condicion')?.value||'enciende',
+      precio_acordado:parseFloat(document.getElementById('tsl-precio-acordado')?.value||'0')||0,
+      estado:all[idx].estado||'enviado',
       fecha_envio:document.getElementById('tsl-fecha-envio')?.value||today(),
       fecha_retorno_est:document.getElementById('tsl-fecha-retorno-est')?.value||'',
       motivo:document.getElementById('tsl-motivo')?.value||'',
@@ -2018,8 +2011,9 @@ function guardarTraslado(editId){
     all.push({id:uid(),numero:num,equipo,
       cliente:document.getElementById('tsl-cliente')?.value||'',
       tecnico,tecnico_tel:telRaw?'+56'+telRaw:'',
-      condicion:document.getElementById('tsl-condicion')?.value||'bueno',
-      estado:document.getElementById('tsl-estado')?.value||'enviado',
+      condicion:document.getElementById('tsl-condicion')?.value||'enciende',
+      precio_acordado:parseFloat(document.getElementById('tsl-precio-acordado')?.value||'0')||0,
+      estado:'enviado',
       fecha_envio:document.getElementById('tsl-fecha-envio')?.value||today(),
       fecha_retorno_est:document.getElementById('tsl-fecha-retorno-est')?.value||'',
       fecha_retorno:'',
@@ -2036,7 +2030,7 @@ function modalVerTraslado(id){
   const t=getTraslados().find(x=>x.id===id);
   if(!t) return;
   const estadoLabel={'enviado':'📤 Enviado','en-revision':'🔍 En revisión','listo':'✅ Listo para retirar','retornado':'↩️ Retornado','con-problema':'⚠️ Con problema'};
-  const condLabel={bueno:'✅ Bueno',regular:'⚠️ Regular','dañado':'❌ Dañado'};
+  const condLabel={enciende:'⚡ Equipo enciende',apagado:'📴 Equipo apagado'};
   const row=(label,val)=>val?`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
     <span style="font-size:12px;color:var(--gray-400);width:140px;flex-shrink:0">${label}</span>
     <span style="font-size:13px;font-weight:500">${val}</span>
@@ -2054,6 +2048,7 @@ function modalVerTraslado(id){
     <div class="modal-body">
       ${row('Estado actual', estadoLabel[t.estado]||t.estado)}
       ${row('Condición envío', condLabel[t.condicion]||t.condicion)}
+      ${t.precio_acordado?row('Precio acordado', '$'+t.precio_acordado.toLocaleString('es-CL')):''}
       ${row('Cliente', t.cliente)}
       ${row('Técnico externo', t.tecnico)}
       ${row('Teléfono técnico', t.tecnico_tel)}
@@ -2089,7 +2084,7 @@ function _renderTslPopup(orderId){
   const o=tp_orders.find(x=>x.id===orderId);
   if(!o) return;
   const traslados=getTraslados().filter(t=>t.order_id===orderId);
-  const condColor={'bueno':'background:#dcfce7;color:#166534','regular':'background:#fef9c3;color:#854d0e','dañado':'background:#fee2e2;color:#991b1b'};
+  const condColor={'enciende':'background:#dcfce7;color:#166534','apagado':'background:#fee2e2;color:#991b1b'};
 
   const tslHtml=traslados.length?traslados.map(t=>`
     <div style="border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px">
@@ -2176,7 +2171,8 @@ function tp_derivarOrden(orderId){
     cliente:o.nombre||'',
     motivo:o.trabajo||'',
     notas:o.estadofisico?`Estado físico: ${o.estadofisico}`:'',
-    condicion:'regular',
+    condicion:'enciende',
+    precio_acordado:0,
     estado:'enviado',
     fecha_envio:today(),
     _order_id:orderId
@@ -2328,20 +2324,13 @@ function _modalTrasladoDesdeOrden(t){
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Condición del equipo al enviar</label>
             <select class="form-input" id="tsl-condicion">
-              <option value="bueno" ${(t.condicion||'')==='bueno'?'selected':''}>✅ Bueno</option>
-              <option value="regular" ${(t.condicion||'regular')==='regular'?'selected':''}>⚠️ Regular</option>
-              <option value="dañado" ${t.condicion==='dañado'?'selected':''}>❌ Dañado</option>
+              <option value="enciende" ${(t.condicion||'enciende')==='enciende'?'selected':''}>⚡ Equipo enciende</option>
+              <option value="apagado" ${t.condicion==='apagado'?'selected':''}>📴 Equipo apagado</option>
             </select>
           </div>
           <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Estado</label>
-            <select class="form-input" id="tsl-estado">
-              <option value="enviado" ${(t.estado||'enviado')==='enviado'?'selected':''}>📤 Enviado</option>
-              <option value="en-revision" ${t.estado==='en-revision'?'selected':''}>🔍 En revisión</option>
-              <option value="listo" ${t.estado==='listo'?'selected':''}>✅ Listo para retirar</option>
-              <option value="con-problema" ${t.estado==='con-problema'?'selected':''}>⚠️ Con problema</option>
-              <option value="retornado" ${t.estado==='retornado'?'selected':''}>↩️ Retornado</option>
-            </select>
+            <label class="form-label">Precio acordado ($)</label>
+            <input class="form-input" id="tsl-precio-acordado" type="number" min="0" step="1" placeholder="0" value="${t.precio_acordado||''}">
           </div>
         </div>
 
@@ -2447,8 +2436,9 @@ function _guardarTrasladoDesdeOrden(editId){
     equipo, cliente:document.getElementById('tsl-cliente')?.value||'',
     tecnico:tecExtObj.nombre, tecnico_tel:tecExtObj.tel||'',
     tecnico_ext_id:tecExtId,
-    condicion:document.getElementById('tsl-condicion')?.value||'regular',
-    estado:document.getElementById('tsl-estado')?.value||'enviado',
+    condicion:document.getElementById('tsl-condicion')?.value||'enciende',
+    precio_acordado:parseFloat(document.getElementById('tsl-precio-acordado')?.value||'0')||0,
+    estado:'enviado',
     fecha_envio:document.getElementById('tsl-fecha-envio')?.value||today(),
     fecha_retorno_est:document.getElementById('tsl-fecha-retorno-est')?.value||'',
     motivo:document.getElementById('tsl-motivo')?.value||'',
@@ -7503,7 +7493,7 @@ function tp_openDetail(id){
         const tsl=getTraslados().find(t=>t.order_id===o.id);
         if(!tsl) return '';
         const estadoLabel={'enviado':'📤 Enviado','en-revision':'🔍 En revisión','listo':'✅ Listo para retirar','retornado':'↩️ Retornado','con-problema':'⚠️ Con problema'};
-        const condColor={'bueno':'#dcfce7;color:#166534','regular':'#fef9c3;color:#854d0e','dañado':'#fee2e2;color:#991b1b'};
+        const condColor={'enciende':'#dcfce7;color:#166534','apagado':'#fee2e2;color:#991b1b'};
         return `<div class="od-section" style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:14px 16px;margin-top:8px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <span style="font-weight:700;font-size:13px;color:#92400e">🔄 Derivado externamente</span>
@@ -7524,7 +7514,8 @@ function tp_openDetail(id){
             <div><span style="color:#a16207;font-weight:500">Teléfono:</span> ${tsl.tecnico_tel||'—'}</div>
             <div><span style="color:#a16207;font-weight:500">Fecha envío:</span> ${tsl.fecha_envio||'—'}</div>
             <div><span style="color:#a16207;font-weight:500">Retorno estimado:</span> ${tsl.fecha_retorno_est||'—'}</div>
-            ${tsl.condicion?`<div><span style="color:#a16207;font-weight:500">Condición:</span> <span style="background:${condColor[tsl.condicion]||'#f1f5f9;color:#475569'};padding:1px 7px;border-radius:6px;font-size:11px;font-weight:600">${tsl.condicion}</span></div>`:''}
+            ${tsl.condicion?`<div><span style="color:#a16207;font-weight:500">Condición:</span> <span style="background:${condColor[tsl.condicion]||'#f1f5f9;color:#475569'};padding:1px 7px;border-radius:6px;font-size:11px;font-weight:600">${tsl.condicion==='enciende'?'⚡ Enciende':'📴 Apagado'}</span></div>`:''}
+            ${tsl.precio_acordado?`<div><span style="color:#a16207;font-weight:500">Precio acordado:</span> $${Number(tsl.precio_acordado).toLocaleString('es-CL')}</div>`:''}
             ${tsl.motivo?`<div style="grid-column:1/-1"><span style="color:#a16207;font-weight:500">Motivo:</span> ${tsl.motivo}</div>`:''}
             ${tsl.notas?`<div style="grid-column:1/-1"><span style="color:#a16207;font-weight:500">Notas:</span> ${tsl.notas}</div>`:''}
           </div>
