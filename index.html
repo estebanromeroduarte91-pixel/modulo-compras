@@ -2075,31 +2075,37 @@ function eliminarTraslado(id){
 function tp_abrirTraslados(orderId){
   const o=tp_orders.find(x=>x.id===orderId);
   if(!o) return;
+  _renderTslPopup(orderId);
+  document.getElementById('mod-tsl').classList.add('open');
+}
+
+function _renderTslPopup(orderId){
+  const o=tp_orders.find(x=>x.id===orderId);
+  if(!o) return;
   const traslados=getTraslados().filter(t=>t.order_id===orderId);
-  const estadoLabel={'enviado':'📤 Enviado','en-revision':'🔍 En revisión','listo':'✅ Listo','retornado':'↩️ Retornado','con-problema':'⚠️ Con problema'};
   const condColor={'bueno':'background:#dcfce7;color:#166534','regular':'background:#fef9c3;color:#854d0e','dañado':'background:#fee2e2;color:#991b1b'};
 
   const tslHtml=traslados.length?traslados.map(t=>`
-    <div style="border:1.5px solid var(--gray-200);border-radius:10px;padding:12px 14px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
         <div>
           <span style="font-weight:700;font-size:13px">${t.tecnico||'Sin técnico'}</span>
-          ${t.tecnico_tel?`<span style="font-size:12px;color:var(--gray-400);margin-left:8px">${t.tecnico_tel}</span>`:''}
+          ${t.tecnico_tel?`<span style="font-size:12px;color:var(--text2);margin-left:8px">${t.tecnico_tel}</span>`:''}
         </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select onchange="tp_cambiarEstadoTsl('${t.id}',this.value)"
-            style="border:1.5px solid var(--gray-200);border-radius:7px;padding:3px 8px;font-size:12px;background:#fff;cursor:pointer">
+        <div style="display:flex;gap:5px;align-items:center">
+          <select onchange="tp_cambiarEstadoTslPopup('${t.id}','${orderId}',this.value)"
+            style="border:1.5px solid var(--border);border-radius:7px;padding:3px 8px;font-size:12px;background:#fff;cursor:pointer">
             <option value="enviado" ${t.estado==='enviado'?'selected':''}>📤 Enviado</option>
             <option value="en-revision" ${t.estado==='en-revision'?'selected':''}>🔍 En revisión</option>
             <option value="listo" ${t.estado==='listo'?'selected':''}>✅ Listo</option>
             <option value="con-problema" ${t.estado==='con-problema'?'selected':''}>⚠️ Con problema</option>
             <option value="retornado" ${t.estado==='retornado'?'selected':''}>↩️ Retornado</option>
           </select>
-          <button onclick="tp_editarTraslado('${t.id}')" style="background:none;border:1.5px solid var(--gray-200);border-radius:7px;padding:3px 10px;font-size:12px;cursor:pointer">✏️</button>
+          <button onclick="tp_closeModal('mod-tsl');tp_editarTraslado('${t.id}')" style="background:none;border:1.5px solid var(--border);border-radius:7px;padding:3px 10px;font-size:12px;cursor:pointer">✏️</button>
           <button onclick="_eliminarTslDesdePopup('${t.id}','${orderId}')" style="background:none;border:1.5px solid #fecaca;border-radius:7px;padding:3px 8px;font-size:12px;color:#dc2626;cursor:pointer">🗑</button>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;color:var(--gray-600)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;color:var(--text2)">
         ${t.condicion?`<div><span style="font-weight:500">Condición:</span> <span style="padding:1px 7px;border-radius:5px;font-size:11px;font-weight:600;${condColor[t.condicion]||''}">${t.condicion}</span></div>`:''}
         ${t.fecha_envio?`<div><span style="font-weight:500">Envío:</span> ${t.fecha_envio}</div>`:''}
         ${t.fecha_retorno_est?`<div><span style="font-weight:500">Retorno est.:</span> ${t.fecha_retorno_est}</div>`:''}
@@ -2107,36 +2113,45 @@ function tp_abrirTraslados(orderId){
         ${t.notas?`<div style="grid-column:1/-1"><span style="font-weight:500">Notas:</span> ${t.notas}</div>`:''}
       </div>
     </div>`).join('')
-  :`<div style="text-align:center;padding:24px 0;color:var(--gray-400)">
-      <div style="font-size:32px;margin-bottom:8px">🔄</div>
+  :`<div style="text-align:center;padding:28px 0;color:var(--text2)">
+      <div style="font-size:36px;margin-bottom:10px">🔄</div>
       <div style="font-size:13px">No hay técnicos externos asignados a esta orden</div>
     </div>`;
 
-  showModal(`
-  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
+  document.getElementById('mod-tsl-inner').innerHTML=`
     <div class="modal-header">
       <div>
-        <h3>Traslados</h3>
-        <div style="font-size:12px;color:var(--gray-400);margin-top:2px">${o.modelo||''} · ${o.nombre||''}</div>
+        <h3 class="modal-title">Traslados</h3>
+        <div class="modal-subtitle">${o.modelo||''} · ${o.nombre||''}</div>
       </div>
-      <button class="close-btn" onclick="closeModal()">×</button>
+      <button class="btn btn-ghost btn-sm modal-close" onclick="tp_closeModal('mod-tsl')">✕</button>
     </div>
-    <div class="modal-body" id="tsl-popup-body">
+    <div class="modal-body" style="max-height:60vh;overflow-y:auto">
       ${tslHtml}
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
-      <button class="btn btn-primary" onclick="closeModal();tp_derivarOrden('${orderId}')">➕ Agregar técnico externo</button>
-    </div>
-  </div></div>`);
+      <button class="btn btn-ghost btn-sm" onclick="tp_closeModal('mod-tsl')">Cerrar</button>
+      <button class="btn btn-primary btn-sm" onclick="tp_closeModal('mod-tsl');tp_derivarOrden('${orderId}')">➕ Agregar técnico externo</button>
+    </div>`;
+}
+
+function tp_cambiarEstadoTslPopup(tslId, orderId, nuevoEstado){
+  const all=getTraslados();
+  const idx=all.findIndex(t=>t.id===tslId);
+  if(idx<0) return;
+  all[idx].estado=nuevoEstado;
+  if(nuevoEstado==='retornado'&&!all[idx].fecha_retorno) all[idx].fecha_retorno=today();
+  setTraslados(all);
+  _renderTslPopup(orderId);
+  tp_openDetail(orderId);
+  toast('Estado actualizado','success');
 }
 
 function _eliminarTslDesdePopup(tslId, orderId){
   if(!confirm('¿Eliminar este traslado?')) return;
   setTraslados(getTraslados().filter(t=>t.id!==tslId));
   toast('Traslado eliminado');
-  closeModal();
+  _renderTslPopup(orderId);
   tp_openDetail(orderId);
 }
 
@@ -2173,7 +2188,6 @@ function tp_cambiarEstadoTsl(tslId, nuevoEstado){
   all[idx].estado=nuevoEstado;
   if(nuevoEstado==='retornado'&&!all[idx].fecha_retorno) all[idx].fecha_retorno=today();
   setTraslados(all);
-  // Refrescar el detalle de la orden actual
   const orderId=all[idx].order_id;
   if(orderId) tp_openDetail(orderId);
   toast('Estado actualizado','success');
@@ -2184,57 +2198,55 @@ function tp_verTraslado(tslId){ tp_editarTraslado(tslId); }
 function _modalTrasladoDesdeOrden(t){
   const editId=t._editId||'';
   const orderId=t._order_id||t.order_id||'';
-  showModal(`
-  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
+  document.getElementById('mod-tsl-inner').innerHTML=`
     <div class="modal-header">
       <div>
-        <h3>${editId?'Editar traslado':'Agregar técnico externo'}</h3>
-        <div style="font-size:12px;color:var(--gray-400);margin-top:2px">${t.equipo||''}</div>
+        <h3 class="modal-title">${editId?'Editar traslado':'Agregar técnico externo'}</h3>
+        <div class="modal-subtitle">${t.equipo||''}</div>
       </div>
-      <button class="close-btn" onclick="closeModal()">×</button>
+      <button class="btn btn-ghost btn-sm modal-close" onclick="tp_closeModal('mod-tsl')">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
       <input type="hidden" id="tsl-order-id" value="${orderId}">
 
       <div class="form-row" style="margin-bottom:14px">
         <div class="form-group" style="margin-bottom:0">
-          <label>Equipo <span style="color:var(--danger)">*</span></label>
-          <input id="tsl-equipo" type="text" value="${t.equipo||''}" placeholder="Modelo, color, serie…">
+          <label class="form-label">Equipo <span style="color:var(--red)">*</span></label>
+          <input class="form-input" id="tsl-equipo" type="text" value="${t.equipo||''}" placeholder="Modelo, color, serie…">
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label>Cliente</label>
-          <input id="tsl-cliente" type="text" value="${t.cliente||''}" placeholder="Nombre del dueño">
+          <label class="form-label">Cliente</label>
+          <input class="form-input" id="tsl-cliente" type="text" value="${t.cliente||''}" placeholder="Nombre del dueño">
         </div>
       </div>
 
       <div class="form-row" style="margin-bottom:14px">
         <div class="form-group" style="margin-bottom:0">
-          <label>Técnico externo <span style="color:var(--danger)">*</span></label>
-          <input id="tsl-tecnico" type="text" value="${t.tecnico||''}" placeholder="Nombre o empresa">
+          <label class="form-label">Técnico externo <span style="color:var(--red)">*</span></label>
+          <input class="form-input" id="tsl-tecnico" type="text" value="${t.tecnico||''}" placeholder="Nombre o empresa">
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label>Teléfono técnico</label>
-          <div style="display:flex;align-items:center;border:1.5px solid var(--gray-300);border-radius:7px;overflow:hidden;height:38px">
-            <span style="padding:0 10px;background:var(--gray-50);color:var(--gray-500);font-size:13px;border-right:1.5px solid var(--gray-200);height:100%;display:flex;align-items:center">+56</span>
+          <label class="form-label">Teléfono técnico</label>
+          <div style="display:flex;align-items:center;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;height:38px">
+            <span style="padding:0 10px;background:var(--surface2);color:var(--text2);font-size:13px;border-right:1.5px solid var(--border);height:100%;display:flex;align-items:center">+56</span>
             <input id="tsl-tecnico-tel" type="tel" value="${(t.tecnico_tel||'').replace(/^\+56/,'')}" placeholder="9 1234 5678"
-              style="border:none;outline:none;flex:1;padding:0 10px;font-size:14px;height:100%">
+              style="border:none;outline:none;flex:1;padding:0 10px;font-size:14px;height:100%;background:transparent">
           </div>
         </div>
       </div>
 
       <div class="form-row" style="margin-bottom:14px">
         <div class="form-group" style="margin-bottom:0">
-          <label>Condición al enviar</label>
-          <select id="tsl-condicion">
+          <label class="form-label">Condición al enviar</label>
+          <select class="form-input" id="tsl-condicion">
             <option value="bueno" ${(t.condicion||'')==='bueno'?'selected':''}>✅ Bueno</option>
             <option value="regular" ${(t.condicion||'regular')==='regular'?'selected':''}>⚠️ Regular</option>
             <option value="dañado" ${t.condicion==='dañado'?'selected':''}>❌ Dañado</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label>Estado</label>
-          <select id="tsl-estado">
+          <label class="form-label">Estado</label>
+          <select class="form-input" id="tsl-estado">
             <option value="enviado" ${(t.estado||'enviado')==='enviado'?'selected':''}>📤 Enviado</option>
             <option value="en-revision" ${t.estado==='en-revision'?'selected':''}>🔍 En revisión</option>
             <option value="listo" ${t.estado==='listo'?'selected':''}>✅ Listo para retirar</option>
@@ -2246,31 +2258,31 @@ function _modalTrasladoDesdeOrden(t){
 
       <div class="form-row" style="margin-bottom:14px">
         <div class="form-group" style="margin-bottom:0">
-          <label>Fecha de envío</label>
-          <input id="tsl-fecha-envio" type="date" value="${t.fecha_envio||today()}" onclick="this.showPicker()" style="cursor:pointer">
+          <label class="form-label">Fecha de envío</label>
+          <input class="form-input" id="tsl-fecha-envio" type="date" value="${t.fecha_envio||today()}" onclick="this.showPicker()" style="cursor:pointer">
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label>Fecha estimada de retorno</label>
-          <input id="tsl-fecha-retorno-est" type="date" value="${t.fecha_retorno_est||''}" onclick="this.showPicker()" style="cursor:pointer">
+          <label class="form-label">Fecha estimada de retorno</label>
+          <input class="form-input" id="tsl-fecha-retorno-est" type="date" value="${t.fecha_retorno_est||''}" onclick="this.showPicker()" style="cursor:pointer">
         </div>
       </div>
 
       <div class="form-group" style="margin-bottom:10px">
-        <label>Problema / motivo del traslado</label>
-        <textarea id="tsl-motivo" rows="2" placeholder="Qué falla tiene y qué se espera del técnico…">${t.motivo||''}</textarea>
+        <label class="form-label">Problema / motivo del traslado</label>
+        <textarea class="form-input" id="tsl-motivo" rows="2" placeholder="Qué falla tiene y qué se espera del técnico…">${t.motivo||''}</textarea>
       </div>
       <div class="form-group">
-        <label>Notas adicionales</label>
-        <textarea id="tsl-notas" rows="2" placeholder="Accesorios incluidos, precio acordado, observaciones…">${t.notas||''}</textarea>
+        <label class="form-label">Notas adicionales</label>
+        <textarea class="form-input" id="tsl-notas" rows="2" placeholder="Accesorios incluidos, precio acordado, observaciones…">${t.notas||''}</textarea>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="_guardarTrasladoDesdeOrden('${editId}')">
+      <button class="btn btn-ghost btn-sm" onclick="tp_closeModal('mod-tsl')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="_guardarTrasladoDesdeOrden('${editId}')">
         ${editId?'💾 Guardar cambios':'🔄 Guardar traslado'}
       </button>
-    </div>
-  </div></div>`);
+    </div>`;
+  document.getElementById('mod-tsl').classList.add('open');
 }
 
 function _guardarTrasladoDesdeOrden(editId){
@@ -2301,7 +2313,7 @@ function _guardarTrasladoDesdeOrden(editId){
     setTraslados(all);
     toast('Equipo derivado correctamente','success');
   }
-  closeModal();
+  tp_closeModal('mod-tsl');
   if(orderId) tp_openDetail(orderId);
 }
 
@@ -6445,6 +6457,11 @@ function renderTaller() {
 
   <!-- ORDER DETAIL -->
   <div class="overlay" id="mod-detail"><div class="modal modal-wide"><div id="detail-inner"></div></div></div>
+
+  <!-- TRASLADOS POPUP -->
+  <div class="overlay" id="mod-tsl" onclick="if(event.target===this)tp_closeModal('mod-tsl')">
+    <div class="modal" style="width:520px;max-width:96vw"><div id="mod-tsl-inner"></div></div>
+  </div>
 
   <!-- ADD REPUESTO -->
   <div class="overlay" id="mod-repuesto">
