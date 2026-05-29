@@ -2538,9 +2538,16 @@ function _guardarTrasladoDesdeOrden(editId){
     const num=(all.length?Math.max(...all.map(t=>t.numero||0))+1:1);
     all.push({id:uid(),numero:num,...data,fecha_retorno:''});
     setTraslados(all);
-    toast('Equipo derivado correctamente','success');
+    // Mover la orden a Reparación automáticamente
+    if(orderId){
+      const ord=tp_orders.find(o=>o.id===orderId);
+      if(ord && ord.status!=='Entregado') ord.status='Reparación';
+      tp_saveState();
+    }
+    toast('Equipo derivado — orden pasada a Reparación','success');
   }
   tp_closeModal('mod-tsl');
+  tp_renderAll();
   if(orderId) tp_openDetail(orderId);
 }
 
