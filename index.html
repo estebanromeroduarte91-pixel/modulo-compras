@@ -7764,44 +7764,32 @@ function tp_openDetail(id){
         </div>
       </div>
       <!-- INSPECCIÓN DE EQUIPO -->
-      <div class="od-section" style="padding:14px 18px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:8px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:var(--text3)"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-            <span style="font-size:13px;font-weight:600;color:var(--text)">Inspección de equipo</span>
-            ${(o.inspeccion?.danos?.length||o.inspeccion?.notas)?`<span style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:10px">${o.inspeccion.danos?.length?o.inspeccion.danos.length+' daño'+(o.inspeccion.danos.length>1?'s':''):'Con notas'}</span>`:`<span style="background:var(--green-bg);color:var(--green);font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:10px">Sin daños registrados</span>`}
+      ${(()=>{
+        const insp=o.inspeccion||{};
+        const fotoCount=insp.fotos?.length||0;
+        const hasNotas=!!(insp.notas||'').trim();
+        const hasContent=fotoCount>0||hasNotas;
+        const badgeHtml=hasContent
+          ? `<span style="background:#eff6ff;color:#1d4ed8;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px">${[fotoCount?fotoCount+' foto'+(fotoCount>1?'s':''):'',hasNotas?'Con notas':''].filter(Boolean).join(' · ')}</span>`
+          : `<span style="background:var(--bg);color:var(--text3);font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid var(--border)">Sin registro</span>`;
+        return `<div class="od-section" style="padding:13px 18px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:var(--text3)"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              <span style="font-size:13px;font-weight:600;color:var(--text)">Inspección de equipo</span>
+              ${badgeHtml}
+            </div>
+            <div style="display:flex;gap:6px">
+              ${hasContent?`<button class="btn btn-ghost btn-sm" onclick="tp_openInspeccionModal('${o.id}','view')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Ver
+              </button>`:''}
+              <button class="btn btn-ghost btn-sm" onclick="tp_openInspeccionModal('${o.id}','edit')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>${hasContent?'Editar':'Registrar'}
+              </button>
+            </div>
           </div>
-          <button class="btn btn-ghost btn-sm" style="font-size:11.5px" onclick="tp_toggleInspeccion('${o.id}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Editar inspección
-          </button>
-        </div>
-        <!-- Modo lectura -->
-        <div id="insp-view-${o.id}">
-          ${(o.inspeccion?.danos?.length)?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${(o.inspeccion.danos).map(d=>`<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:500">${d}</span>`).join('')}</div>`:''}
-          ${o.inspeccion?.notas?`<div style="font-size:12.5px;color:var(--text2);background:var(--bg);border-radius:8px;padding:8px 12px;white-space:pre-wrap">${o.inspeccion.notas}</div>`:''}
-          ${(!o.inspeccion?.danos?.length&&!o.inspeccion?.notas)?`<div style="font-size:12px;color:var(--text3);font-style:italic">Toca "Editar inspección" para registrar el estado del equipo al ingresar.</div>`:''}
-        </div>
-        <!-- Modo edición -->
-        <div id="insp-edit-${o.id}" style="display:none">
-          <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Daños visibles</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px" id="insp-tags-${o.id}">
-            ${['🖥 Pantalla rota','💧 Mojado','🔧 Mal armado','🪛 Tornillos faltantes','📱 Carcasa dañada','⚡ Puerto dañado','🔘 Botones dañados','✏️ Arañazos','🔋 Batería hinchada','📷 Cámara dañada'].map(tag=>{
-              const active=(o.inspeccion?.danos||[]).includes(tag);
-              return `<button onclick="tp_toggleDanoTag('${o.id}',this,'${tag.replace(/'/g,"\\'")}')" style="border:1.5px solid ${active?'#f59e0b':'var(--border)'};background:${active?'#fef3c7':'var(--surface)'};color:${active?'#92400e':'var(--text2)'};border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:${active?'600':'400'}">${tag}</button>`;
-            }).join('')}
-          </div>
-          <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Observaciones</div>
-          <textarea id="insp-notas-${o.id}" class="form-input" rows="3" placeholder="Ej: pantalla con crack en esquina superior, carcasa con golpe en lado derecho..." style="width:100%;resize:vertical;font-size:13px;line-height:1.5">${o.inspeccion?.notas||''}</textarea>
-          <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
-            <button class="btn btn-ghost btn-sm" onclick="tp_toggleInspeccion('${o.id}')">Cancelar</button>
-            <button class="btn btn-primary btn-sm" onclick="tp_saveInspeccion('${o.id}')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
-              Guardar inspección
-            </button>
-          </div>
-        </div>
-      </div>
+        </div>`;
+      })()}
 
       <div class="od-section">
         <div class="od-section-header">
@@ -7950,31 +7938,95 @@ function tp_removeCheckItem(type,idx){
 }
 
 // ─── INSPECCIÓN DE EQUIPO ───
-function tp_toggleInspeccion(orderId){
-  const view=document.getElementById('insp-view-'+orderId);
-  const edit=document.getElementById('insp-edit-'+orderId);
-  if(!view||!edit) return;
-  const editing=edit.style.display!=='none';
-  view.style.display=editing?'block':'none';
-  edit.style.display=editing?'none':'block';
-}
-function tp_toggleDanoTag(orderId, btn, tag){
-  const active=btn.style.background.includes('fef3c7');
-  if(active){
-    btn.style.background='var(--surface)';btn.style.borderColor='var(--border)';btn.style.color='var(--text2)';btn.style.fontWeight='400';
-  } else {
-    btn.style.background='#fef3c7';btn.style.borderColor='#f59e0b';btn.style.color='#92400e';btn.style.fontWeight='600';
-  }
-}
-function tp_saveInspeccion(orderId){
+let _inspOrderId=null;
+let _inspFotos=[];
+
+function tp_openInspeccionModal(orderId, mode){
   const o=tp_orders.find(x=>x.id===orderId);if(!o)return;
-  const tags=document.querySelectorAll(`#insp-tags-${orderId} button`);
-  const danos=[];
-  tags.forEach(btn=>{ if(btn.style.background.includes('fef3c7')) danos.push(btn.textContent.trim()); });
-  const notas=(document.getElementById('insp-notas-'+orderId)?.value||'').trim();
-  o.inspeccion={danos,notas,fecha:today()};
+  _inspOrderId=orderId;
+  _inspFotos=[...(o.inspeccion?.fotos||[])];
+  const insp=o.inspeccion||{};
+  const isEdit=mode==='edit';
+
+  const renderFotos=(fotos,editable)=>fotos.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px">${fotos.map((src,i)=>`<div style="position:relative;border-radius:10px;overflow:hidden;aspect-ratio:1;background:#f3f4f6">
+    <img src="${src}" style="width:100%;height:100%;object-fit:cover">
+    ${editable?`<button onclick="tp_inspRemoveFoto(${i})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center">×</button>`:''}
+  </div>`).join('')}</div>`:'';
+
+  showModal(`<div onclick="event.stopPropagation()" style="background:#fff;border-radius:14px;width:560px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+    <div style="padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:2;border-bottom:1px solid #f3f4f6;padding-bottom:14px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#111">📷 Inspección de equipo</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:2px">${o.nombre} · ${o.modelo} · #${o.num}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${!isEdit&&(insp.fotos?.length||insp.notas)?`<button onclick="tp_openInspeccionModal('${orderId}','edit')" style="font-size:12px;padding:5px 10px;border:1px solid #d1d5db;border-radius:7px;background:#fff;cursor:pointer;font-family:inherit">✏️ Editar</button>`:''}
+        <button onclick="closeModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280">×</button>
+      </div>
+    </div>
+    <div style="padding:18px 20px" id="insp-modal-body">
+      ${isEdit?`
+        <div style="margin-bottom:14px">
+          <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Fotos del equipo</div>
+          <div id="insp-fotos-grid">${renderFotos(_inspFotos,true)}</div>
+          <label style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;border:1.5px dashed #d1d5db;border-radius:10px;padding:10px 16px;font-size:13px;color:#6b7280;background:#f9fafb;transition:all .15s" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#d1d5db'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Agregar fotos
+            <input type="file" accept="image/*" multiple style="display:none" onchange="tp_inspAddFotos(this)">
+          </label>
+        </div>
+        <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observaciones</div>
+        <textarea id="insp-notas-input" class="form-input" rows="4" placeholder="Describe el estado del equipo: golpes, rayones, piezas rotas, evidencia de agua, intervenciones previas..." style="width:100%;resize:vertical;font-size:13px;line-height:1.6">${insp.notas||''}</textarea>
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+          <button onclick="closeModal()" style="padding:8px 16px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px">Cancelar</button>
+          <button onclick="tp_saveInspeccion()" style="padding:8px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Guardar inspección</button>
+        </div>
+      `:`
+        ${insp.fotos?.length?`<div style="margin-bottom:16px"><div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Fotos (${insp.fotos.length})</div>${renderFotos(insp.fotos,false)}</div>`:''}
+        ${insp.notas?`<div><div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observaciones</div><div style="font-size:13.5px;color:#374151;background:#f9fafb;border-radius:10px;padding:12px 14px;white-space:pre-wrap;line-height:1.6">${insp.notas}</div></div>`:''}
+        ${insp.fecha?`<div style="margin-top:14px;font-size:11px;color:#9ca3af">Registrado el ${tp_fmtDate(insp.fecha)}</div>`:''}
+        ${!insp.fotos?.length&&!insp.notas?`<div style="text-align:center;padding:30px 0;color:#9ca3af;font-size:13px">Sin inspección registrada.<br><button onclick="tp_openInspeccionModal('${orderId}','edit')" style="margin-top:10px;font-size:13px;color:#2563eb;background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit">Registrar ahora →</button></div>`:''}
+      `}
+    </div>
+  </div>`);
+}
+
+function tp_inspAddFotos(input){
+  const files=Array.from(input.files);
+  let loaded=0;
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      _inspFotos.push(e.target.result);
+      loaded++;
+      if(loaded===files.length) tp_refreshInspFotosGrid();
+    };
+    r.readAsDataURL(f);
+  });
+  input.value='';
+}
+
+function tp_inspRemoveFoto(idx){
+  _inspFotos.splice(idx,1);
+  tp_refreshInspFotosGrid();
+}
+
+function tp_refreshInspFotosGrid(){
+  const grid=document.getElementById('insp-fotos-grid');if(!grid)return;
+  if(!_inspFotos.length){grid.innerHTML='';return;}
+  grid.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px">${_inspFotos.map((src,i)=>`<div style="position:relative;border-radius:10px;overflow:hidden;aspect-ratio:1;background:#f3f4f6">
+    <img src="${src}" style="width:100%;height:100%;object-fit:cover">
+    <button onclick="tp_inspRemoveFoto(${i})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center">×</button>
+  </div>`).join('')}</div>`;
+}
+
+function tp_saveInspeccion(){
+  const o=tp_orders.find(x=>x.id===_inspOrderId);if(!o)return;
+  const notas=(document.getElementById('insp-notas-input')?.value||'').trim();
+  o.inspeccion={fotos:[..._inspFotos],notas,fecha:today()};
   tp_saveState();
-  tp_openDetail(orderId);
+  closeModal();
+  tp_openDetail(_inspOrderId);
   toast('Inspección guardada ✓','success');
 }
 
