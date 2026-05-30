@@ -1115,7 +1115,7 @@ let currentPage = 'dashboard';
 const pageTitles = {
   dashboard:'Dashboard',oc:'Compras',gastos:'Gastos',contabilidad:'Contabilidad',
   proveedores:'Proveedores',productos:'Productos',categorias:'Categorías',bodegas:'Bodegas',estadisticas:'Estadísticas',
-  traslados:'Traslados',taller:'Taller — Órdenes de Servicio'
+  traslados:'Traslados',taller:'Taller — Órdenes de Servicio','sys-usuarios':'Accesos'
 };
 function toggleTaller(){
   const parent=document.getElementById('nav-taller-parent');
@@ -9552,17 +9552,17 @@ async function sysToggleActivo(userId, activo){
 }
 
 function sysEditRole(userId, currentRole, nombre){
-  showModal(`<div class="modal-overlay" onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000">
-    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:14px;width:380px;max-width:96vw;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.2)">
-      <div style="font-size:15px;font-weight:700;margin-bottom:16px">Cambiar rol — ${nombre}</div>
-      <select id="edit-role-select" class="form-input" style="margin-bottom:16px">
-        <option value="admin" ${currentRole==='admin'?'selected':''}>Administrador</option>
-        <option value="tecnico" ${currentRole==='tecnico'?'selected':''}>Técnico</option>
-        <option value="vendedor" ${currentRole==='vendedor'?'selected':''}>Vendedor</option>
+  showModal(`<div onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000">
+    <div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;width:360px;max-width:96vw;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+      <div style="font-size:16px;font-weight:700;color:#111;margin-bottom:16px">Cambiar rol — ${nombre}</div>
+      <select id="edit-role-select" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;background:#fff;margin-bottom:20px">
+        <option value="admin" ${currentRole==='admin'?'selected':''}>Administrador — acceso total</option>
+        <option value="tecnico" ${currentRole==='tecnico'?'selected':''}>Técnico — solo Taller</option>
+        <option value="vendedor" ${currentRole==='vendedor'?'selected':''}>Vendedor — Taller + Clientes</option>
       </select>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button onclick="closeModal()" class="btn btn-default">Cancelar</button>
-        <button onclick="_sysGuardarRole('${userId}')" class="btn btn-primary">Guardar</button>
+        <button onclick="closeModal()" style="padding:9px 18px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:14px;cursor:pointer;font-family:inherit">Cancelar</button>
+        <button onclick="_sysGuardarRole('${userId}')" style="padding:9px 20px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Guardar</button>
       </div>
     </div>
   </div>`);
@@ -9575,27 +9575,27 @@ async function _sysGuardarRole(userId){
 }
 
 function sysInviteModal(){
-  showModal(`<div class="modal-overlay" onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000">
-    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:14px;width:420px;max-width:96vw;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.2)">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px">Invitar usuario</div>
-      <div style="font-size:12.5px;color:var(--text3);margin-bottom:18px">Se generará un link de acceso único para que el usuario cree su contraseña.</div>
-      <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-input" id="inv-nombre" placeholder="Juan Pérez"></div>
-      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="inv-email" placeholder="juan@empresa.com"></div>
-      <div class="form-group"><label class="form-label">Rol</label>
-        <select class="form-input" id="inv-role">
+  showModal(`<div onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000">
+    <div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;width:440px;max-width:96vw;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+      <div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px">Invitar usuario</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Se generará un link único para que el usuario cree su contraseña.</div>
+      <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Nombre completo</label><input style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none" id="inv-nombre" placeholder="Juan Pérez"></div>
+      <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Email</label><input style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none" type="email" id="inv-email" placeholder="juan@empresa.com"></div>
+      <div style="margin-bottom:20px"><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Rol</label>
+        <select style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;background:#fff" id="inv-role">
           <option value="tecnico">Técnico — solo Taller</option>
           <option value="vendedor">Vendedor — Taller + Clientes</option>
           <option value="admin">Administrador — acceso total</option>
         </select>
       </div>
-      <div id="inv-link-result" style="display:none;margin-bottom:14px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
-        <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">LINK GENERADO — compártelo con el usuario</div>
-        <div id="inv-link-text" style="font-size:12px;word-break:break-all;color:var(--accent);margin-bottom:8px"></div>
-        <button onclick="sysCopiarLink(document.getElementById('inv-link-text').textContent)" style="padding:5px 14px;border-radius:6px;border:1.5px solid var(--accent);background:transparent;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;font-family:inherit">Copiar link</button>
+      <div id="inv-link-result" style="display:none;margin-bottom:16px;padding:12px 14px;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe">
+        <div style="font-size:11px;font-weight:600;color:#1e40af;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Link generado — compártelo con el usuario</div>
+        <div id="inv-link-text" style="font-size:12px;word-break:break-all;color:#1d4ed8;margin-bottom:10px;line-height:1.5"></div>
+        <button onclick="sysCopiarLink(document.getElementById('inv-link-text').textContent)" style="padding:6px 14px;border-radius:7px;border:1.5px solid #2563eb;background:transparent;font-size:12px;font-weight:600;color:#2563eb;cursor:pointer;font-family:inherit">📋 Copiar link</button>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button onclick="closeModal()" class="btn btn-default">Cerrar</button>
-        <button id="inv-btn" onclick="sysCrearInvitacion()" class="btn btn-primary">Generar link</button>
+        <button onclick="closeModal()" style="padding:9px 18px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:14px;cursor:pointer;font-family:inherit">Cerrar</button>
+        <button id="inv-btn" onclick="sysCrearInvitacion()" style="padding:9px 20px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Generar link</button>
       </div>
     </div>
   </div>`);
