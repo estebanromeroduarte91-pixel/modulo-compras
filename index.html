@@ -6756,6 +6756,7 @@ function renderTaller() {
       <div class="form-section-title">Trabajo a realizar</div>
       <div class="form-grid">
         <div class="form-group span2"><label class="form-label">Descripción del trabajo *</label><textarea class="form-input" id="f-trabajo" placeholder="Ej: Cambio de pantalla, reparación de conector de carga..." oninput="autoCapFirst(this)"></textarea></div>
+        <div class="form-group"><label class="form-label">Técnico asignado</label><input type="text" class="form-input" id="f-tecnico" placeholder="Nombre del técnico" oninput="autoCapFirst(this)"></div>
         <div class="form-group"><label class="form-label">Presupuesto estimado ($)</label><input type="number" class="form-input" id="f-presup" placeholder="0"></div>
         <div class="form-group"><label class="form-label">Costo real ($)</label><input type="number" class="form-input" id="f-costo" placeholder="0"></div>
       </div>
@@ -7464,7 +7465,7 @@ function tp_openNewOrder(){
   const t=document.getElementById('order-modal-title');if(t)t.textContent='Nueva orden de trabajo';
   const s=document.getElementById('order-modal-sub');if(s)s.textContent='Completa los datos del cliente y equipo';
   const sb=document.getElementById('save-order-btn');if(sb)sb.textContent='Guardar orden';
-  ['f-nombre','f-tel','f-email','f-rut','f-serie','f-pin','f-color','f-estadofisico','f-trabajo','f-presup','f-costo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['f-nombre','f-tel','f-email','f-rut','f-serie','f-pin','f-color','f-estadofisico','f-trabajo','f-tecnico','f-presup','f-costo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const nci=document.getElementById('nuevo-cli-inline');if(nci)nci.style.display='none';
   tp_setPinMode('text');
   tp_clearModelo();
@@ -7483,7 +7484,7 @@ function tp_openEditOrder(id){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
   set('f-nombre',o.nombre);set('f-rut',o.rut);set('f-tel',o.tel);set('f-email',o.email);
   set('f-serie',o.serie);set('f-color',o.color);set('f-estadofisico',o.estadoFisico);
-  set('f-trabajo',o.trabajo);set('f-presup',o.presup);set('f-costo',o.costo);
+  set('f-trabajo',o.trabajo);set('f-tecnico',o.tecnico);set('f-presup',o.presup);set('f-costo',o.costo);
   set('f-status',o.status);set('f-fecha',o.fecha);
   tp_loadPinValue(o.pin||'',o.pinType||'text');
   setTimeout(()=>{if(o.modelo)tp_selectModelo(o.modelo);else tp_clearModelo();},10);
@@ -7507,6 +7508,7 @@ function tp_saveOrder(){
     pin:tp_getPatternValue(),pinType:(document.getElementById('f-pin-type')?.value||'text'),
     color:(document.getElementById('f-color')?.value||'').trim(),
     estadoFisico:(document.getElementById('f-estadofisico')?.value||'').trim(),
+    tecnico:(document.getElementById('f-tecnico')?.value||'').trim(),
     presup:document.getElementById('f-presup')?.value||'0',
     costo:document.getElementById('f-costo')?.value||'0',
     status:document.getElementById('f-status')?.value||'Chequeo',
@@ -7799,17 +7801,38 @@ function tp_openDetail(id){
           </div>
         </div>`;
       })()}
-      <div class="od-section">
-        <div class="od-info-grid">
-          <div class="od-info-col">
-            ${o.trabajo?`<div class="od-info-row"><span class="od-info-label" style="min-width:110px">Trabajo</span><span class="od-info-val">${o.trabajo}</span></div>`:''}
-            ${o.estadoFisico?`<div class="od-info-row"><span class="od-info-label" style="min-width:110px">Estado físico</span><span class="od-info-val" style="font-size:12px">${o.estadoFisico}</span></div>`:''}
+      ${(o.trabajo||o.estadoFisico||o.tecnico||o.observSalida)?`<div class="od-section" style="padding:16px 18px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div style="display:flex;flex-direction:column;gap:14px;padding-right:18px;border-right:1px solid var(--border)">
+            ${o.trabajo?`<div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:30px;height:30px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--text3)"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+              </div>
+              <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Trabajo</div><div style="font-size:13.5px;font-weight:600;color:var(--text);line-height:1.4">${o.trabajo}</div></div>
+            </div>`:''}
+            ${o.estadoFisico?`<div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:30px;height:30px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--text3)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Estado físico</div><div style="font-size:13px;color:var(--text);line-height:1.4">${o.estadoFisico}</div></div>
+            </div>`:''}
           </div>
-          <div class="od-info-col">
-            ${o.observSalida?`<div class="od-info-row"><span class="od-info-label" style="min-width:100px">Obs. salida</span><span class="od-info-val" style="font-size:12px">${o.observSalida}</span></div>`:''}
+          <div style="display:flex;flex-direction:column;gap:14px;padding-left:18px">
+            ${o.tecnico?`<div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:30px;height:30px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--text3)"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Técnico asignado</div><div style="font-size:13.5px;font-weight:600;color:var(--text)">${o.tecnico}</div></div>
+            </div>`:''}
+            ${o.observSalida?`<div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:30px;height:30px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--text3)"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              </div>
+              <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Obs. salida</div><div style="font-size:13px;color:var(--text);line-height:1.4">${o.observSalida}</div></div>
+            </div>`:''}
           </div>
         </div>
-      </div>
+      </div>`:''}
       <div class="od-section">
         <div class="od-section-header">
           <div style="display:flex;flex-direction:column;gap:1px">
