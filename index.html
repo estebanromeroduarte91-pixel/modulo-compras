@@ -7492,10 +7492,9 @@ function tp_openDetail(id){
     if(!arr?.length) return '';
     const ok=arr.filter(c=>c.checked).length;
     const total=arr.length;
-    const uid_cl='cl-'+Math.random().toString(36).slice(2,7);
-    return `<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px">
-      <div onclick="(function(el){const b=el.querySelector('.cl-body');const arr=el.querySelector('.cl-arrow');const open=b.style.display!=='none';b.style.display=open?'none':'block';arr.style.transform=open?'rotate(0deg)':'rotate(180deg)';})(this.closest('.cl-wrap'))"
-        style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer;background:var(--surface);user-select:none" class="cl-wrap">
+    return `<div class="cl-container" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div onclick="(function(c){const b=c.querySelector('.cl-body');const a=c.querySelector('.cl-arrow');const open=b.style.display!=='none';b.style.display=open?'none':'block';a.style.transform=open?'rotate(0deg)':'rotate(180deg)';})(this.closest('.cl-container'))"
+        style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer;background:var(--surface);user-select:none">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${label}</span>
           <span style="font-size:11px;padding:1px 7px;border-radius:10px;font-weight:600;background:${ok===total?'var(--green-bg)':'var(--orange-bg)'};color:${ok===total?'var(--green)':'var(--orange)'}">${ok}/${total}</span>
