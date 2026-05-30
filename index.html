@@ -6768,7 +6768,7 @@ function renderTaller() {
         <div class="form-group"><label class="form-label">Estado</label>
           <select class="form-input" id="f-status"><option>Chequeo</option><option>Reparación</option><option>Listo</option><option>Entregado</option></select>
         </div>
-        <div class="form-group"><label class="form-label">Fecha recepción</label><input type="date" class="form-input" id="f-fecha"></div>
+        <div class="form-group"><label class="form-label">Fecha estimada de entrega</label><input type="date" class="form-input" id="f-fechaEstimada"></div>
         <div class="form-group span3"><label class="form-label">Estado físico del equipo</label><textarea class="form-input" id="f-estadofisico" placeholder="Rayones, grietas, daños visibles..." oninput="autoCapFirst(this)"></textarea></div>
       </div>
       <div class="form-section-title">Trabajo a realizar</div>
@@ -7484,12 +7484,11 @@ function tp_openNewOrder(){
   const t=document.getElementById('order-modal-title');if(t)t.textContent='Nueva orden de trabajo';
   const s=document.getElementById('order-modal-sub');if(s)s.textContent='Completa los datos del cliente y equipo';
   const sb=document.getElementById('save-order-btn');if(sb)sb.textContent='Guardar orden';
-  ['f-nombre','f-tel','f-email','f-rut','f-serie','f-pin','f-color','f-estadofisico','f-trabajo','f-tecnico','f-presup','f-costo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['f-nombre','f-tel','f-email','f-rut','f-serie','f-pin','f-color','f-estadofisico','f-trabajo','f-tecnico','f-presup','f-costo','f-fechaEstimada'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const nci=document.getElementById('nuevo-cli-inline');if(nci)nci.style.display='none';
   tp_setPinMode('text');
   tp_clearModelo();
   const fs=document.getElementById('f-status');if(fs)fs.value='Chequeo';
-  const ff=document.getElementById('f-fecha');if(ff)ff.value=new Date().toISOString().split('T')[0];
   tp_renderOrderRepuestos();tp_renderOrderChecklist('ingreso');tp_renderPhotoGrid('ingreso');
   tp_refreshTecnicoSelect();
   document.getElementById('mod-order').classList.add('open');
@@ -7505,7 +7504,7 @@ function tp_openEditOrder(id){
   set('f-nombre',o.nombre);set('f-rut',o.rut);set('f-tel',o.tel);set('f-email',o.email);
   set('f-serie',o.serie);set('f-color',o.color);set('f-estadofisico',o.estadoFisico);
   set('f-trabajo',o.trabajo);set('f-tecnico',o.tecnico);set('f-presup',o.presup);set('f-costo',o.costo);
-  set('f-status',o.status);set('f-fecha',o.fecha);
+  set('f-status',o.status);set('f-fechaEstimada',o.fechaEstimada);
   tp_loadPinValue(o.pin||'',o.pinType||'text');
   setTimeout(()=>{if(o.modelo)tp_selectModelo(o.modelo);else tp_clearModelo();},10);
   tp_renderOrderRepuestos();tp_renderOrderChecklist('ingreso',o.checkIngreso);tp_renderPhotoGrid('ingreso');
@@ -7533,7 +7532,7 @@ function tp_saveOrder(){
     presup:document.getElementById('f-presup')?.value||'0',
     costo:document.getElementById('f-costo')?.value||'0',
     status:document.getElementById('f-status')?.value||'Chequeo',
-    fecha:document.getElementById('f-fecha')?.value||'',
+    fechaEstimada:document.getElementById('f-fechaEstimada')?.value||'',
     repuestos:[...tp_currentRepuestos],checkIngreso,
     photosIngreso:[...tp_photoBuffers.ingreso],
   };
@@ -7542,7 +7541,7 @@ function tp_saveOrder(){
     const idx=tp_orders.findIndex(o=>o.id===tp_editingOrderId);
     if(idx!==-1)tp_orders[idx]={...tp_orders[idx],...data};
   } else {
-    tp_orders.unshift({id:Date.now().toString(),num:tp_nextNum(),branchId:tp_currentBranchId,...data});
+    tp_orders.unshift({id:Date.now().toString(),num:tp_nextNum(),branchId:tp_currentBranchId,fecha:new Date().toISOString(),...data});
     // Auto-registrar cliente en BD compartida si no existe
     const clis=getClientes();
     const yaExiste=clis.find(c=>(c.rut&&c.rut===data.rut)||(c.nombre+' '+(c.apellido||'')).trim().toLowerCase()===nombre.toLowerCase());
@@ -7844,6 +7843,12 @@ function tp_openDetail(id){
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--text3)"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
               <div><div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px">Técnico asignado</div><div style="font-size:13px;color:var(--text2)">${o.tecnico}</div></div>
+            </div>`:''}
+            ${o.fechaEstimada?`<div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:30px;height:30px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--text3)"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <div><div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px">Fecha estimada de entrega</div><div style="font-size:13px;color:var(--text2)">${tp_fmtDate(o.fechaEstimada)}</div></div>
             </div>`:''}
             ${o.observSalida?`<div style="display:flex;gap:10px;align-items:flex-start">
               <div style="width:30px;height:30px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
