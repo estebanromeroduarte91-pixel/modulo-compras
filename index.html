@@ -6768,7 +6768,7 @@ function renderTaller() {
         <div class="form-group"><label class="form-label">Estado</label>
           <select class="form-input" id="f-status"><option>Chequeo</option><option>Reparación</option><option>Listo</option><option>Entregado</option></select>
         </div>
-        <div class="form-group"><label class="form-label">Fecha estimada de entrega</label><input type="date" class="form-input" id="f-fechaEstimada"></div>
+        <div class="form-group"><label class="form-label">Fecha estimada de entrega</label><input type="date" class="form-input" id="f-fechaEstimada" onclick="try{this.showPicker()}catch(e){}"></div>
         <div class="form-group span3"><label class="form-label">Estado físico del equipo</label><textarea class="form-input" id="f-estadofisico" placeholder="Rayones, grietas, daños visibles..." oninput="autoCapFirst(this)"></textarea></div>
       </div>
       <div class="form-section-title">Trabajo a realizar</div>
