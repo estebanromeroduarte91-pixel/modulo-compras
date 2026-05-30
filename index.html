@@ -8418,7 +8418,7 @@ function tp_renderMensajesSettings(){
 
       <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Variables disponibles — haz clic para insertar</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">${_MSG_VARS.map(v=>`<button onclick="tp_insertVar('ta-wa-${waKey}',${JSON.stringify(v.code)})" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('')}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${_MSG_VARS.map(v=>`<button onclick="tp_insertVar('ta-wa-${waKey}','${v.code}')" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('')}</div>
       </div>
 
       <div style="margin-bottom:14px">
@@ -8440,7 +8440,7 @@ function tp_renderMensajesSettings(){
         </div>
         <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:8px">
           <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Variables disponibles</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px">${_MSG_VARS.map(v=>`<button onclick="tp_insertVar('ta-em-${emailKey}',${JSON.stringify(v.code)})" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('')}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${_MSG_VARS.map(v=>`<button onclick="tp_insertVar('ta-em-${emailKey}','${v.code}')" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('')}</div>
         </div>
         <textarea id="ta-em-${emailKey}" class="form-input" rows="6" style="font-size:13px;line-height:1.6;font-family:inherit;resize:vertical">${tpls[emailKey]||''}</textarea>
         <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
