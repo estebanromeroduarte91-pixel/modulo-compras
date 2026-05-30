@@ -7728,6 +7728,7 @@ function tp_openDetail(id){
         <div class="modal-title" style="margin-top:2px">${o.nombre}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-default btn-sm" onclick="tp_closeModal('mod-detail');tp_openEditOrder('${o.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
         <button class="btn btn-default btn-sm" onclick="tp_openSend('${o.id}','ingreso')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>Notificar</button>
         <button class="btn btn-ghost btn-sm" onclick="tp_closeModal('mod-detail')">✕</button>
       </div>
@@ -7762,6 +7763,46 @@ function tp_openDetail(id){
           </div>
         </div>
       </div>
+      <!-- INSPECCIÓN DE EQUIPO -->
+      <div class="od-section" style="padding:14px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:var(--text3)"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            <span style="font-size:13px;font-weight:600;color:var(--text)">Inspección de equipo</span>
+            ${(o.inspeccion?.danos?.length||o.inspeccion?.notas)?`<span style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:10px">${o.inspeccion.danos?.length?o.inspeccion.danos.length+' daño'+(o.inspeccion.danos.length>1?'s':''):'Con notas'}</span>`:`<span style="background:var(--green-bg);color:var(--green);font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:10px">Sin daños registrados</span>`}
+          </div>
+          <button class="btn btn-ghost btn-sm" style="font-size:11.5px" onclick="tp_toggleInspeccion('${o.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Editar inspección
+          </button>
+        </div>
+        <!-- Modo lectura -->
+        <div id="insp-view-${o.id}">
+          ${(o.inspeccion?.danos?.length)?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${(o.inspeccion.danos).map(d=>`<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:500">${d}</span>`).join('')}</div>`:''}
+          ${o.inspeccion?.notas?`<div style="font-size:12.5px;color:var(--text2);background:var(--bg);border-radius:8px;padding:8px 12px;white-space:pre-wrap">${o.inspeccion.notas}</div>`:''}
+          ${(!o.inspeccion?.danos?.length&&!o.inspeccion?.notas)?`<div style="font-size:12px;color:var(--text3);font-style:italic">Toca "Editar inspección" para registrar el estado del equipo al ingresar.</div>`:''}
+        </div>
+        <!-- Modo edición -->
+        <div id="insp-edit-${o.id}" style="display:none">
+          <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Daños visibles</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px" id="insp-tags-${o.id}">
+            ${['🖥 Pantalla rota','💧 Mojado','🔧 Mal armado','🪛 Tornillos faltantes','📱 Carcasa dañada','⚡ Puerto dañado','🔘 Botones dañados','✏️ Arañazos','🔋 Batería hinchada','📷 Cámara dañada'].map(tag=>{
+              const active=(o.inspeccion?.danos||[]).includes(tag);
+              return `<button onclick="tp_toggleDanoTag('${o.id}',this,'${tag.replace(/'/g,"\\'")}')" style="border:1.5px solid ${active?'#f59e0b':'var(--border)'};background:${active?'#fef3c7':'var(--surface)'};color:${active?'#92400e':'var(--text2)'};border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:${active?'600':'400'}">${tag}</button>`;
+            }).join('')}
+          </div>
+          <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Observaciones</div>
+          <textarea id="insp-notas-${o.id}" class="form-input" rows="3" placeholder="Ej: pantalla con crack en esquina superior, carcasa con golpe en lado derecho..." style="width:100%;resize:vertical;font-size:13px;line-height:1.5">${o.inspeccion?.notas||''}</textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+            <button class="btn btn-ghost btn-sm" onclick="tp_toggleInspeccion('${o.id}')">Cancelar</button>
+            <button class="btn btn-primary btn-sm" onclick="tp_saveInspeccion('${o.id}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+              Guardar inspección
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="od-section">
         <div class="od-section-header">
           <div style="display:flex;align-items:center;gap:10px">
@@ -7906,6 +7947,35 @@ function tp_addCheckItem(type){
 function tp_removeCheckItem(type,idx){
   if(type==='ingreso')tp_checklistIngreso.splice(idx,1);else tp_checklistSalida.splice(idx,1);
   tp_saveState();tp_renderSettingsChecklists();
+}
+
+// ─── INSPECCIÓN DE EQUIPO ───
+function tp_toggleInspeccion(orderId){
+  const view=document.getElementById('insp-view-'+orderId);
+  const edit=document.getElementById('insp-edit-'+orderId);
+  if(!view||!edit) return;
+  const editing=edit.style.display!=='none';
+  view.style.display=editing?'block':'none';
+  edit.style.display=editing?'none':'block';
+}
+function tp_toggleDanoTag(orderId, btn, tag){
+  const active=btn.style.background.includes('fef3c7');
+  if(active){
+    btn.style.background='var(--surface)';btn.style.borderColor='var(--border)';btn.style.color='var(--text2)';btn.style.fontWeight='400';
+  } else {
+    btn.style.background='#fef3c7';btn.style.borderColor='#f59e0b';btn.style.color='#92400e';btn.style.fontWeight='600';
+  }
+}
+function tp_saveInspeccion(orderId){
+  const o=tp_orders.find(x=>x.id===orderId);if(!o)return;
+  const tags=document.querySelectorAll(`#insp-tags-${orderId} button`);
+  const danos=[];
+  tags.forEach(btn=>{ if(btn.style.background.includes('fef3c7')) danos.push(btn.textContent.trim()); });
+  const notas=(document.getElementById('insp-notas-'+orderId)?.value||'').trim();
+  o.inspeccion={danos,notas,fecha:today()};
+  tp_saveState();
+  tp_openDetail(orderId);
+  toast('Inspección guardada ✓','success');
 }
 
 // ─── SETTINGS TABS ───
