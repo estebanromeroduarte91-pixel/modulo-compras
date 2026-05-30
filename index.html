@@ -7721,7 +7721,7 @@ function tp_modalAprobacion(orderId){
 
 async function tp_enviarAprobacion(orderId, canal){
   const o=tp_orders.find(x=>x.id===orderId); if(!o) return;
-  const msg=(document.getElementById('aprob-msg')?.value||'').trim();
+  const msgWA=(document.getElementById('aprob-msg')?.value||'').trim();
 
   // Reusar token si ya está pendiente
   let token=o.aprobacion_token;
@@ -7738,12 +7738,25 @@ async function tp_enviarAprobacion(orderId, canal){
   }
 
   const link=`${_APROB_BASE_URL}?t=${token}`;
-  const msgFinal=msg.includes('(se generará al enviar)')?msg.replace('(se generará al enviar)',link):msg;
+  // WA: usar textarea (puede haber sido editado), reemplazando placeholder del link
+  const msgWAFinal=msgWA.includes('(se generará al enviar)')?msgWA.replace('(se generará al enviar)',link):msgWA.replace(/\{\{link\}\}/g,link);
+
+  // Email: usar template aprobacion_email con todas las variables
+  const cfg=DB.get('tp_config')||{};
+  const presup=o.presup?'$'+Number(o.presup).toLocaleString('es-CL'):'$0';
+  const tplData={
+    nombre:o.nombre||'',modelo:o.modelo||'',orden:o.num||'',
+    sucursal:cfg.sucursal||cfg.taller||'nuestra sucursal',
+    horario:cfg.horario||'',tecnico:o.tecnico||'',
+    fecha_estimada:o.fechaEstimada||'',presupuesto:presup,
+    trabajo:o.trabajo||'—',link,
+  };
+  const emailPlain=tp_applyMsgTemplate('aprobacion_email',tplData);
 
   if(canal==='wa'){
     const telLimpio=(o.tel||'').replace(/\D/g,'');
     const telWA=telLimpio.startsWith('56')?telLimpio:'56'+telLimpio;
-    window.open(`https://wa.me/${telWA}?text=${encodeURIComponent(msgFinal)}`,'_blank');
+    window.open(`https://wa.me/${telWA}?text=${encodeURIComponent(msgWAFinal)}`,'_blank');
     closeModal();
     toast('Solicitud enviada por WhatsApp — esperando aprobación','success');
     tp_renderAll();
@@ -7751,15 +7764,18 @@ async function tp_enviarAprobacion(orderId, canal){
     const asunto=`Aprobación de presupuesto — ${o.modelo||'Equipo'} #${o.num||''}`;
     const smtpCfg=DB.get('tp_smtp_config');
     if(smtpCfg?.host&&smtpCfg?.user&&smtpCfg?.password){
-      // Envío directo por SMTP
+      // Envío directo por SMTP usando template aprobacion_email
       const bodyHtml=`<div style="font-family:sans-serif;max-width:560px;margin:auto">
-        <h2 style="color:#1e40af">Solicitud de aprobación de presupuesto</h2>
-        <p>Estimado/a <strong>${o.nombre||'cliente'}</strong>,</p>
-        <p>${(msg||'').replace(/\n/g,'<br>')}</p>
-        <div style="margin:24px 0;text-align:center">
-          <a href="${link}" style="background:#2563eb;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px">Revisar y Aprobar presupuesto →</a>
+        <div style="background:#1e40af;border-radius:12px 12px 0 0;padding:20px 24px">
+          <h2 style="color:#fff;margin:0;font-size:18px">📋 Aprobación de presupuesto</h2>
         </div>
-        <p style="color:#6b7280;font-size:12px">Si el botón no funciona, copia este enlace en tu navegador:<br>${link}</p>
+        <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
+          <p style="font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap">${emailPlain.replace(/\n/g,'<br>')}</p>
+          <div style="margin:24px 0;text-align:center">
+            <a href="${link}" style="background:#2563eb;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px">Revisar y Aprobar presupuesto →</a>
+          </div>
+          <p style="color:#6b7280;font-size:12px">Si el botón no funciona, copia este enlace:<br>${link}</p>
+        </div>
       </div>`;
       closeModal();
       toast('Enviando email...','');
@@ -7769,8 +7785,8 @@ async function tp_enviarAprobacion(orderId, canal){
       });
       tp_renderAll();
     } else {
-      // Fallback: abrir cliente de correo
-      window.open(`mailto:${o.email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(msgFinal)}`,'_blank');
+      // Fallback: abrir cliente de correo con template email
+      window.open(`mailto:${o.email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(emailPlain)}`,'_blank');
       closeModal();
       toast('Abriendo cliente de correo — configura SMTP para envío directo','');
       tp_renderAll();
