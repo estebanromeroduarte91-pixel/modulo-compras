@@ -930,9 +930,10 @@ async function _iniciarApp(user){
       document.getElementById('login-err').textContent = 'Tu cuenta está desactivada. Contacta al administrador.';
       await _sb.auth.signOut(); return;
     }
+    // Intentar leer empresa (puede fallar por RLS si el usuario no es owner)
     const {data: emp} = await _sb.from('empresas').select('id,nombre').eq('id', profile.empresa_id).maybeSingle();
-    if(!emp){ document.getElementById('login-err').textContent='Error: empresa no encontrada.'; return; }
-    empresaId = emp.id; empresaNombre = emp.nombre;
+    empresaId = profile.empresa_id; // siempre usar el id del perfil
+    empresaNombre = emp?.nombre || profile.empresa_nombre || 'TallerPro';
     _currentRole = profile.role||'tecnico';
     _currentUserNombre = profile.nombre||user.email;
   } else {
