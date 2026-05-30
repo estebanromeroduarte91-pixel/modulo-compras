@@ -7665,7 +7665,20 @@ function tp_modalAprobacion(orderId){
   const telWA=telLimpio.startsWith('56')?telLimpio:'56'+telLimpio;
   const isPending=o.aprobacion_estado==='pendiente';
   const link=isPending&&o.aprobacion_token?`${_APROB_BASE_URL}?t=${o.aprobacion_token}`:'';
-  const msgDefault=`Hola ${o.nombre} 👋\n\nTe escribimos del taller para informarte que tu equipo *${o.modelo||''}* está en proceso de reparación.\n\nDetalle del trabajo:\n📋 ${o.trabajo||'—'}\n💰 Presupuesto: *${presup}*\n\nPor favor haz click en el siguiente enlace para aprobar el presupuesto:\n${link||'(se generará al enviar)'}`;
+  const cfg=DB.get('tp_config')||{};
+  const tplData={
+    nombre:o.nombre||'',
+    modelo:o.modelo||'',
+    orden:o.num||'',
+    sucursal:cfg.sucursal||cfg.taller||'nuestra sucursal',
+    horario:cfg.horario||'',
+    tecnico:o.tecnico||'',
+    fecha_estimada:o.fechaEstimada||'',
+    presupuesto:presup,
+    trabajo:o.trabajo||'—',
+    link:link||'(se generará al enviar)',
+  };
+  const msgDefault=tp_applyMsgTemplate('aprobacion_wa', tplData);
 
   showModal(`
     <div class="modal-overlay" onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000">
@@ -8367,8 +8380,8 @@ const _MSG_DEFAULTS = {
   ingreso_wa:    `📥 *Orden recibida*\n\nHola *{{nombre}}*, hemos recibido tu *{{modelo}}* en nuestro taller.\n\n🔢 *Orden N°:* #{{orden}}\n📍 *Sucursal:* {{sucursal}}\n\nTe avisaremos cuando esté listo. ¡Gracias por confiar en nosotros!`,
   ingreso_email: `Hola {{nombre}},\n\nhemos recibido tu {{modelo}} en nuestro taller.\n\nOrden N°: #{{orden}}\nSucursal: {{sucursal}}\n\nTe notificaremos cuando esté listo.\n\n¡Gracias por confiar en nosotros!`,
 
-  aprobacion_wa:    `🔧 *Presupuesto para aprobación*\n\nHola *{{nombre}}*, hemos revisado tu *{{modelo}}* y necesitamos tu autorización para proceder con la reparación.\n\n🔢 *Orden N°:* #{{orden}}\n\nPor favor revisa el presupuesto y aprueba o rechaza haciendo clic en el siguiente enlace:`,
-  aprobacion_email: `Hola {{nombre}},\n\nhemos revisado tu {{modelo}} y necesitamos tu autorización para proceder.\n\nOrden N°: #{{orden}}\n\nPor favor revisa el presupuesto y responde a la brevedad.\n\n¡Gracias!`,
+  aprobacion_wa:    `🔧 *Presupuesto para aprobación*\n\nHola *{{nombre}}*, hemos revisado tu *{{modelo}}* y necesitamos tu autorización para proceder con la reparación.\n\n📋 *Trabajo:* {{trabajo}}\n💰 *Presupuesto:* {{presupuesto}}\n🔢 *Orden N°:* #{{orden}}\n\nHaz clic en el siguiente enlace para aprobar o rechazar:\n{{link}}`,
+  aprobacion_email: `Hola {{nombre}},\n\nhemos revisado tu {{modelo}} y necesitamos tu autorización para proceder.\n\nTrabajo: {{trabajo}}\nPresupuesto: {{presupuesto}}\nOrden N°: #{{orden}}\n\nPor favor revisa el presupuesto y responde a la brevedad.\n\n¡Gracias!`,
 
   inspeccion_wa:    `📋 *Reporte de inspección*\n\nHola *{{nombre}}*, adjuntamos el informe de estado de tu *{{modelo}}* al momento de ingresar a nuestro taller.\n\n🔢 *Orden N°:* #{{orden}}\n\nCualquier consulta, estamos a tu disposición.`,
   inspeccion_email: `Hola {{nombre}},\n\nadjuntamos el reporte de inspección de tu {{modelo}} (Orden #{{orden}}) al momento de ingresar a nuestro taller.\n\n¡Gracias por confiar en nosotros!`,
@@ -8385,6 +8398,8 @@ const _MSG_VARS = [
   {code:'{{horario}}', label:'Horario'},
   {code:'{{tecnico}}', label:'Técnico'},
   {code:'{{fecha_estimada}}', label:'Fecha estimada'},
+  {code:'{{presupuesto}}', label:'Presupuesto'},
+  {code:'{{link}}', label:'Link aprobación'},
 ];
 
 function tp_getMsgTemplates(){ return {..._MSG_DEFAULTS,...(DB.get('tp_msg_templates')||{})}; }
@@ -8483,7 +8498,10 @@ function tp_applyMsgTemplate(key, data){
     .replace(/\{\{sucursal\}\}/g, data.sucursal||'')
     .replace(/\{\{horario\}\}/g, data.horario||'')
     .replace(/\{\{tecnico\}\}/g, data.tecnico||'')
-    .replace(/\{\{fecha_estimada\}\}/g, data.fecha_estimada||'');
+    .replace(/\{\{fecha_estimada\}\}/g, data.fecha_estimada||'')
+    .replace(/\{\{presupuesto\}\}/g, data.presupuesto||'')
+    .replace(/\{\{trabajo\}\}/g, data.trabajo||'')
+    .replace(/\{\{link\}\}/g, data.link||'');
 }
 
 // ─── SMTP CONFIG ───
