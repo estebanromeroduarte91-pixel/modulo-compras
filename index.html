@@ -8436,11 +8436,7 @@ function tp_removeRepuesto(idx){tp_currentRepuestos.splice(idx,1);tp_renderOrder
 let tp_detailOrderId=null;
 
 function tp_buildRepHtml(o){
-  if(!o.repuestos?.length) return `<div class="od-products-empty">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg>
-    <strong>Sin repuestos agregados</strong>
-    <span>Agregá los ítems utilizados en esta reparación.</span>
-  </div>`;
+  if(!o.repuestos?.length) return `<div style="text-align:center;padding:12px 16px;color:var(--text3);font-size:12.5px">Sin repuestos agregados</div>`;
   const rows = o.repuestos.map((r,i)=>`
     <div class="rep-row">
       <div class="rep-row-name">${r.name}</div>
