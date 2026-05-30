@@ -7772,6 +7772,7 @@ function tp_saveSalida(){
 
 // ─── APROBACIÓN DE PRESUPUESTO ───
 const _APROB_BASE_URL = 'https://estebanromeroduarte91-pixel.github.io/modulo-compras/aprobar.html';
+const _APP_BASE_URL   = 'https://estebanromeroduarte91-pixel.github.io/modulo-compras/index.html';
 
 function tp_modalAprobacion(orderId){
   const o=tp_orders.find(x=>x.id===orderId); if(!o) return;
@@ -9526,7 +9527,7 @@ async function renderSysUsuarios(){
       invEl.innerHTML = `<div style="color:var(--text3);font-size:13px">Sin invitaciones pendientes.</div>`;
     } else {
       invEl.innerHTML = invites.map(inv=>{
-        const url = `${window.location.origin}${window.location.pathname}?invite=${inv.token}`;
+        const url = `${_APP_BASE_URL}?invite=${inv.token}`;
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:9px;margin-bottom:6px">
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--text)">${inv.email}</div>
@@ -9609,7 +9610,7 @@ async function sysCrearInvitacion(){
   const token = Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
   const {error} = await _sb.from('pending_invites').insert({empresa_id:_empresaId, email, nombre, role, token, used:false});
   if(error){ toast('Error: '+error.message,'error'); return; }
-  const url = `${window.location.origin}${window.location.pathname}?invite=${token}`;
+  const url = `${_APP_BASE_URL}?invite=${token}`;
   const linkEl = document.getElementById('inv-link-result');
   const linkText = document.getElementById('inv-link-text');
   const btn = document.getElementById('inv-btn');
