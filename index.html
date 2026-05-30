@@ -8364,7 +8364,16 @@ function tp_settingsTab(tab){
 
 // ─── MENSAJES AUTOMÁTICOS ───
 const _MSG_DEFAULTS = {
-  listo_wa: `✅ *Tu equipo está listo*\n\nHola *{{nombre}}*, te informamos que tu *{{modelo}}* ya se encuentra listo para ser retirado.\n\n📍 *Sucursal:* {{sucursal}}\n🕐 *Horario:* {{horario}}\n🔢 *Orden N°:* #{{orden}}\n\n¡Gracias por confiar en nosotros!`,
+  ingreso_wa:    `📥 *Orden recibida*\n\nHola *{{nombre}}*, hemos recibido tu *{{modelo}}* en nuestro taller.\n\n🔢 *Orden N°:* #{{orden}}\n📍 *Sucursal:* {{sucursal}}\n\nTe avisaremos cuando esté listo. ¡Gracias por confiar en nosotros!`,
+  ingreso_email: `Hola {{nombre}},\n\nhemos recibido tu {{modelo}} en nuestro taller.\n\nOrden N°: #{{orden}}\nSucursal: {{sucursal}}\n\nTe notificaremos cuando esté listo.\n\n¡Gracias por confiar en nosotros!`,
+
+  aprobacion_wa:    `🔧 *Presupuesto para aprobación*\n\nHola *{{nombre}}*, hemos revisado tu *{{modelo}}* y necesitamos tu autorización para proceder con la reparación.\n\n🔢 *Orden N°:* #{{orden}}\n\nPor favor revisa el presupuesto y aprueba o rechaza haciendo clic en el siguiente enlace:`,
+  aprobacion_email: `Hola {{nombre}},\n\nhemos revisado tu {{modelo}} y necesitamos tu autorización para proceder.\n\nOrden N°: #{{orden}}\n\nPor favor revisa el presupuesto y responde a la brevedad.\n\n¡Gracias!`,
+
+  inspeccion_wa:    `📋 *Reporte de inspección*\n\nHola *{{nombre}}*, adjuntamos el informe de estado de tu *{{modelo}}* al momento de ingresar a nuestro taller.\n\n🔢 *Orden N°:* #{{orden}}\n\nCualquier consulta, estamos a tu disposición.`,
+  inspeccion_email: `Hola {{nombre}},\n\nadjuntamos el reporte de inspección de tu {{modelo}} (Orden #{{orden}}) al momento de ingresar a nuestro taller.\n\n¡Gracias por confiar en nosotros!`,
+
+  listo_wa:    `✅ *Tu equipo está listo*\n\nHola *{{nombre}}*, te informamos que tu *{{modelo}}* ya se encuentra listo para ser retirado.\n\n📍 *Sucursal:* {{sucursal}}\n🕐 *Horario:* {{horario}}\n🔢 *Orden N°:* #{{orden}}\n\n¡Gracias por confiar en nosotros!`,
   listo_email: `Hola {{nombre}},\n\nte informamos que tu {{modelo}} (Orden #{{orden}}) ya se encuentra listo para ser retirado.\n\nSucursal: {{sucursal}}\nHorario: {{horario}}\n\n¡Gracias por confiar en nosotros!`
 };
 
@@ -8405,53 +8414,64 @@ function tp_resetMsgTemplate(key, textareaId){
   toast('Mensaje restaurado','success');
 }
 
-function tp_renderMensajesSettings(){
+const _MSG_SECTIONS=[
+  {id:'ingreso',    label:'Ingreso',               icon:'📥', waKey:'ingreso_wa',    emailKey:'ingreso_email'},
+  {id:'aprobacion', label:'Solicitud de aprobación',icon:'📋', waKey:'aprobacion_wa', emailKey:'aprobacion_email'},
+  {id:'inspeccion', label:'Inspección de equipo',   icon:'📷', waKey:'inspeccion_wa', emailKey:'inspeccion_email'},
+  {id:'listo',      label:'Listo para retiro',      icon:'✅', waKey:'listo_wa',      emailKey:'listo_email'},
+];
+let _msgActiveTab='ingreso';
+
+function tp_renderMensajesSettings(tab){
+  if(tab) _msgActiveTab=tab;
   const tpls=tp_getMsgTemplates();
-  const varBtns=_MSG_VARS.map(v=>`<button onclick="tp_insertVar(arguments[0],${JSON.stringify(v.code)})" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace;white-space:nowrap" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('');
+  const s=_MSG_SECTIONS.find(x=>x.id===_msgActiveTab)||_MSG_SECTIONS[0];
 
-  const makeSection=(title,icon,waKey,emailKey)=>`
-    <div class="chart-card" style="background:var(--surface);border:1px solid var(--border);margin-bottom:20px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-        <span style="font-size:18px">${icon}</span>
-        <div style="font-size:15px;font-weight:700;color:var(--text)">${title}</div>
+  const tabs=_MSG_SECTIONS.map(x=>`<button onclick="tp_renderMensajesSettings('${x.id}')" style="padding:8px 14px;border:none;background:transparent;cursor:pointer;font-family:inherit;font-size:13px;font-weight:${x.id===_msgActiveTab?'700':'500'};color:${x.id===_msgActiveTab?'var(--accent)':'var(--text2)'};border-bottom:2px solid ${x.id===_msgActiveTab?'var(--accent)':'transparent'};white-space:nowrap">${x.icon} ${x.label}</button>`).join('');
+
+  const varRow=(taId)=>_MSG_VARS.map(v=>`<button onclick="tp_insertVar('${taId}','${v.code}')" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('');
+
+  const waId=`ta-wa-${s.waKey}`;
+  const emId=`ta-em-${s.emailKey}`;
+
+  const cont=document.getElementById('mensajes-tab-content');if(!cont)return;
+  cont.innerHTML=`
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto">${tabs}</div>
+    <div class="chart-card" style="background:var(--surface);border:1px solid var(--border)">
+
+      <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:18px">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Variables — haz clic para insertar en el campo activo</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" id="msg-var-row-wa">${varRow(waId)}</div>
       </div>
 
-      <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:14px">
-        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Variables disponibles — haz clic para insertar</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">${_MSG_VARS.map(v=>`<button onclick="tp_insertVar('ta-wa-${waKey}','${v.code}')" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('')}</div>
-      </div>
-
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+      <div style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
           <svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px;color:#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.987-1.399A9.954 9.954 0 0011.999 22C17.523 22 22 17.523 22 12S17.523 2 11.999 2zm0 18c-1.66 0-3.202-.49-4.489-1.333l-.322-.19-3.3.924.916-3.22-.21-.338A7.957 7.957 0 014 12c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8z"/></svg>
           <span style="font-size:13px;font-weight:600;color:var(--text)">Mensaje WhatsApp</span>
         </div>
-        <textarea id="ta-wa-${waKey}" class="form-input" rows="6" style="font-size:13px;line-height:1.6;font-family:inherit;resize:vertical">${tpls[waKey]||''}</textarea>
+        <textarea id="${waId}" class="form-input" rows="7" style="font-size:13px;line-height:1.7;font-family:inherit;resize:vertical">${tpls[s.waKey]||''}</textarea>
         <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
-          <button onclick="tp_resetMsgTemplate('${waKey}','ta-wa-${waKey}')" style="padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">Restaurar por defecto</button>
-          <button onclick="tp_saveMsgTemplate('${waKey}','ta-wa-${waKey}')" class="btn btn-primary btn-sm">Guardar</button>
+          <button onclick="tp_resetMsgTemplate('${s.waKey}','${waId}')" style="padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">Restaurar por defecto</button>
+          <button onclick="tp_saveMsgTemplate('${s.waKey}','${waId}')" class="btn btn-primary btn-sm">Guardar</button>
         </div>
       </div>
 
-      <div style="border-top:1px solid var(--border);padding-top:14px">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+      <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
           <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" style="width:15px;height:15px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           <span style="font-size:13px;font-weight:600;color:var(--text)">Mensaje Email</span>
         </div>
         <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:8px">
-          <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Variables disponibles</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px">${_MSG_VARS.map(v=>`<button onclick="tp_insertVar('ta-em-${emailKey}','${v.code}')" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('')}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Variables — haz clic para insertar</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${varRow(emId)}</div>
         </div>
-        <textarea id="ta-em-${emailKey}" class="form-input" rows="6" style="font-size:13px;line-height:1.6;font-family:inherit;resize:vertical">${tpls[emailKey]||''}</textarea>
+        <textarea id="${emId}" class="form-input" rows="7" style="font-size:13px;line-height:1.7;font-family:inherit;resize:vertical">${tpls[s.emailKey]||''}</textarea>
         <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
-          <button onclick="tp_resetMsgTemplate('${emailKey}','ta-em-${emailKey}')" style="padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">Restaurar por defecto</button>
-          <button onclick="tp_saveMsgTemplate('${emailKey}','ta-em-${emailKey}')" class="btn btn-primary btn-sm">Guardar</button>
+          <button onclick="tp_resetMsgTemplate('${s.emailKey}','${emId}')" style="padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">Restaurar por defecto</button>
+          <button onclick="tp_saveMsgTemplate('${s.emailKey}','${emId}')" class="btn btn-primary btn-sm">Guardar</button>
         </div>
       </div>
     </div>`;
-
-  const cont=document.getElementById('mensajes-tab-content');if(!cont)return;
-  cont.innerHTML=makeSection('Equipo listo para retiro','✅','listo_wa','listo_email');
 }
 
 function tp_applyMsgTemplate(key, data){
