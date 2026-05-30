@@ -7977,6 +7977,17 @@ function tp_openInspeccionModal(orderId, mode){
         ${insp.fotos?.length?`<div style="margin-bottom:16px"><div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Fotos (${insp.fotos.length})</div>${renderFotos(insp.fotos,false)}</div>`:''}
         ${insp.notas?`<div><div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observaciones</div><div style="font-size:13.5px;color:#374151;background:#f9fafb;border-radius:10px;padding:12px 14px;white-space:pre-wrap;line-height:1.6">${insp.notas}</div></div>`:''}
         ${insp.fecha?`<div style="margin-top:14px;font-size:11px;color:#9ca3af">Registrado el ${tp_fmtDate(insp.fecha)}</div>`:''}
+        ${(insp.fotos?.length||insp.notas)?`
+        <div style="display:flex;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid #f3f4f6">
+          <button onclick="tp_enviarInspeccionReporte('${orderId}','whatsapp')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border:1.5px solid #25d366;border-radius:9px;background:#fff;color:#128c3e;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#fff'">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.987-1.399A9.954 9.954 0 0011.999 22C17.523 22 22 17.523 22 12S17.523 2 11.999 2zm0 18c-1.66 0-3.202-.49-4.489-1.333l-.322-.19-3.3.924.916-3.22-.21-.338A7.957 7.957 0 014 12c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8z"/></svg>
+            WhatsApp
+          </button>
+          <button onclick="tp_enviarInspeccionReporte('${orderId}','email')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border:1.5px solid #2563eb;border-radius:9px;background:#fff;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email
+          </button>
+        </div>`:''}
         ${!insp.fotos?.length&&!insp.notas?`<div style="text-align:center;padding:30px 0;color:#9ca3af;font-size:13px">Sin inspección registrada.<br><button onclick="tp_openInspeccionModal('${orderId}','edit')" style="margin-top:10px;font-size:13px;color:#2563eb;background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit">Registrar ahora →</button></div>`:''}
       `}
     </div>
@@ -8020,6 +8031,77 @@ function tp_saveInspeccion(){
   closeModal();
   tp_openDetail(_inspOrderId);
   toast('Inspección guardada ✓','success');
+}
+
+async function tp_enviarInspeccionReporte(orderId, via){
+  const o=tp_orders.find(x=>x.id===orderId);if(!o)return;
+  const insp=o.inspeccion||{};
+  const taller=DB.get('tp_config')||{};
+  const tallerNombre=taller.nombre||'TallerPro';
+  const fecha=insp.fecha?tp_fmtDate(insp.fecha):'';
+  const notasTexto=(insp.notas||'').trim();
+  const fotoCount=insp.fotos?.length||0;
+
+  if(via==='whatsapp'){
+    const phone=(o.tel||'').replace(/\D/g,'');
+    let texto=`📋 *Reporte de Inspección - ${tallerNombre}*\n`;
+    texto+=`━━━━━━━━━━━━━━━━━━\n`;
+    texto+=`👤 Cliente: ${o.nombre}\n`;
+    texto+=`📱 Equipo: ${o.modelo}\n`;
+    texto+=`🔢 Orden N°: #${o.num}\n`;
+    if(fecha) texto+=`📅 Fecha inspección: ${fecha}\n`;
+    texto+=`━━━━━━━━━━━━━━━━━━\n`;
+    if(notasTexto){
+      texto+=`📝 *Estado del equipo:*\n${notasTexto}\n`;
+    }
+    if(fotoCount){
+      texto+=`\n📷 Se adjuntan ${fotoCount} foto${fotoCount>1?'s':''} del equipo.\n`;
+    }
+    texto+=`\nGracias por confiar en ${tallerNombre}.`;
+    const url=phone
+      ?`https://wa.me/${phone}?text=${encodeURIComponent(texto)}`
+      :`https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(url,'_blank');
+    return;
+  }
+
+  if(via==='email'){
+    const email=o.email||'';
+    if(!email){ toast('Esta orden no tiene email del cliente','error'); return; }
+    const smtpCfg=DB.get('tp_smtp_config');
+    const fotosHtml=fotoCount
+      ?`<div style="margin:16px 0"><p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px">📷 Fotos del equipo (${fotoCount}):</p><div style="display:flex;flex-wrap:wrap;gap:8px">${(insp.fotos||[]).map(src=>`<img src="${src}" style="width:160px;height:160px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb">`).join('')}</div></div>`
+      :'';
+    const notasHtml=notasTexto
+      ?`<div style="background:#f9fafb;border-radius:10px;padding:14px 16px;margin:12px 0"><p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 8px">📝 Estado del equipo:</p><p style="font-size:13.5px;color:#374151;margin:0;line-height:1.7;white-space:pre-wrap">${notasTexto}</p></div>`
+      :'';
+    const bodyHtml=`<div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:24px">
+      <div style="background:#2563eb;border-radius:12px 12px 0 0;padding:20px 24px">
+        <h2 style="color:#fff;margin:0;font-size:18px">📋 Reporte de Inspección</h2>
+        <p style="color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px">${tallerNombre}</p>
+      </div>
+      <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;width:130px">Cliente</td><td style="font-size:13px;font-weight:600;color:#111">${o.nombre}</td></tr>
+          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280">Equipo</td><td style="font-size:13px;font-weight:600;color:#111">${o.modelo}</td></tr>
+          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280">Orden N°</td><td style="font-size:13px;font-weight:600;color:#111">#${o.num}</td></tr>
+          ${fecha?`<tr><td style="padding:6px 0;font-size:13px;color:#6b7280">Fecha</td><td style="font-size:13px;color:#111">${fecha}</td></tr>`:''}
+        </table>
+        ${notasHtml}
+        ${fotosHtml}
+        <p style="font-size:12px;color:#9ca3af;margin-top:20px;border-top:1px solid #f3f4f6;padding-top:14px">Este reporte fue generado automáticamente por ${tallerNombre}.</p>
+      </div>
+    </div>`;
+    const asunto=`Inspección de equipo - ${o.modelo} #${o.num}`;
+    if(smtpCfg?.host&&smtpCfg?.user&&smtpCfg?.password){
+      toast('Enviando reporte...','');
+      const res=await tp_callSendEmail(email,asunto,bodyHtml);
+      if(res.ok) toast('✅ Reporte enviado a '+email,'success');
+      else toast('⚠️ Error al enviar: '+res.error,'error');
+    } else {
+      window.open(`mailto:${email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent('Reporte de inspección adjunto.\n\nEquipo: '+o.modelo+'\nOrden: #'+o.num+(notasTexto?'\n\nEstado del equipo:\n'+notasTexto:''))}`, '_blank');
+    }
+  }
 }
 
 // ─── SETTINGS TABS ───
