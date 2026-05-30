@@ -9472,6 +9472,23 @@ function tp_addListeners(){
 // GESTIÓN DE ACCESOS (admin only)
 // ─────────────────────────────────────────────
 async function renderSysUsuarios(){
+  const cont = document.getElementById('page-content');
+  if(!cont) return;
+  cont.innerHTML = `<div style="max-width:860px;margin:0 auto;padding:8px 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
+      <div>
+        <div style="font-size:18px;font-weight:700">Accesos al sistema</div>
+        <div style="font-size:13px;color:var(--text3)">Gestiona quién puede ingresar al ERP y con qué permisos</div>
+      </div>
+      <button class="btn btn-primary" onclick="sysInviteModal()">+ Invitar usuario</button>
+    </div>
+    <div id="sys-usuarios-list"><div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Cargando...</div></div>
+    <div style="margin-top:28px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text2)">Invitaciones pendientes</div>
+      <div id="sys-invites-list"></div>
+    </div>
+  </div>`;
+
   // Usuarios activos
   const {data: perfiles} = await _sb.from('user_profiles').select('id,nombre,role,activo').eq('empresa_id', _empresaId);
   const listEl = document.getElementById('sys-usuarios-list');
