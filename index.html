@@ -7737,7 +7737,8 @@ function tp_renderModeloList(q){
   if(!list.length){cont.innerHTML=`<div class="modelo-ac-empty">No se encontraron equipos${q?` para "<strong>${q}</strong>"`:''}</div>`;return;}
   cont.innerHTML=list.map(e=>{
     const displayName=`${e.modelo} [${e.marca}]`;
-    return `<div class="modelo-ac-item" onclick="tp_selectModelo('${displayName.replace(/'/g,"\\'")}')">
+    const safeVal=displayName.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    return `<div class="modelo-ac-item" data-modelo="${safeVal}" onclick="tp_selectModelo(this.dataset.modelo)">
       <div class="modelo-ac-icon">${tp_getEquipoIcon(e.categoria)}</div>
       <div class="modelo-ac-name">${e.modelo} <span style="color:var(--text3);font-weight:400;font-size:12px">[${e.marca}]</span></div>
       ${e.categoria?`<div class="modelo-ac-cat-badge">${e.categoria}</div>`:''}
