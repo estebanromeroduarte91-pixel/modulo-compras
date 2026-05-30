@@ -1281,20 +1281,328 @@ function calcularEstadoOC(oc){
 }
 
 // ─────────────────────────────────────────────
-// VENTAS
+// VENTAS / POS
 // ─────────────────────────────────────────────
 let _vtaFiltro='todas';
+let _vtaTab='pos';
+let _posItems=[];
+let _posCliente='';
+let _posDocumento='boleta';
+let _posMetodo='efectivo';
+let _posNumBuf='';
 
 function renderVentas(){
-  const ventas=getVentas();
-  document.getElementById('topbar-actions').innerHTML=
-    `<button class="btn btn-primary" onclick="modalNuevaVenta()">＋ Nueva Venta</button>`;
+  document.getElementById('topbar-actions').innerHTML=`
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="btn ${_vtaTab==='pos'?'btn-primary':'btn-secondary'}" onclick="setVtaTab('pos')">🛒 POS</button>
+      <button class="btn ${_vtaTab==='historial'?'btn-primary':'btn-secondary'}" onclick="setVtaTab('historial')">📋 Historial</button>
+    </div>`;
+  if(_vtaTab==='pos') _renderPOS();
+  else _renderHistorial();
+}
 
+function setVtaTab(tab){ _vtaTab=tab; renderVentas(); }
+
+function _renderPOS(){
+  document.getElementById('page-content').innerHTML=`
+  <div style="display:grid;grid-template-columns:1fr 196px 224px;gap:0;background:#fff;border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;height:calc(100vh - 136px)">
+    <!-- PRODUCTOS -->
+    <div style="display:flex;flex-direction:column;border-right:1px solid var(--gray-100)">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--gray-100);background:var(--gray-50)">
+        <div style="position:relative">
+          <input id="pos-search" type="text" placeholder="Buscar producto…" autocomplete="off"
+            oninput="posBuscarProd(this.value)"
+            onblur="setTimeout(()=>{const d=document.getElementById('pos-prod-drop');if(d)d.style.display='none'},280)"
+            style="width:100%;padding:8px 12px 8px 34px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray-400);font-size:14px;pointer-events:none">🔍</span>
+          <div id="pos-prod-drop" class="prod-dropdown" style="min-width:100%"></div>
+        </div>
+      </div>
+      <div id="pos-cart" style="flex:1;overflow-y:auto">${_renderPOSCart()}</div>
+    </div>
+    <!-- NUMPAD -->
+    <div style="display:flex;flex-direction:column;border-right:1px solid var(--gray-100);background:#fff">
+      <div style="padding:8px 12px;font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--gray-100);background:var(--gray-50)">Teclado</div>
+      <div id="pos-numpad-display" style="margin:10px 10px 0;padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;text-align:right;font-size:22px;font-weight:700;color:var(--gray-800);min-height:48px">${_posNumBuf||'0'}</div>
+      <div style="padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px;flex:1;align-content:start">
+        <button onclick="posNumpadKey('Exc')" style="grid-column:span 2;${_posNKStyle(true,false,false)}">Exento</button>
+        <button onclick="posNumpadKey('%')" style="${_posNKStyle(true,false,false)}">%</button>
+        <button onclick="posNumpadKey('C')" style="${_posNKStyle(true,false,true)}">C</button>
+        <button onclick="posNumpadKey('7')" style="${_posNKStyle()}">7</button>
+        <button onclick="posNumpadKey('8')" style="${_posNKStyle()}">8</button>
+        <button onclick="posNumpadKey('9')" style="${_posNKStyle()}">9</button>
+        <button onclick="posNumpadKey('⌫')" style="${_posNKStyle(true,false,false)}">⌫</button>
+        <button onclick="posNumpadKey('4')" style="${_posNKStyle()}">4</button>
+        <button onclick="posNumpadKey('5')" style="${_posNKStyle()}">5</button>
+        <button onclick="posNumpadKey('6')" style="${_posNKStyle()}">6</button>
+        <button onclick="posNumpadKey('+')" style="${_posNKStyle(true,false,false)}">+</button>
+        <button onclick="posNumpadKey('1')" style="${_posNKStyle()}">1</button>
+        <button onclick="posNumpadKey('2')" style="${_posNKStyle()}">2</button>
+        <button onclick="posNumpadKey('3')" style="${_posNKStyle()}">3</button>
+        <button onclick="posNumpadKey('−')" style="${_posNKStyle(true,false,false)}">−</button>
+        <button onclick="posNumpadKey('0')" style="grid-column:span 2;${_posNKStyle()}">0</button>
+        <button onclick="posNumpadKey('.')" style="${_posNKStyle()}">.</button>
+        <button onclick="posCobrar()" style="${_posNKStyle(false,true,false)}">✓</button>
+      </div>
+    </div>
+    <!-- RESUMEN -->
+    <div style="display:flex;flex-direction:column;background:#fff">
+      <div style="padding:8px 14px;font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--gray-100);background:var(--gray-50)">Resumen</div>
+      <div style="padding:12px;flex:1;display:flex;flex-direction:column;gap:10px;overflow-y:auto">
+        <div>
+          <div style="font-size:11px;color:var(--gray-500);font-weight:600;margin-bottom:4px">Cliente</div>
+          <div style="position:relative">
+            <input id="pos-cliente" type="text" placeholder="Cliente genérico" value="${_posCliente}" autocomplete="off"
+              oninput="_posCliente=this.value;posBuscarClientePos(this.value)"
+              onblur="setTimeout(()=>{const d=document.getElementById('pos-cli-drop');if(d)d.style.display='none'},280)"
+              style="width:100%;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px">
+            <div id="pos-cli-drop" class="prod-dropdown" style="min-width:100%"></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--gray-500);font-weight:600;margin-bottom:4px">Documento</div>
+          <select id="pos-doc" onchange="_posDocumento=this.value"
+            style="width:100%;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px">
+            <option value="boleta" ${_posDocumento==='boleta'?'selected':''}>Boleta electrónica</option>
+            <option value="factura" ${_posDocumento==='factura'?'selected':''}>Factura</option>
+            <option value="ticket" ${_posDocumento==='ticket'?'selected':''}>Ticket / Sin doc.</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--gray-500);font-weight:600;margin-bottom:4px">Pago</div>
+          <div style="display:flex;gap:4px">
+            ${[['efectivo','💵','Efect.'],['tarjeta','💳','Tarjeta'],['transfer','🏦','Trans.']].map(([k,ic,lbl])=>`
+              <button onclick="_posMetodo='${k}';posRenderResumen()"
+                style="flex:1;padding:6px 2px;font-size:11px;border-radius:7px;border:2px solid ${_posMetodo===k?'var(--primary)':'var(--gray-200)'};background:${_posMetodo===k?'var(--primary-light,#eff6ff)':'#fff'};color:${_posMetodo===k?'var(--primary)':'var(--gray-600)'};font-weight:600;cursor:pointer">
+                ${ic} ${lbl}</button>`).join('')}
+          </div>
+        </div>
+        <div style="height:1px;background:var(--gray-100)"></div>
+        <div id="pos-totales">${_renderPOSTotales()}</div>
+        <button onclick="posCobrar()" id="pos-btn-cobrar"
+          style="width:100%;padding:13px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+          💳 Cobrar ${fmt$(_posTotalConIVA())}
+        </button>
+        <button onclick="posLimpiar()"
+          style="width:100%;padding:8px;background:#fff;color:var(--gray-400);border:1px solid var(--gray-200);border-radius:8px;font-size:12px;cursor:pointer">
+          🗑 Limpiar carrito
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function _posNKStyle(special,green,danger){
+  const bg=danger?'#fef2f2':green?'#f0fdf4':special?'var(--gray-50)':'#fff';
+  const color=danger?'#dc2626':green?'#16a34a':special?'var(--primary)':'var(--gray-800)';
+  return `padding:11px 0;border-radius:8px;border:1px solid var(--gray-200);background:${bg};color:${color};font-size:${special||danger||green?'12':'15'}px;font-weight:600;cursor:pointer`;
+}
+
+function _renderPOSCart(){
+  if(!_posItems.length) return `<div style="padding:40px 20px;text-align:center;color:var(--gray-400)"><div style="font-size:40px;margin-bottom:8px">🛒</div><div style="font-size:13px">Busca un producto para agregar</div></div>`;
+  return `<table style="width:100%;border-collapse:collapse">
+    <thead style="position:sticky;top:0;z-index:1">
+      <tr style="background:var(--gray-50);font-size:11px;color:var(--gray-400)">
+        <th style="padding:8px 10px;text-align:left;font-weight:600">Producto</th>
+        <th style="padding:8px 6px;text-align:center;font-weight:600;width:96px">Cant.</th>
+        <th style="padding:8px 10px;text-align:right;font-weight:600;width:90px">Total</th>
+        <th style="width:28px"></th>
+      </tr>
+    </thead>
+    <tbody>
+      ${_posItems.map(it=>`
+        <tr style="border-bottom:1px solid var(--gray-100)">
+          <td style="padding:10px 10px">
+            <div style="font-size:13px;font-weight:600;color:var(--gray-800)">${it.nombre}</div>
+            <div style="font-size:11px;color:var(--gray-400)">${fmt$(it.precio_iva)} c/IVA</div>
+          </td>
+          <td style="padding:6px;text-align:center">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+              <button onclick="posChangeQty('${it.id}',-1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--gray-200);background:var(--gray-50);cursor:pointer;font-size:14px;line-height:1;color:var(--gray-600)">−</button>
+              <span style="font-size:13px;font-weight:700;min-width:22px;text-align:center">${it.qty}</span>
+              <button onclick="posChangeQty('${it.id}',1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--gray-200);background:var(--gray-50);cursor:pointer;font-size:14px;line-height:1;color:var(--gray-600)">+</button>
+            </div>
+          </td>
+          <td style="padding:10px;text-align:right;font-size:13px;font-weight:700;color:var(--gray-800)">${fmt$(it.qty*it.precio_iva)}</td>
+          <td style="padding:6px;text-align:center">
+            <button onclick="posRemoveItem('${it.id}')" style="background:none;border:none;color:var(--gray-300);cursor:pointer;font-size:15px" title="Eliminar">🗑</button>
+          </td>
+        </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function _renderPOSTotales(){
+  const sub=_posItems.reduce((s,it)=>s+it.qty*it.precio_neto,0);
+  const iva=Math.round(sub*IVA);
+  const total=sub+iva;
+  return `<div style="display:flex;flex-direction:column;gap:6px">
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-500)"><span>Subtotal neto</span><span>${fmt$(sub)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-500)"><span>IVA (19%)</span><span>${fmt$(iva)}</span></div>
+    <div style="height:1px;background:var(--gray-100);margin:2px 0"></div>
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--gray-800)"><span>Total</span><span>${fmt$(total)}</span></div>
+  </div>`;
+}
+
+function _posTotalConIVA(){
+  return Math.round(_posItems.reduce((s,it)=>s+it.qty*it.precio_neto,0)*(1+IVA));
+}
+
+function posRenderCart(){ const c=document.getElementById('pos-cart'); if(c) c.innerHTML=_renderPOSCart(); }
+function posRenderResumen(){
+  const t=document.getElementById('pos-totales'); if(t) t.innerHTML=_renderPOSTotales();
+  const b=document.getElementById('pos-btn-cobrar'); if(b) b.textContent='💳 Cobrar '+fmt$(_posTotalConIVA());
+  ['efectivo','tarjeta','transfer'].forEach(k=>{
+    const btn=document.querySelector(`[onclick="_posMetodo='${k}';posRenderResumen()"]`);
+    if(!btn) return;
+    const active=k===_posMetodo;
+    btn.style.borderColor=active?'var(--primary)':'var(--gray-200)';
+    btn.style.background=active?'var(--primary-light,#eff6ff)':'#fff';
+    btn.style.color=active?'var(--primary)':'var(--gray-600)';
+  });
+}
+
+function posBuscarProd(q){
+  const drop=document.getElementById('pos-prod-drop'); if(!drop) return;
+  const prods=getProductos();
+  const matches=q.trim()?prods.filter(p=>(p.nombre||'').toLowerCase().includes(q.toLowerCase())).slice(0,10):prods.slice(0,10);
+  if(!matches.length){ drop.style.display='none'; return; }
+  drop.innerHTML=matches.map(p=>`<div class="prod-drop-item"
+    onmousedown="posAddProd('${p.id}')" ontouchstart="posAddProd('${p.id}')">
+    <span class="prod-name">${p.nombre}</span>
+    <span style="font-size:11px;color:var(--gray-400)">${fmt$(p.precio_venta||0)} c/IVA</span>
+  </div>`).join('');
+  const inp=document.getElementById('pos-search');
+  if(inp){ const r=inp.getBoundingClientRect(); drop.style.top=(r.bottom+2)+'px'; drop.style.left=r.left+'px'; drop.style.width=r.width+'px'; }
+  drop.style.display='block';
+}
+
+function posBuscarClientePos(q){
+  const drop=document.getElementById('pos-cli-drop'); if(!drop) return;
+  const clientes=getClientes();
+  const matches=q.trim()?clientes.filter(c=>`${c.nombre} ${c.apellido||''}`.toLowerCase().includes(q.toLowerCase())).slice(0,6):clientes.slice(0,6);
+  if(!matches.length){ drop.style.display='none'; return; }
+  drop.innerHTML=matches.map(c=>{
+    const nombre=`${c.nombre} ${c.apellido||''}`.trim();
+    return `<div class="prod-drop-item"
+      onmousedown="_posCliente='${nombre}';document.getElementById('pos-cliente').value='${nombre}';document.getElementById('pos-cli-drop').style.display='none'">
+      <span class="prod-name">${nombre}</span>
+    </div>`;
+  }).join('');
+  const inp=document.getElementById('pos-cliente');
+  if(inp){ const r=inp.getBoundingClientRect(); drop.style.top=(r.bottom+2)+'px'; drop.style.left=r.left+'px'; drop.style.width=r.width+'px'; }
+  drop.style.display='block';
+}
+
+function posAddProd(prodId){
+  const p=getProductos().find(x=>x.id===prodId); if(!p) return;
+  const existing=_posItems.find(it=>it.producto_id===prodId);
+  if(existing){ existing.qty++; }
+  else{
+    const piva=+(p.precio_venta||0);
+    const pn=Math.round(piva/(1+IVA));
+    _posItems.push({id:uid(),producto_id:prodId,nombre:p.nombre,qty:1,precio_neto:pn,precio_iva:piva});
+  }
+  const inp=document.getElementById('pos-search'); if(inp) inp.value='';
+  const drop=document.getElementById('pos-prod-drop'); if(drop) drop.style.display='none';
+  posRenderCart(); posRenderResumen();
+}
+
+function posRemoveItem(id){
+  _posItems=_posItems.filter(it=>it.id!==id);
+  posRenderCart(); posRenderResumen();
+}
+
+function posChangeQty(id,delta){
+  const it=_posItems.find(x=>x.id===id); if(!it) return;
+  it.qty=Math.max(1,it.qty+delta);
+  posRenderCart(); posRenderResumen();
+}
+
+function posNumpadKey(k){
+  const disp=document.getElementById('pos-numpad-display');
+  if(k==='C'){ _posNumBuf=''; }
+  else if(k==='⌫'){ _posNumBuf=_posNumBuf.slice(0,-1); }
+  else if(k==='Exc'||k==='%'||k==='+'||k==='−'){}
+  else if(k==='✓'){ posCobrar(); return; }
+  else{ _posNumBuf+=k; }
+  if(disp) disp.textContent=_posNumBuf||'0';
+}
+
+function posLimpiar(){
+  if(_posItems.length&&!confirm('¿Limpiar el carrito?')) return;
+  _posItems=[]; _posCliente=''; _posNumBuf='';
+  renderVentas();
+}
+
+function posCobrar(){
+  if(!_posItems.length){ toast('Agrega al menos un producto','error'); return; }
+  const total=_posTotalConIVA();
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header"><h3>💳 Confirmar cobro</h3><button class="close-btn" onclick="closeModal()">×</button></div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div style="text-align:center;padding:8px 0">
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:4px">Total a cobrar</div>
+        <div style="font-size:32px;font-weight:800;color:var(--primary)">${fmt$(total)}</div>
+        <div style="font-size:12px;color:var(--gray-400)">${_posItems.length} producto(s) · ${_posDocumento}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px">Método de pago</div>
+        <div style="display:flex;gap:8px">
+          ${[['efectivo','💵 Efectivo'],['tarjeta','💳 Tarjeta'],['transfer','🏦 Trans.']].map(([k,l])=>`
+            <button id="cob-${k}" onclick="posCobrarMetodo('${k}')"
+              style="flex:1;padding:10px 4px;font-size:12px;border-radius:8px;border:2px solid ${_posMetodo===k?'var(--primary)':'var(--gray-200)'};background:${_posMetodo===k?'var(--primary-light,#eff6ff)':'#fff'};color:${_posMetodo===k?'var(--primary)':'var(--gray-600)'};font-weight:600;cursor:pointer">
+              ${l}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="posSaveVenta()">✅ Registrar venta</button>
+    </div>
+  </div></div>`);
+}
+
+function posCobrarMetodo(m){
+  _posMetodo=m;
+  ['efectivo','tarjeta','transfer'].forEach(k=>{
+    const btn=document.getElementById('cob-'+k); if(!btn) return;
+    const active=k===m;
+    btn.style.borderColor=active?'var(--primary)':'var(--gray-200)';
+    btn.style.background=active?'var(--primary-light,#eff6ff)':'#fff';
+    btn.style.color=active?'var(--primary)':'var(--gray-600)';
+  });
+}
+
+function posSaveVenta(){
+  if(!_posItems.length){ toast('Sin productos','error'); return; }
+  const items=_posItems.map(it=>({id:it.id,producto_id:it.producto_id,producto_nombre:it.nombre,
+    cantidad:it.qty,precio_neto:it.precio_neto,precio_iva:it.precio_iva,subtotal:it.qty*it.precio_neto}));
+  const total=items.reduce((s,i)=>s+i.subtotal,0);
+  const total_iva=Math.round(total*(1+IVA));
+  const stock=DB.get('stock')||{};
+  items.forEach(it=>{
+    if(!it.producto_id) return;
+    const keys=Object.keys(stock).filter(k=>k.startsWith(it.producto_id+'_'));
+    if(keys.length){ stock[keys[0]]=Math.max(0,(stock[keys[0]]||0)-it.cantidad); }
+  });
+  DB.set('stock',stock);
+  const venta={id:uid(),numero:'VTA-'+String(DB.nextVenta()).padStart(5,'0'),estado:'pagada',
+    fecha:today(),cliente:_posCliente||'Cliente genérico',metodo_pago:_posMetodo,
+    items,total,total_iva,fecha_creacion:today()};
+  const ventas=getVentas(); ventas.push(venta); setVentas(ventas);
+  crearAsientoVenta(venta);
+  _posItems=[]; _posCliente=''; _posNumBuf=''; _posDocumento='boleta';
+  closeModal(); toast(`Venta ${venta.numero} registrada ✓`,'success'); renderVentas();
+}
+
+function _renderHistorial(){
+  const ventas=getVentas();
   const counts={};
   ['todas','pendiente','pagada','anulada'].forEach(e=>{ counts[e]=e==='todas'?ventas.length:ventas.filter(v=>v.estado===e).length; });
-
   const totalMes=ventas.filter(v=>v.fecha&&v.fecha.startsWith(today().slice(0,7))&&v.estado!=='anulada').reduce((s,v)=>s+(+v.total_iva||0),0);
-
   document.getElementById('page-content').innerHTML=`
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
     <div class="card" style="padding:16px 20px">
@@ -1314,7 +1622,7 @@ function renderVentas(){
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--gray-100);flex-wrap:wrap;gap:10px">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${[['todas','Todas'],['pendiente','Pendiente'],['pagada','Pagada'],['anulada','Anulada']].map(([k,l])=>`
-          <div class="filter-tab ${_vtaFiltro===k?'active':''}" onclick="_vtaFiltro='${k}';renderVentas()">
+          <div class="filter-tab ${_vtaFiltro===k?'active':''}" onclick="_vtaFiltro='${k}';_renderHistorial()">
             ${l} <span class="tab-count">${counts[k]}</span>
           </div>`).join('')}
       </div>
@@ -1328,7 +1636,7 @@ function renderVentas(){
 }
 
 function renderVentasTable(ventas){
-  if(!ventas.length) return '<div class="empty-state"><div class="empty-icon">🛒</div><h3>Sin ventas</h3><p>Registra tu primera venta con el botón "Nueva Venta"</p></div>';
+  if(!ventas.length) return '<div class="empty-state"><div class="empty-icon">🛒</div><h3>Sin ventas</h3><p>Usa el POS para registrar tu primera venta</p></div>';
   const estadoBadge={pendiente:'<span class="badge badge-blue">Pendiente</span>',pagada:'<span class="badge badge-green">Pagada</span>',anulada:'<span class="badge badge-red">Anulada</span>'};
   return `<table><thead><tr><th>Folio</th><th>Fecha</th><th>Cliente</th><th>Ítems</th><th>Total</th><th>Pago</th><th>Estado</th><th>Acciones</th></tr></thead>
   <tbody>${ventas.slice().reverse().map(v=>`<tr style="cursor:pointer" onclick="verVenta('${v.id}')">
@@ -1337,7 +1645,7 @@ function renderVentasTable(ventas){
     <td>${v.cliente||'—'}</td>
     <td style="text-align:center">${(v.items||[]).length}</td>
     <td><strong>${fmt$(v.total_iva||0)}</strong><div style="font-size:11px;color:var(--gray-400)">Neto: ${fmt$(v.total||0)}</div></td>
-    <td><span style="font-size:12px;color:var(--gray-500)">${{efectivo:'💵 Efectivo',transferencia:'🏦 Transferencia',tarjeta:'💳 Tarjeta'}[v.metodo_pago]||v.metodo_pago||'—'}</span></td>
+    <td><span style="font-size:12px;color:var(--gray-500)">${{efectivo:'💵 Efectivo',transfer:'🏦 Trans.',tarjeta:'💳 Tarjeta',transferencia:'🏦 Trans.'}[v.metodo_pago]||v.metodo_pago||'—'}</span></td>
     <td>${estadoBadge[v.estado]||v.estado}</td>
     <td onclick="event.stopPropagation()">
       <div style="display:flex;gap:6px">
@@ -1355,7 +1663,7 @@ function filtrarVentas(q){
   document.getElementById('vta-table').innerHTML=renderVentasTable(res);
 }
 
-// ── Modal nueva venta ──────────────────────────
+// ── Modal nueva venta (legacy) ──────────────────────────
 function modalNuevaVenta(){
   const item={id:uid(),producto_id:'',producto_nombre:'',cantidad:1,precio_neto:0,precio_iva:0,subtotal:0};
   showModal(`
