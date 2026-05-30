@@ -733,7 +733,7 @@ select{cursor:pointer}
   <div class="nav-submenu" id="submenu-taller">
     <div class="nav-subitem" id="nav-taller-orders" onclick="navTaller('orders','Taller — Órdenes')"><span class="icon">📋</span> Órdenes</div>
     <div class="nav-subitem" id="nav-taller-branches" onclick="navTaller('branches','Taller — Sucursales')"><span class="icon">🏢</span> Sucursales</div>
-    <div class="nav-subitem" id="nav-taller-equipo" onclick="navTaller('equipo','Taller — Equipo')"><span class="icon">📱</span> Equipo</div>
+    <div class="nav-subitem" id="nav-taller-equipo" onclick="navTaller('equipo','Taller — Equipos')"><span class="icon">📱</span> Equipos</div>
     <div class="nav-subitem" id="nav-taller-usuarios" onclick="navTaller('usuarios','Taller — Usuarios')"><span class="icon">👤</span> Usuarios</div>
     <div class="nav-subitem" id="nav-taller-settings" onclick="navTaller('settings','Taller — Configuración')"><span class="icon">⚙️</span> Configuración</div>
   </div>
@@ -8176,18 +8176,22 @@ function tp_renderUsuarios(){
     </div>`;
     return;
   }
-  list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">${tecnicos.map(t=>`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px">
-      <div style="width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">${(t.nombre||'?').charAt(0).toUpperCase()}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px">${t.nombre}</div>
-        ${t.rol?`<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">${t.rol}</div>`:''}
-        ${t.tel?`<div style="font-size:12px;color:var(--text3)">${t.tel}</div>`:''}
-        ${t.email?`<div style="font-size:12px;color:var(--text3)">${t.email}</div>`:''}
+  list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">${tecnicos.map(t=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-0.5px">${(t.nombre||'?').split(' ').slice(0,2).map(w=>w.charAt(0).toUpperCase()).join('')}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14.5px;font-weight:700;color:var(--text);line-height:1.2">${t.nombre}</div>
+          ${t.rol?`<div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:3px">${t.rol}</div>`:'<div style="font-size:12px;color:var(--text3);margin-top:3px">Sin rol asignado</div>'}
+        </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <button class="icon-btn" onclick="tp_openUsuarioModal('${t.id}')" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="icon-btn" onclick="tp_deleteUsuario('${t.id}')" style="color:var(--red)" title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+      ${(t.tel||t.email)?`<div style="display:flex;flex-direction:column;gap:5px;padding:10px 12px;background:var(--bg);border-radius:9px">
+        ${t.tel?`<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3)"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>${t.tel}</div>`:''}
+        ${t.email?`<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;color:var(--text3)"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>${t.email}</div>`:''}
+      </div>`:``}
+      <div style="display:flex;gap:8px;border-top:1px solid var(--border);padding-top:12px">
+        <button onclick="tp_openUsuarioModal('${t.id}')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>
+        <button onclick="tp_deleteUsuario('${t.id}')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--red);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Eliminar</button>
       </div>
     </div>`).join('')}</div>`;
 }
