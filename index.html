@@ -7953,7 +7953,7 @@ function tp_openInspeccionModal(orderId, mode){
     ${editable?`<button onclick="tp_inspRemoveFoto(${i})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center">×</button>`:''}
   </div>`).join('')}</div>`:'';
 
-  showModal(`<div onclick="event.stopPropagation()" style="background:#fff;border-radius:14px;width:560px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+  showModal(`<div class="modal-overlay" onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000"><div onclick="event.stopPropagation()" style="background:#fff;border-radius:14px;width:560px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
     <div style="padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:2;border-bottom:1px solid #f3f4f6;padding-bottom:14px">
       <div>
         <div style="font-size:15px;font-weight:700;color:#111">📷 Inspección de equipo</div>
@@ -7988,7 +7988,7 @@ function tp_openInspeccionModal(orderId, mode){
         ${!insp.fotos?.length&&!insp.notas?`<div style="text-align:center;padding:30px 0;color:#9ca3af;font-size:13px">Sin inspección registrada.<br><button onclick="tp_openInspeccionModal('${orderId}','edit')" style="margin-top:10px;font-size:13px;color:#2563eb;background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit">Registrar ahora →</button></div>`:''}
       `}
     </div>
-  </div>`);
+  </div></div>`);
 }
 
 function tp_inspAddFotos(input){
