@@ -8028,9 +8028,9 @@ function tp_saveInspeccion(){
   const notas=(document.getElementById('insp-notas-input')?.value||'').trim();
   o.inspeccion={fotos:[..._inspFotos],notas,fecha:today()};
   tp_saveState();
-  closeModal();
-  tp_openDetail(_inspOrderId);
   toast('Inspección guardada ✓','success');
+  // Re-abrir en modo ver para mostrar botones de envío
+  tp_openInspeccionModal(_inspOrderId,'view');
 }
 
 async function tp_enviarInspeccionReporte(orderId, via){
