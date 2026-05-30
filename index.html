@@ -6429,7 +6429,7 @@ function renderTaller() {
       </div>
       <div class="orders-table-wrap">
         <table class="orders-table">
-          <thead><tr><th></th><th>N°</th><th>Estado</th><th>Modelo</th><th>Cliente</th><th>Fecha / Días</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th></th><th>N°</th><th>Cliente</th><th>Modelo</th><th>Estado</th><th>Fecha / Días</th><th>Precio</th><th></th></tr></thead>
           <tbody id="orders-tbody"></tbody>
         </table>
       </div>
@@ -7404,9 +7404,9 @@ function tp_renderOrders(){
     return `<tr class="${rowClass}" onclick="tp_openDetail('${o.id}')">
       <td><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></td>
       <td class="num-cell">${o.num}</td>
-      <td>${tp_badge(o.status)}${isDerived?`<span style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 7px;font-size:10.5px;font-weight:600;margin-left:4px">🔄 ${derivedTsl?.tecnico||'Derivado'}</span>`:''}</td>
-      <td class="model-cell"><div class="model-name">${o.modelo}</div><div class="model-sub">${o.color||'—'} ${o.serie?'· '+o.serie:''}</div></td>
       <td class="client-cell"><div class="client-name">${o.nombre}</div><div class="client-contact">${o.tel||o.email||'—'}</div></td>
+      <td class="model-cell"><div class="model-name">${o.modelo}</div><div class="model-sub">${o.color||'—'} ${o.serie?'· '+o.serie:''}</div></td>
+      <td>${tp_badge(o.status)}${isDerived?`<span style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 7px;font-size:10.5px;font-weight:600;margin-left:4px">🔄 ${derivedTsl?.tecnico||'Derivado'}</span>`:''}</td>
       <td><div style="font-size:12px;color:var(--text2)">${o.fecha?tp_fmtDate(o.fecha):'—'}</div><span class="age-chip ${ageClass}">${ageLabel}</span></td>
       <td class="price-cell">${tp_fmtMoney(o.costo||o.presup)}</td>
       <td class="actions-cell" onclick="event.stopPropagation()">
