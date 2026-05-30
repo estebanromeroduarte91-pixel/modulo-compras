@@ -8453,10 +8453,7 @@ function tp_addListeners(){
     const wrap=document.getElementById('tsl-tech-search-wrap');
     if(dd&&dd.style.display!=='none'&&!dd.contains(e.target)&&wrap&&!wrap.contains(e.target)) tp_hideTechDropdown();
   });
-  // Close modals on overlay click
-  ['mod-order','mod-detail','mod-salida','mod-send','mod-product','mod-upload','mod-repuesto','mod-branch','mod-edit-client','mod-pattern','mod-client-history','mod-equipo','mod-equipo-upload'].forEach(id=>{
-    document.addEventListener('click',function(e){const el=document.getElementById(id);if(el&&e.target===el)tp_closeModal(id);});
-  });
+  // Click-outside-to-close desactivado intencionalmente
 }
 
 
