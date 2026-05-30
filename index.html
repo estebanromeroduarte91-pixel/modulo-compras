@@ -729,6 +729,13 @@ select{cursor:pointer}
   </div>
   <div class="nav-item active" id="nav-dashboard" onclick="nav('dashboard')"><span class="icon">📊</span> Dashboard</div>
   <div class="nav-item" id="nav-ventas" onclick="nav('ventas')"><span class="icon">🛒</span> Ventas</div>
+  <div class="nav-item-parent" id="nav-taller-parent" onclick="toggleTaller()"><span class="icon">🔧</span> Taller<span class="arrow">▶</span></div>
+  <div class="nav-submenu" id="submenu-taller">
+    <div class="nav-subitem" id="nav-taller-orders" onclick="navTaller('orders','Taller — Órdenes')"><span class="icon">📋</span> Órdenes</div>
+    <div class="nav-subitem" id="nav-taller-branches" onclick="navTaller('branches','Taller — Sucursales')"><span class="icon">🏢</span> Sucursales</div>
+    <div class="nav-subitem" id="nav-taller-equipo" onclick="navTaller('equipo','Taller — Equipo')"><span class="icon">📱</span> Equipo</div>
+    <div class="nav-subitem" id="nav-taller-settings" onclick="navTaller('settings','Taller — Configuración')"><span class="icon">⚙️</span> Configuración</div>
+  </div>
   <div class="nav-item" id="nav-clientes" onclick="nav('clientes')"><span class="icon">👥</span> Clientes</div>
   <div class="nav-item" id="nav-proveedores" onclick="nav('proveedores')"><span class="icon">🏢</span> Proveedores</div>
   <div class="nav-item-parent" id="nav-inventario-parent" onclick="toggleInventario()"><span class="icon">📦</span> Inventario<span class="arrow">▶</span></div>
@@ -745,14 +752,6 @@ select{cursor:pointer}
     <div class="nav-subitem" id="nav-oc" onclick="nav('oc')"><span class="icon">📋</span> Compras</div>
     <div class="nav-subitem" id="nav-gastos" onclick="nav('gastos')"><span class="icon">💳</span> Gastos</div>
     <div class="nav-subitem" id="nav-contabilidad-page" onclick="nav('contabilidad')"><span class="icon">📒</span> Libro contable</div>
-  </div>
-  <div style="border-top:1px solid rgba(255,255,255,.1);margin:8px 16px"></div>
-  <div class="nav-item-parent" id="nav-taller-parent" onclick="toggleTaller()"><span class="icon">🔧</span> Taller<span class="arrow">▶</span></div>
-  <div class="nav-submenu" id="submenu-taller">
-    <div class="nav-subitem" id="nav-taller-orders" onclick="navTaller('orders','Taller — Órdenes')"><span class="icon">📋</span> Órdenes</div>
-    <div class="nav-subitem" id="nav-taller-branches" onclick="navTaller('branches','Taller — Sucursales')"><span class="icon">🏢</span> Sucursales</div>
-    <div class="nav-subitem" id="nav-taller-equipo" onclick="navTaller('equipo','Taller — Equipo')"><span class="icon">📱</span> Equipo</div>
-    <div class="nav-subitem" id="nav-taller-settings" onclick="navTaller('settings','Taller — Configuración')"><span class="icon">⚙️</span> Configuración</div>
   </div>
   <div class="sidebar-footer" id="sidebar-user-info">v2.0</div>
 </nav>
