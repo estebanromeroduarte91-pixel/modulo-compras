@@ -7763,34 +7763,6 @@ function tp_openDetail(id){
           </div>
         </div>
       </div>
-      <!-- INSPECCIÓN DE EQUIPO -->
-      ${(()=>{
-        const insp=o.inspeccion||{};
-        const fotoCount=insp.fotos?.length||0;
-        const hasNotas=!!(insp.notas||'').trim();
-        const hasContent=fotoCount>0||hasNotas;
-        const badgeHtml=hasContent
-          ? `<span style="background:#eff6ff;color:#1d4ed8;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px">${[fotoCount?fotoCount+' foto'+(fotoCount>1?'s':''):'',hasNotas?'Con notas':''].filter(Boolean).join(' · ')}</span>`
-          : `<span style="background:var(--bg);color:var(--text3);font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid var(--border)">Sin registro</span>`;
-        return `<div class="od-section" style="padding:13px 18px">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <div style="display:flex;align-items:center;gap:8px">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:var(--text3)"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              <span style="font-size:13px;font-weight:600;color:var(--text)">Inspección de equipo</span>
-              ${badgeHtml}
-            </div>
-            <div style="display:flex;gap:6px">
-              ${hasContent?`<button class="btn btn-ghost btn-sm" onclick="tp_openInspeccionModal('${o.id}','view')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Ver
-              </button>`:''}
-              <button class="btn btn-ghost btn-sm" onclick="tp_openInspeccionModal('${o.id}','edit')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>${hasContent?'Editar':'Registrar'}
-              </button>
-            </div>
-          </div>
-        </div>`;
-      })()}
-
       <div class="od-section">
         <div class="od-section-header">
           <div style="display:flex;align-items:center;gap:10px">
@@ -7805,6 +7777,28 @@ function tp_openDetail(id){
         <div class="od-pipeline">${pipelineHtml}</div>
         <div class="od-pipe-meta">${tp_getOrderAge(o)===0?'Ingresado hoy':tp_getOrderAge(o)===1?'1 día en taller':tp_getOrderAge(o)+' días en taller'}</div>
       </div>
+      ${(()=>{
+        const insp=o.inspeccion||{};
+        const fotoCount=insp.fotos?.length||0;
+        const hasNotas=!!(insp.notas||'').trim();
+        const hasContent=fotoCount>0||hasNotas;
+        const badgeHtml=hasContent
+          ?`<span style="background:#eff6ff;color:#1d4ed8;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px">${[fotoCount?fotoCount+' foto'+(fotoCount>1?'s':''):'',hasNotas?'Con notas':''].filter(Boolean).join(' · ')}</span>`
+          :`<span style="background:var(--bg);color:var(--text3);font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid var(--border)">Sin registro</span>`;
+        return `<div class="od-section" style="padding:13px 18px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;color:var(--text3)"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              <span style="font-size:13px;font-weight:600;color:var(--text)">Inspección de equipo</span>
+              ${badgeHtml}
+            </div>
+            <div style="display:flex;gap:6px">
+              ${hasContent?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();tp_openInspeccionModal('${o.id}','view')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Ver</button>`:''}
+              <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();tp_openInspeccionModal('${o.id}','edit')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> ${hasContent?'Editar':'Registrar'}</button>
+            </div>
+          </div>
+        </div>`;
+      })()}
       <div class="od-section">
         <div class="od-info-grid">
           <div class="od-info-col">
@@ -7812,8 +7806,6 @@ function tp_openDetail(id){
             ${o.estadoFisico?`<div class="od-info-row"><span class="od-info-label" style="min-width:110px">Estado físico</span><span class="od-info-val" style="font-size:12px">${o.estadoFisico}</span></div>`:''}
           </div>
           <div class="od-info-col">
-            <div class="od-info-row"><span class="od-info-label" style="min-width:100px">Presupuesto</span><span class="od-info-val" style="font-weight:700">${tp_fmtMoney(o.presup)}</span></div>
-            <div class="od-info-row"><span class="od-info-label" style="min-width:100px">Costo real</span><span class="od-info-val" style="font-weight:700;color:var(--green)">${tp_fmtMoney(o.costo)}</span></div>
             ${o.observSalida?`<div class="od-info-row"><span class="od-info-label" style="min-width:100px">Obs. salida</span><span class="od-info-val" style="font-size:12px">${o.observSalida}</span></div>`:''}
           </div>
         </div>
