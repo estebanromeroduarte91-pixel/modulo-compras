@@ -7482,6 +7482,115 @@ function tp_saveSalida(){
   o.status='Listo';tp_saveState();tp_closeModal('mod-salida');tp_renderAll();
 }
 
+// ─── APROBACIÓN DE PRESUPUESTO ───
+const _APROB_BASE_URL = 'https://estebanromero.github.io/modulo-compras/aprobar.html';
+
+function tp_modalAprobacion(orderId){
+  const o=tp_orders.find(x=>x.id===orderId); if(!o) return;
+  const presup=o.presup?'$'+Number(o.presup).toLocaleString('es-CL'):'$0';
+  const telLimpio=(o.tel||'').replace(/\D/g,'');
+  const telWA=telLimpio.startsWith('56')?telLimpio:'56'+telLimpio;
+  const isPending=o.aprobacion_estado==='pendiente';
+  const link=isPending&&o.aprobacion_token?`${_APROB_BASE_URL}?t=${o.aprobacion_token}`:'';
+  const msgDefault=`Hola ${o.nombre} 👋\n\nTe escribimos del taller para informarte que tu equipo *${o.modelo||''}* está en proceso de reparación.\n\nDetalle del trabajo:\n📋 ${o.trabajo||'—'}\n💰 Presupuesto: *${presup}*\n\nPor favor haz click en el siguiente enlace para aprobar el presupuesto:\n${link||'(se generará al enviar)'}`;
+
+  showModal(`
+    <div class="modal-overlay" onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000">
+      <div onclick="event.stopPropagation()" style="background:#fff;border-radius:14px;width:500px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+        <div style="padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#111">📋 Solicitar aprobación</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px">${o.nombre} · ${o.modelo||''}</div>
+          </div>
+          <button onclick="closeModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280">×</button>
+        </div>
+        <div style="padding:20px 24px">
+          <div style="background:#f9fafb;border-radius:10px;padding:14px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+            <div><span style="color:#6b7280">Trabajo:</span> <strong>${o.trabajo||'—'}</strong></div>
+            <div><span style="color:#6b7280">Presupuesto:</span> <strong style="color:#16a34a">${presup}</strong></div>
+            <div><span style="color:#6b7280">Teléfono:</span> ${o.tel||'—'}</div>
+            <div><span style="color:#6b7280">Email:</span> ${o.email||'—'}</div>
+          </div>
+          ${isPending&&link?`<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#854d0e">⏳ Ya hay una solicitud pendiente. Puedes reenviar el mismo link al cliente.</div>`:''}
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px">Mensaje personalizable</label>
+          <textarea id="aprob-msg" rows="7" style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:10px;font-size:13px;font-family:inherit;resize:vertical">${msgDefault}</textarea>
+          <div style="margin-top:16px;display:flex;gap:10px">
+            ${o.tel?`<button onclick="tp_enviarAprobacion('${orderId}','wa')" style="flex:1;padding:11px;background:#16a34a;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:inherit">
+              <svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              WhatsApp
+            </button>`:''}
+            ${o.email?`<button onclick="tp_enviarAprobacion('${orderId}','email')" style="flex:1;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:inherit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:17px;height:17px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Email
+            </button>`:''}
+          </div>
+          ${!o.tel&&!o.email?`<div style="color:#dc2626;font-size:13px;text-align:center;padding:10px">El cliente no tiene teléfono ni email registrado. Edita la orden primero.</div>`:''}
+        </div>
+      </div>
+    </div>`);
+
+  window._aprobOrderId=orderId;
+  window._aprobTelWA=telWA;
+}
+
+async function tp_enviarAprobacion(orderId, canal){
+  const o=tp_orders.find(x=>x.id===orderId); if(!o) return;
+  const msg=(document.getElementById('aprob-msg')?.value||'').trim();
+
+  // Reusar token si ya está pendiente
+  let token=o.aprobacion_token;
+  if(!token || o.aprobacion_estado!=='pendiente'){
+    token=uid()+uid();
+    // Guardar en Supabase tabla aprobaciones
+    const row={token, orden_id:orderId, empresa_id:_empresaId, orden_num:o.num||'', cliente:o.nombre||'', equipo:o.modelo||'', trabajo:o.trabajo||'', presupuesto:o.presup||0, estado:'pendiente'};
+    const {error}=await _sb.from('aprobaciones').insert(row);
+    if(error){ toast('Error al crear la solicitud: '+error.message,'error'); return; }
+    o.aprobacion_token=token;
+    o.aprobacion_estado='pendiente';
+    o.aprobacion_enviado=today();
+    tp_saveState();
+  }
+
+  const link=`${_APROB_BASE_URL}?t=${token}`;
+  const msgFinal=msg.includes('(se generará al enviar)')?msg.replace('(se generará al enviar)',link):msg;
+
+  if(canal==='wa'){
+    const telLimpio=(o.tel||'').replace(/\D/g,'');
+    const telWA=telLimpio.startsWith('56')?telLimpio:'56'+telLimpio;
+    window.open(`https://wa.me/${telWA}?text=${encodeURIComponent(msgFinal)}`,'_blank');
+  } else {
+    const asunto=`Aprobación de presupuesto - ${o.modelo||'Equipo'} #${o.num||''}`;
+    window.open(`mailto:${o.email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(msgFinal)}`,'_blank');
+  }
+
+  closeModal();
+  toast('Solicitud enviada — esperando aprobación del cliente','success');
+  tp_renderAll();
+}
+
+async function tp_pollAprobaciones(){
+  const pending=tp_orders.filter(o=>o.aprobacion_estado==='pendiente'&&o.aprobacion_token);
+  if(!pending.length) return;
+  const tokens=pending.map(o=>o.aprobacion_token);
+  const {data}=await _sb.from('aprobaciones').select('token,estado,aprobado_en').in('token',tokens).neq('estado','pendiente');
+  if(!data?.length) return;
+  let changed=false;
+  data.forEach(row=>{
+    const o=tp_orders.find(x=>x.aprobacion_token===row.token);
+    if(o){
+      o.aprobacion_estado=row.estado;
+      o.aprobacion_fecha=row.aprobado_en;
+      changed=true;
+      if(row.estado==='aprobado') toast(`✅ ${o.nombre} aprobó el presupuesto de la orden #${o.num}`,'success');
+      if(row.estado==='rechazado') toast(`❌ ${o.nombre} rechazó el presupuesto de la orden #${o.num}`,'error');
+    }
+  });
+  if(changed){ tp_saveState(); tp_renderAll(); }
+}
+
+// Iniciar polling cada 30 segundos
+setInterval(tp_pollAprobaciones, 30000);
+
 // ─── DETAIL ───
 function tp_openDetail(id){
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
@@ -7637,10 +7746,17 @@ function tp_openDetail(id){
       <button class="btn btn-danger btn-sm" onclick="tp_deleteOrder('${o.id}')">Eliminar</button>
       <button class="btn btn-default btn-sm" onclick="tp_printOrder('${o.id}')">Imprimir</button>
       <div class="ml-auto"></div>
+      ${(()=>{
+        const ae=o.aprobacion_estado;
+        if(ae==='aprobado') return `<button class="btn btn-sm" style="background:#dcfce7;color:#166534;border:1.5px solid #bbf7d0;font-weight:700;cursor:default">🔒 Aprobado</button>`;
+        if(ae==='rechazado') return `<button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border:1.5px solid #fecaca;font-weight:600" onclick="tp_modalAprobacion('${o.id}')">❌ Rechazado — Reenviar</button>`;
+        if(ae==='pendiente') return `<button class="btn btn-default btn-sm" onclick="tp_modalAprobacion('${o.id}')">⏳ Aprobación pendiente</button>`;
+        return `<button class="btn btn-default btn-sm" onclick="tp_modalAprobacion('${o.id}')">📋 Solicitar aprobación</button>`;
+      })()}
       ${(()=>{const tsl=getTraslados().find(t=>t.order_id===o.id&&t.estado!=='retornado');
         return `<button class="btn btn-default btn-sm" onclick="tp_abrirTraslados('${o.id}')">🔄 Traslado${tsl?' · '+({enviado:'Enviado','en-revision':'En revisión',listo:'Listo',retornado:'Retornado','con-problema':'Con problema'})[tsl.estado]:''}</button>`;
       })()}
-      <button class="btn btn-default btn-sm" onclick="tp_closeModal('mod-detail')">
+      <button class="btn btn-default btn-sm" onclick="tp_closeModal('mod-detail');tp_openEditOrder('${o.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         Editar orden
       </button>
