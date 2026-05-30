@@ -7,7 +7,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://smtpjs.com/v3/smtp.js"></script>
 <style>
 /* ── LOGIN SCREEN ── */
 #login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);display:flex;align-items:center;justify-content:center;z-index:9999}
@@ -7954,6 +7953,23 @@ function tp_saveSmtp(){
   toast('Configuración SMTP guardada ✓','success');
 }
 
+async function tp_callSendEmail(to, subject, bodyHtml){
+  const cfg=DB.get('tp_smtp_config');
+  if(!cfg?.host||!cfg?.user||!cfg?.password) return {ok:false,error:'Sin configuración SMTP'};
+  try{
+    const {data,error}=await _sb.functions.invoke('send-email',{
+      body:{
+        to, subject, html:bodyHtml,
+        host:cfg.host, port:cfg.port||587,
+        user:cfg.user, password:cfg.password,
+        from:cfg.from||cfg.user, from_name:cfg.from_name||'TallerPro'
+      }
+    });
+    if(error) return {ok:false,error:error.message};
+    return data||{ok:true};
+  }catch(e){return {ok:false,error:e.message};}
+}
+
 async function tp_testSmtp(){
   const testTo=(document.getElementById('smtp-test-email')?.value||'').trim();
   if(!testTo){toast('Ingresa un email de prueba','error');return;}
@@ -7961,41 +7977,21 @@ async function tp_testSmtp(){
   if(!cfg?.host||!cfg?.user||!cfg?.password){toast('Guarda la configuración SMTP primero','error');return;}
   const statusEl=document.getElementById('smtp-status');
   if(statusEl){statusEl.style.display='block';statusEl.style.background='var(--bg)';statusEl.style.color='var(--text2)';statusEl.textContent='⏳ Enviando correo de prueba...';}
-  try{
-    const result=await Email.send({
-      Host:cfg.host,
-      Username:cfg.user,
-      Password:cfg.password,
-      To:testTo,
-      From:`${cfg.from_name} <${cfg.from}>`,
-      Subject:'Prueba SMTP — TallerPro',
-      Body:'<p>Este es un correo de prueba desde <strong>TallerPro</strong>. Tu configuración SMTP está funcionando correctamente ✅</p>'
-    });
-    if(result==='OK'){
-      if(statusEl){statusEl.style.background='#f0fdf4';statusEl.style.color='#166534';statusEl.textContent='✅ Email enviado correctamente a '+testTo;}
-    } else {
-      if(statusEl){statusEl.style.background='#fef2f2';statusEl.style.color='#991b1b';statusEl.textContent='❌ Error: '+result;}
-    }
-  }catch(e){
-    if(statusEl){statusEl.style.background='#fef2f2';statusEl.style.color='#991b1b';statusEl.textContent='❌ Error: '+e.message;}
+  const res=await tp_callSendEmail(
+    testTo,
+    'Prueba SMTP — TallerPro',
+    '<div style="font-family:sans-serif"><h2 style="color:#1e40af">✅ Configuración SMTP correcta</h2><p>Este es un correo de prueba desde <strong>TallerPro</strong>. Tu servidor SMTP está funcionando correctamente.</p></div>'
+  );
+  if(res.ok){
+    if(statusEl){statusEl.style.background='#f0fdf4';statusEl.style.color='#166534';statusEl.textContent='✅ Email enviado correctamente a '+testTo;}
+  } else {
+    if(statusEl){statusEl.style.background='#fef2f2';statusEl.style.color='#991b1b';statusEl.textContent='❌ Error: '+res.error;}
   }
 }
 
 async function tp_enviarEmailDirecto(to, subject, bodyHtml){
-  const cfg=DB.get('tp_smtp_config');
-  if(!cfg?.host||!cfg?.user||!cfg?.password) return false;
-  try{
-    const result=await Email.send({
-      Host:cfg.host,
-      Username:cfg.user,
-      Password:cfg.password,
-      To:to,
-      From:`${cfg.from_name||'TallerPro'} <${cfg.from||cfg.user}>`,
-      Subject:subject,
-      Body:bodyHtml
-    });
-    return result==='OK';
-  }catch(e){return false;}
+  const res=await tp_callSendEmail(to,subject,bodyHtml);
+  return res.ok;
 }
 
 // ─── MODELO AUTOCOMPLETE ───
