@@ -8179,7 +8179,7 @@ function tp_renderUsuarios(){
   list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">${tecnicos.map(t=>`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
       <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:48px;height:48px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.6" style="width:26px;height:26px"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+        <div style="width:48px;height:48px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.6" style="width:26px;height:26px"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:14.5px;font-weight:700;color:var(--text);line-height:1.2">${t.nombre}</div>
           ${t.rol?`<div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:3px">${t.rol}</div>`:'<div style="font-size:12px;color:var(--text3);margin-top:3px">Sin rol asignado</div>'}
