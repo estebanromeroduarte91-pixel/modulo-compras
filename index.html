@@ -7969,7 +7969,20 @@ function tp_openInspeccionModal(orderId, mode){
         </div>
         <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observaciones</div>
         <textarea id="insp-notas-input" class="form-input" rows="4" placeholder="Describe el estado del equipo: golpes, rayones, piezas rotas, evidencia de agua, intervenciones previas..." style="width:100%;resize:vertical;font-size:13px;line-height:1.6">${insp.notas||''}</textarea>
-        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <div style="margin-top:16px">
+          <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Enviar reporte al cliente</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="tp_enviarInspeccionReporte('${orderId}','whatsapp')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 14px;border:1.5px solid #25d366;border-radius:9px;background:#fff;color:#128c3e;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+              <svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px;flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.987-1.399A9.954 9.954 0 0011.999 22C17.523 22 22 17.523 22 12S17.523 2 11.999 2zm0 18c-1.66 0-3.202-.49-4.489-1.333l-.322-.19-3.3.924.916-3.22-.21-.338A7.957 7.957 0 014 12c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8z"/></svg>
+              WhatsApp
+            </button>
+            <button onclick="tp_enviarInspeccionReporte('${orderId}','email')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 14px;border:1.5px solid #2563eb;border-radius:9px;background:#fff;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Email
+            </button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid #f3f4f6;justify-content:flex-end">
           <button onclick="closeModal()" style="padding:8px 16px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px">Cancelar</button>
           <button onclick="tp_saveInspeccion()" style="padding:8px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Guardar inspección</button>
         </div>
