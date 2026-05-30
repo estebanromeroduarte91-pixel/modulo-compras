@@ -7461,6 +7461,7 @@ function tp_updateStatus(id,val){
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
   o.status=val;tp_saveState();tp_renderAll();
   if(val==='Listo'){tp_closeModal('mod-detail');tp_openSalidaModal(id);}
+  else{tp_closeModal('mod-detail');}
 }
 
 // ─── SALIDA ───
