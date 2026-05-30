@@ -7556,9 +7556,81 @@ function tp_deleteOrder(id){
 }
 function tp_updateStatus(id,val){
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
+  const prevStatus=o.status;
   o.status=val;tp_saveState();tp_renderAll();
-  if(val==='Listo'){tp_closeModal('mod-detail');tp_openSalidaModal(id);}
-  else{tp_closeModal('mod-detail');}
+  if(val==='Listo'&&prevStatus!=='Listo'){
+    tp_closeModal('mod-detail');
+    tp_notificarListo(id);
+  } else {
+    tp_closeModal('mod-detail');
+  }
+}
+
+async function tp_notificarListo(id){
+  const o=tp_orders.find(x=>x.id===id);if(!o)return;
+  const cfg=DB.get('tp_config')||{};
+  const taller=cfg.nombre||'TallerPro';
+  const sucursal=cfg.direccion||'nuestra sucursal';
+  const horario=cfg.horario||'Lun–Vie 9:00–18:00';
+
+  const textoWA=`✅ *Tu equipo está listo*\n\nHola *${o.nombre}*, te informamos que tu *${o.modelo}* ya se encuentra listo para ser retirado.\n\n📍 *Sucursal:* ${sucursal}\n🕐 *Horario:* ${horario}\n🔢 *Orden N°:* #${o.num}\n\n¡Gracias por confiar en ${taller}!`;
+
+  const bodyHtml=`<div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:24px">
+    <div style="background:#16a34a;border-radius:12px 12px 0 0;padding:20px 24px">
+      <h2 style="color:#fff;margin:0;font-size:18px">✅ Tu equipo está listo</h2>
+      <p style="color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px">${taller}</p>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
+      <p style="font-size:14px;color:#374151;line-height:1.7">Hola <strong>${o.nombre}</strong>, te informamos que tu <strong>${o.modelo}</strong> ya se encuentra listo para ser retirado.</p>
+      <table style="width:100%;border-collapse:collapse;margin:12px 0;background:#f9fafb;border-radius:8px;overflow:hidden">
+        <tr><td style="padding:8px 14px;font-size:13px;color:#6b7280;width:130px">📍 Sucursal</td><td style="padding:8px 14px;font-size:13px;font-weight:600;color:#111">${sucursal}</td></tr>
+        <tr><td style="padding:8px 14px;font-size:13px;color:#6b7280">🕐 Horario</td><td style="padding:8px 14px;font-size:13px;color:#111">${horario}</td></tr>
+        <tr><td style="padding:8px 14px;font-size:13px;color:#6b7280">🔢 Orden N°</td><td style="padding:8px 14px;font-size:13px;font-weight:600;color:#111">#${o.num}</td></tr>
+      </table>
+      <p style="font-size:13px;color:#374151;line-height:1.7">¡Gracias por confiar en ${taller}!</p>
+      <p style="font-size:11px;color:#9ca3af;margin-top:20px;border-top:1px solid #f3f4f6;padding-top:14px">Este mensaje fue generado automáticamente por ${taller}.</p>
+    </div>
+  </div>`;
+
+  // Enviar email automáticamente
+  const smtpCfg=DB.get('tp_smtp_config');
+  let emailEnviado=false;
+  if(o.email&&smtpCfg?.host&&smtpCfg?.user&&smtpCfg?.password){
+    const res=await tp_callSendEmail(o.email,`Tu ${o.modelo} está listo para retirar — #${o.num}`,bodyHtml);
+    emailEnviado=res.ok;
+  }
+
+  // Mostrar modal con resultado + opción WhatsApp
+  const phone=(o.tel||'').replace(/\D/g,'');
+  showModal(`<div class="modal-overlay" onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000">
+    <div onclick="event.stopPropagation()" style="background:#fff;border-radius:14px;width:460px;max-width:96vw;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="padding:20px 22px 14px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:12px">
+        <div style="width:38px;height:38px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" style="width:18px;height:18px"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#111">Equipo listo para retiro</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:1px">${o.nombre} · ${o.modelo} · #${o.num}</div>
+        </div>
+      </div>
+      <div style="padding:16px 22px;border-bottom:1px solid #f3f4f6">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${emailEnviado?'#f0fdf4':o.email?'#fef9ec':'#f9fafb'};border-radius:9px;font-size:13px;color:${emailEnviado?'#15803d':o.email?'#b45309':'#6b7280'}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;flex-shrink:0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          ${emailEnviado?'✅ Email enviado automáticamente a '+o.email:o.email?'⚠️ No se pudo enviar el email (revisa config SMTP)':'Sin email registrado en esta orden'}
+        </div>
+      </div>
+      <div style="padding:16px 22px 18px">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:10px">¿También quieres avisar por WhatsApp?</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="window.open('https://wa.me/${phone}?text=${encodeURIComponent(textoWA)}','_blank')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border:1.5px solid #25d366;border-radius:9px;background:#fff;color:#128c3e;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.987-1.399A9.954 9.954 0 0011.999 22C17.523 22 22 17.523 22 12S17.523 2 11.999 2zm0 18c-1.66 0-3.202-.49-4.489-1.333l-.322-.19-3.3.924.916-3.22-.21-.338A7.957 7.957 0 014 12c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8z"/></svg>
+            WhatsApp
+          </button>
+          <button onclick="closeModal()" style="padding:10px 18px;border:1px solid #e5e7eb;border-radius:9px;background:#fff;color:#6b7280;font-size:13px;cursor:pointer;font-family:inherit">Omitir</button>
+        </div>
+      </div>
+    </div>
+  </div>`);
 }
 
 // ─── SALIDA ───
