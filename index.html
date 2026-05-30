@@ -734,6 +734,7 @@ select{cursor:pointer}
     <div class="nav-subitem" id="nav-taller-orders" onclick="navTaller('orders','Taller — Órdenes')"><span class="icon">📋</span> Órdenes</div>
     <div class="nav-subitem" id="nav-taller-branches" onclick="navTaller('branches','Taller — Sucursales')"><span class="icon">🏢</span> Sucursales</div>
     <div class="nav-subitem" id="nav-taller-equipo" onclick="navTaller('equipo','Taller — Equipo')"><span class="icon">📱</span> Equipo</div>
+    <div class="nav-subitem" id="nav-taller-usuarios" onclick="navTaller('usuarios','Taller — Usuarios')"><span class="icon">👤</span> Usuarios</div>
     <div class="nav-subitem" id="nav-taller-settings" onclick="navTaller('settings','Taller — Configuración')"><span class="icon">⚙️</span> Configuración</div>
   </div>
   <div class="nav-item" id="nav-clientes" onclick="nav('clientes')"><span class="icon">👥</span> Clientes</div>
@@ -6492,6 +6493,23 @@ function renderTaller() {
     </div>
   </div>
 
+  <!-- PAGE: USUARIOS -->
+  <div id="page-usuarios" class="page-content" style="display:none">
+    <div class="content">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-top:4px">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--text)">Usuarios / Técnicos</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:2px">Gestiona los técnicos de tu taller</div>
+        </div>
+        <button class="btn btn-primary" onclick="tp_openUsuarioModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Agregar técnico
+        </button>
+      </div>
+      <div id="usuarios-list"></div>
+    </div>
+  </div>
+
   <!-- PAGE: SETTINGS -->
   <div id="page-settings" class="page-content" style="display:none">
     <div class="content">
@@ -6756,7 +6774,7 @@ function renderTaller() {
       <div class="form-section-title">Trabajo a realizar</div>
       <div class="form-grid">
         <div class="form-group span2"><label class="form-label">Descripción del trabajo *</label><textarea class="form-input" id="f-trabajo" placeholder="Ej: Cambio de pantalla, reparación de conector de carga..." oninput="autoCapFirst(this)"></textarea></div>
-        <div class="form-group"><label class="form-label">Técnico asignado</label><input type="text" class="form-input" id="f-tecnico" placeholder="Nombre del técnico" oninput="autoCapFirst(this)"></div>
+        <div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-input" id="f-tecnico"><option value="">— Sin asignar —</option></select></div>
         <div class="form-group"><label class="form-label">Presupuesto estimado ($)</label><input type="number" class="form-input" id="f-presup" placeholder="0"></div>
         <div class="form-group"><label class="form-label">Costo real ($)</label><input type="number" class="form-input" id="f-costo" placeholder="0"></div>
       </div>
@@ -7191,7 +7209,7 @@ function tp_showPage(id, btn) {
   const si = document.getElementById('nav-taller-'+id);
   if(si) si.classList.add('active');
   const tpHeader=document.querySelector('#tp-wrap .tp-header');
-  if(tpHeader) tpHeader.style.display = (id==='equipo'||id==='branches'||id==='settings') ? 'none' : '';
+  if(tpHeader) tpHeader.style.display = (id==='equipo'||id==='branches'||id==='settings'||id==='usuarios') ? 'none' : '';
   if(id==='branches') tp_renderBranchScreen();
   if(id==='clients') tp_renderClients();
   if(id==='stats') tp_renderStats();
@@ -7199,6 +7217,7 @@ function tp_showPage(id, btn) {
   if(id==='settings') tp_settingsTab('checklist');
   if(id==='orders') tp_renderAll();
   if(id==='equipo') tp_renderEquipo();
+  if(id==='usuarios') tp_renderUsuarios();
 }
 function tp_closeModal(id) { const el=document.getElementById(id); if(el) el.classList.remove('open'); }
 
@@ -7472,6 +7491,7 @@ function tp_openNewOrder(){
   const fs=document.getElementById('f-status');if(fs)fs.value='Chequeo';
   const ff=document.getElementById('f-fecha');if(ff)ff.value=new Date().toISOString().split('T')[0];
   tp_renderOrderRepuestos();tp_renderOrderChecklist('ingreso');tp_renderPhotoGrid('ingreso');
+  tp_refreshTecnicoSelect();
   document.getElementById('mod-order').classList.add('open');
 }
 function tp_openEditOrder(id){
@@ -7489,6 +7509,7 @@ function tp_openEditOrder(id){
   tp_loadPinValue(o.pin||'',o.pinType||'text');
   setTimeout(()=>{if(o.modelo)tp_selectModelo(o.modelo);else tp_clearModelo();},10);
   tp_renderOrderRepuestos();tp_renderOrderChecklist('ingreso',o.checkIngreso);tp_renderPhotoGrid('ingreso');
+  tp_refreshTecnicoSelect();setTimeout(()=>{const s=document.getElementById('f-tecnico');if(s)s.value=o.tecnico||'';},50);
   tp_closeModal('mod-detail');document.getElementById('mod-order').classList.add('open');
 }
 function tp_saveOrder(){
@@ -7814,7 +7835,7 @@ function tp_openDetail(id){
               <div style="width:30px;height:30px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;color:var(--text3)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               </div>
-              <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Estado físico</div><div style="font-size:13px;color:var(--text);line-height:1.4">${o.estadoFisico}</div></div>
+              <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Estado físico</div><div style="font-size:13.5px;font-weight:600;color:var(--text);line-height:1.4">${o.estadoFisico}</div></div>
             </div>`:''}
           </div>
           <div style="display:flex;flex-direction:column;gap:14px;padding-left:18px">
@@ -8138,6 +8159,105 @@ async function tp_enviarInspeccionReporte(orderId, via){
       window.open(`mailto:${email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent('Reporte de inspección adjunto.\n\nEquipo: '+o.modelo+'\nOrden: #'+o.num+(notasTexto?'\n\nEstado del equipo:\n'+notasTexto:''))}`, '_blank');
     }
   }
+}
+
+// ─── USUARIOS / TÉCNICOS ───
+function tp_getTecnicos(){ return DB.get('tp_tecnicos')||[]; }
+function tp_saveTecnicos(arr){ DB.set('tp_tecnicos',arr); }
+
+function tp_renderUsuarios(){
+  const tecnicos=tp_getTecnicos();
+  const list=document.getElementById('usuarios-list');if(!list)return;
+  if(!tecnicos.length){
+    list.innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--text3)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin-bottom:12px;opacity:.4"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">Sin técnicos registrados</div>
+      <div style="font-size:13px">Agrega los técnicos de tu taller para asignarlos a las órdenes</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">${tecnicos.map(t=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px">
+      <div style="width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">${(t.nombre||'?').charAt(0).toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px">${t.nombre}</div>
+        ${t.rol?`<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:3px">${t.rol}</div>`:''}
+        ${t.tel?`<div style="font-size:12px;color:var(--text3)">${t.tel}</div>`:''}
+        ${t.email?`<div style="font-size:12px;color:var(--text3)">${t.email}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="icon-btn" onclick="tp_openUsuarioModal('${t.id}')" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="icon-btn" onclick="tp_deleteUsuario('${t.id}')" style="color:var(--red)" title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+let _editingUsuarioId=null;
+function tp_openUsuarioModal(id){
+  _editingUsuarioId=id||null;
+  const t=id?tp_getTecnicos().find(x=>x.id===id):null;
+  showModal(`<div class="modal-overlay" onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000">
+    <div onclick="event.stopPropagation()" style="background:#fff;border-radius:14px;width:420px;max-width:96vw;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="padding:18px 20px 14px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:15px;font-weight:700;color:#111">${t?'Editar técnico':'Nuevo técnico'}</div>
+        <button onclick="closeModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280">×</button>
+      </div>
+      <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Nombre completo *</label>
+          <input id="u-nombre" class="form-input" type="text" placeholder="Ej: Carlos Pérez" value="${t?.nombre||''}" oninput="autoCapFirst(this)"></div>
+        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Rol / Especialidad</label>
+          <input id="u-rol" class="form-input" type="text" placeholder="Ej: Técnico senior, Electrónica..." value="${t?.rol||''}" oninput="autoCapFirst(this)"></div>
+        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Teléfono</label>
+          <input id="u-tel" class="form-input" type="text" placeholder="+56 9 xxxx xxxx" value="${t?.tel||''}"></div>
+        <div><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Email</label>
+          <input id="u-email" class="form-input" type="email" placeholder="tecnico@taller.cl" value="${t?.email||''}"></div>
+      </div>
+      <div style="padding:14px 20px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #f3f4f6">
+        <button onclick="closeModal()" style="padding:8px 16px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px">Cancelar</button>
+        <button onclick="tp_saveUsuario()" style="padding:8px 18px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Guardar</button>
+      </div>
+    </div>
+  </div>`);
+  setTimeout(()=>document.getElementById('u-nombre')?.focus(),100);
+}
+
+function tp_saveUsuario(){
+  const nombre=(document.getElementById('u-nombre')?.value||'').trim();
+  if(!nombre){alert('El nombre es requerido.');return;}
+  const arr=tp_getTecnicos();
+  const data={
+    nombre,
+    rol:(document.getElementById('u-rol')?.value||'').trim(),
+    tel:(document.getElementById('u-tel')?.value||'').trim(),
+    email:(document.getElementById('u-email')?.value||'').trim(),
+  };
+  if(_editingUsuarioId){
+    const idx=arr.findIndex(x=>x.id===_editingUsuarioId);
+    if(idx!==-1) arr[idx]={...arr[idx],...data};
+  } else {
+    arr.push({id:'usr-'+Date.now(),...data});
+  }
+  tp_saveTecnicos(arr);
+  closeModal();
+  tp_renderUsuarios();
+  tp_refreshTecnicoSelect();
+  toast(_editingUsuarioId?'Técnico actualizado ✓':'Técnico agregado ✓','success');
+}
+
+function tp_deleteUsuario(id){
+  if(!confirm('¿Eliminar este técnico?'))return;
+  tp_saveTecnicos(tp_getTecnicos().filter(x=>x.id!==id));
+  tp_renderUsuarios();
+  tp_refreshTecnicoSelect();
+  toast('Técnico eliminado','success');
+}
+
+function tp_refreshTecnicoSelect(){
+  const sel=document.getElementById('f-tecnico');if(!sel)return;
+  const current=sel.value;
+  const tecnicos=tp_getTecnicos();
+  sel.innerHTML=`<option value="">— Sin asignar —</option>${tecnicos.map(t=>`<option value="${t.nombre}">${t.nombre}${t.rol?' · '+t.rol:''}</option>`).join('')}`;
+  if(current) sel.value=current;
 }
 
 // ─── SETTINGS TABS ───
