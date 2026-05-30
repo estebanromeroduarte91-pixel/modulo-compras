@@ -6521,6 +6521,9 @@ function renderTaller() {
         <button id="stab-smtp" class="tp-subnav-btn" onclick="tp_settingsTab('smtp')" style="border-bottom:2px solid transparent">
           ✉️ SMTP / Email
         </button>
+        <button id="stab-mensajes" class="tp-subnav-btn" onclick="tp_settingsTab('mensajes')" style="border-bottom:2px solid transparent">
+          💬 Mensajes automáticos
+        </button>
       </div>
 
       <!-- TAB: CHECKLIST -->
@@ -6543,6 +6546,11 @@ function renderTaller() {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- TAB: MENSAJES AUTOMÁTICOS -->
+      <div id="settings-tab-mensajes" style="display:none">
+        <div id="mensajes-tab-content" style="max-width:700px"></div>
       </div>
 
       <!-- TAB: SMTP / EMAIL -->
@@ -7573,21 +7581,16 @@ async function tp_notificarListo(id){
   const sucursal=cfg.direccion||'nuestra sucursal';
   const horario=cfg.horario||'Lun–Vie 9:00–18:00';
 
-  const textoWA=`✅ *Tu equipo está listo*\n\nHola *${o.nombre}*, te informamos que tu *${o.modelo}* ya se encuentra listo para ser retirado.\n\n📍 *Sucursal:* ${sucursal}\n🕐 *Horario:* ${horario}\n🔢 *Orden N°:* #${o.num}\n\n¡Gracias por confiar en ${taller}!`;
-
+  const tplData={nombre:o.nombre,modelo:o.modelo,orden:o.num,sucursal,horario,tecnico:o.tecnico||'',fecha_estimada:o.fechaEstimada?tp_fmtDate(o.fechaEstimada):''};
+  const textoWA=tp_applyMsgTemplate('listo_wa',tplData);
+  const emailPlain=tp_applyMsgTemplate('listo_email',tplData);
   const bodyHtml=`<div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:24px">
     <div style="background:#16a34a;border-radius:12px 12px 0 0;padding:20px 24px">
       <h2 style="color:#fff;margin:0;font-size:18px">✅ Tu equipo está listo</h2>
       <p style="color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px">${taller}</p>
     </div>
     <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
-      <p style="font-size:14px;color:#374151;line-height:1.7">Hola <strong>${o.nombre}</strong>, te informamos que tu <strong>${o.modelo}</strong> ya se encuentra listo para ser retirado.</p>
-      <table style="width:100%;border-collapse:collapse;margin:12px 0;background:#f9fafb;border-radius:8px;overflow:hidden">
-        <tr><td style="padding:8px 14px;font-size:13px;color:#6b7280;width:130px">📍 Sucursal</td><td style="padding:8px 14px;font-size:13px;font-weight:600;color:#111">${sucursal}</td></tr>
-        <tr><td style="padding:8px 14px;font-size:13px;color:#6b7280">🕐 Horario</td><td style="padding:8px 14px;font-size:13px;color:#111">${horario}</td></tr>
-        <tr><td style="padding:8px 14px;font-size:13px;color:#6b7280">🔢 Orden N°</td><td style="padding:8px 14px;font-size:13px;font-weight:600;color:#111">#${o.num}</td></tr>
-      </table>
-      <p style="font-size:13px;color:#374151;line-height:1.7">¡Gracias por confiar en ${taller}!</p>
+      <p style="font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap">${emailPlain}</p>
       <p style="font-size:11px;color:#9ca3af;margin-top:20px;border-top:1px solid #f3f4f6;padding-top:14px">Este mensaje fue generado automáticamente por ${taller}.</p>
     </div>
   </div>`;
@@ -8343,7 +8346,7 @@ function tp_refreshTecnicoSelect(){
 
 // ─── SETTINGS TABS ───
 function tp_settingsTab(tab){
-  ['checklist','smtp'].forEach(t=>{
+  ['checklist','smtp','mensajes'].forEach(t=>{
     const el=document.getElementById('settings-tab-'+t);
     const btn=document.getElementById('stab-'+t);
     if(!el||!btn) return;
@@ -8356,6 +8359,111 @@ function tp_settingsTab(tab){
   });
   if(tab==='checklist') tp_renderSettingsChecklists();
   if(tab==='smtp') tp_renderSmtpSettings();
+  if(tab==='mensajes') tp_renderMensajesSettings();
+}
+
+// ─── MENSAJES AUTOMÁTICOS ───
+const _MSG_DEFAULTS = {
+  listo_wa: `✅ *Tu equipo está listo*\n\nHola *{{nombre}}*, te informamos que tu *{{modelo}}* ya se encuentra listo para ser retirado.\n\n📍 *Sucursal:* {{sucursal}}\n🕐 *Horario:* {{horario}}\n🔢 *Orden N°:* #{{orden}}\n\n¡Gracias por confiar en nosotros!`,
+  listo_email: `Hola {{nombre}},\n\nte informamos que tu {{modelo}} (Orden #{{orden}}) ya se encuentra listo para ser retirado.\n\nSucursal: {{sucursal}}\nHorario: {{horario}}\n\n¡Gracias por confiar en nosotros!`
+};
+
+const _MSG_VARS = [
+  {code:'{{nombre}}', label:'Nombre cliente'},
+  {code:'{{modelo}}', label:'Modelo equipo'},
+  {code:'{{orden}}',  label:'N° orden'},
+  {code:'{{sucursal}}', label:'Sucursal'},
+  {code:'{{horario}}', label:'Horario'},
+  {code:'{{tecnico}}', label:'Técnico'},
+  {code:'{{fecha_estimada}}', label:'Fecha estimada'},
+];
+
+function tp_getMsgTemplates(){ return {..._MSG_DEFAULTS,...(DB.get('tp_msg_templates')||{})}; }
+
+function tp_insertVar(textareaId, code){
+  const ta=document.getElementById(textareaId);if(!ta)return;
+  const s=ta.selectionStart,e=ta.selectionEnd;
+  ta.value=ta.value.substring(0,s)+code+ta.value.substring(e);
+  ta.selectionStart=ta.selectionEnd=s+code.length;
+  ta.focus();
+}
+
+function tp_saveMsgTemplate(key, textareaId){
+  const val=document.getElementById(textareaId)?.value||'';
+  const tpls=DB.get('tp_msg_templates')||{};
+  tpls[key]=val;
+  DB.set('tp_msg_templates',tpls);
+  toast('Plantilla guardada ✓','success');
+}
+
+function tp_resetMsgTemplate(key, textareaId){
+  if(!confirm('¿Restaurar el mensaje por defecto?'))return;
+  const tpls=DB.get('tp_msg_templates')||{};
+  delete tpls[key];
+  DB.set('tp_msg_templates',tpls);
+  const ta=document.getElementById(textareaId);if(ta)ta.value=_MSG_DEFAULTS[key]||'';
+  toast('Mensaje restaurado','success');
+}
+
+function tp_renderMensajesSettings(){
+  const tpls=tp_getMsgTemplates();
+  const varBtns=_MSG_VARS.map(v=>`<button onclick="tp_insertVar(arguments[0],${JSON.stringify(v.code)})" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace;white-space:nowrap" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('');
+
+  const makeSection=(title,icon,waKey,emailKey)=>`
+    <div class="chart-card" style="background:var(--surface);border:1px solid var(--border);margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <span style="font-size:18px">${icon}</span>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">${title}</div>
+      </div>
+
+      <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Variables disponibles — haz clic para insertar</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${_MSG_VARS.map(v=>`<button onclick="tp_insertVar('ta-wa-${waKey}',${JSON.stringify(v.code)})" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('')}</div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px;color:#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.987-1.399A9.954 9.954 0 0011.999 22C17.523 22 22 17.523 22 12S17.523 2 11.999 2zm0 18c-1.66 0-3.202-.49-4.489-1.333l-.322-.19-3.3.924.916-3.22-.21-.338A7.957 7.957 0 014 12c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8z"/></svg>
+          <span style="font-size:13px;font-weight:600;color:var(--text)">Mensaje WhatsApp</span>
+        </div>
+        <textarea id="ta-wa-${waKey}" class="form-input" rows="6" style="font-size:13px;line-height:1.6;font-family:inherit;resize:vertical">${tpls[waKey]||''}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+          <button onclick="tp_resetMsgTemplate('${waKey}','ta-wa-${waKey}')" style="padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">Restaurar por defecto</button>
+          <button onclick="tp_saveMsgTemplate('${waKey}','ta-wa-${waKey}')" class="btn btn-primary btn-sm">Guardar</button>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" style="width:15px;height:15px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span style="font-size:13px;font-weight:600;color:var(--text)">Mensaje Email</span>
+        </div>
+        <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Variables disponibles</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${_MSG_VARS.map(v=>`<button onclick="tp_insertVar('ta-em-${emailKey}',${JSON.stringify(v.code)})" style="padding:4px 10px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:monospace" onmouseover="this.style.background='rgba(99,102,241,.08)'" onmouseout="this.style.background='var(--bg)'">${v.code}</button>`).join('')}</div>
+        </div>
+        <textarea id="ta-em-${emailKey}" class="form-input" rows="6" style="font-size:13px;line-height:1.6;font-family:inherit;resize:vertical">${tpls[emailKey]||''}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+          <button onclick="tp_resetMsgTemplate('${emailKey}','ta-em-${emailKey}')" style="padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">Restaurar por defecto</button>
+          <button onclick="tp_saveMsgTemplate('${emailKey}','ta-em-${emailKey}')" class="btn btn-primary btn-sm">Guardar</button>
+        </div>
+      </div>
+    </div>`;
+
+  const cont=document.getElementById('mensajes-tab-content');if(!cont)return;
+  cont.innerHTML=makeSection('Equipo listo para retiro','✅','listo_wa','listo_email');
+}
+
+function tp_applyMsgTemplate(key, data){
+  const tpl=tp_getMsgTemplates()[key]||'';
+  return tpl
+    .replace(/\{\{nombre\}\}/g, data.nombre||'')
+    .replace(/\{\{modelo\}\}/g, data.modelo||'')
+    .replace(/\{\{orden\}\}/g, data.orden||'')
+    .replace(/\{\{sucursal\}\}/g, data.sucursal||'')
+    .replace(/\{\{horario\}\}/g, data.horario||'')
+    .replace(/\{\{tecnico\}\}/g, data.tecnico||'')
+    .replace(/\{\{fecha_estimada\}\}/g, data.fecha_estimada||'');
 }
 
 // ─── SMTP CONFIG ───
