@@ -713,7 +713,8 @@ select{cursor:pointer}
       <button class="login-btn" onclick="doLogin()">Ingresar</button>
     </div>
     <div id="register-form" style="display:none">
-      <div class="login-field"><label>Nombre de tu empresa</label><input id="r-empresa" type="text" placeholder="Mi Empresa SpA"></div>
+      <div class="login-field" id="r-empresa-group"><label>Nombre de tu empresa</label><input id="r-empresa" type="text" placeholder="Mi Empresa SpA"></div>
+      <div class="login-field" id="r-nombre-group" style="display:none"><label>Tu nombre completo</label><input id="r-nombre" type="text" placeholder="Juan Pérez"></div>
       <div class="login-field"><label>Email</label><input id="r-email" type="email" placeholder="tu@empresa.com"></div>
       <div class="login-field"><label>Contraseña (mín. 6 caracteres)</label><input id="r-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()"></div>
       <button class="login-btn" onclick="doRegister()">Crear cuenta</button>
@@ -747,6 +748,7 @@ select{cursor:pointer}
   <div class="nav-item" id="nav-kits" onclick="nav('kits')"><span class="icon">🔧</span> Kits / Equipos</div>
   <div class="nav-item" id="nav-bodegas" onclick="nav('bodegas')"><span class="icon">🏭</span> Bodegas / Sucursales</div>
   <div class="nav-item" id="nav-estadisticas" onclick="nav('estadisticas')"><span class="icon">📈</span> Estadísticas</div>
+  <div class="nav-item" id="nav-sys-usuarios" onclick="nav('sys-usuarios')"><span class="icon">🔐</span> Accesos</div>
   <div style="border-top:1px solid rgba(255,255,255,.1);margin:8px 16px"></div>
   <div class="nav-item-parent" id="nav-contabilidad" onclick="toggleContabilidad()"><span class="icon">📒</span> Contabilidad<span class="arrow">▶</span></div>
   <div class="nav-submenu" id="submenu-contabilidad">
@@ -780,6 +782,9 @@ const _SB_URL = 'https://nfcdqdbhrsjhbnbtqewl.supabase.co';
 const _SB_KEY = 'sb_publishable_hbmva0O8zTFwr-EfnqBUdw_X8lwOPoZ';
 const _sb = supabase.createClient(_SB_URL, _SB_KEY);
 let _empresaId = null;
+let _currentRole = 'admin';      // admin | tecnico | vendedor
+let _currentUserNombre = '';
+let _currentUserId = null;
 let _dbCache = {};
 let _syncQueue = {};
 let _syncTimer = null;
@@ -829,8 +834,10 @@ async function _cargarDesdeSupabase(){
 }
 
 // ─────────────────────────────────────────────
-// AUTH
+// AUTH — multi-usuario con roles
 // ─────────────────────────────────────────────
+const _ROLES_LABEL = {admin:'Administrador', tecnico:'Técnico', vendedor:'Vendedor'};
+
 function switchTab(t){
   document.getElementById('login-form').style.display = t==='login'?'block':'none';
   document.getElementById('register-form').style.display = t==='register'?'block':'none';
@@ -850,6 +857,11 @@ async function doLogin(){
 }
 
 async function doRegister(){
+  // Si hay invite token en la URL → registro de usuario invitado
+  const inviteToken = new URLSearchParams(window.location.search).get('invite');
+  if(inviteToken){ await _doRegisterInvitado(inviteToken); return; }
+
+  // Registro normal de propietario (crea empresa)
   const empresa = document.getElementById('r-empresa').value.trim();
   const email   = document.getElementById('r-email').value.trim();
   const pass    = document.getElementById('r-pass').value;
@@ -863,32 +875,102 @@ async function doRegister(){
     document.getElementById('login-err').textContent = '✅ Revisa tu email para confirmar la cuenta.';
     return;
   }
-  // Crear empresa (sesión activa)
   const {error: empErr} = await _sb.from('empresas').insert({nombre: empresa, owner_id: data.user.id});
-  if(empErr){ document.getElementById('login-err').textContent = 'Error creando empresa: '+empErr.message; return; }
+  if(empErr){ document.getElementById('login-err').textContent = 'Error: '+empErr.message; return; }
+  await _iniciarApp(data.user);
+}
+
+async function _doRegisterInvitado(token){
+  const email  = document.getElementById('r-email').value.trim();
+  const pass   = document.getElementById('r-pass').value;
+  const nombre = (document.getElementById('r-nombre')?.value||'').trim();
+  if(!email||!pass||!nombre){ document.getElementById('login-err').textContent='Completa todos los campos'; return; }
+  if(pass.length<6){ document.getElementById('login-err').textContent='La contraseña debe tener al menos 6 caracteres'; return; }
+  document.getElementById('login-err').textContent = 'Creando cuenta...';
+
+  // Verificar invitación
+  const {data: inv} = await _sb.from('pending_invites').select('*').eq('token', token).eq('used', false).maybeSingle();
+  if(!inv){ document.getElementById('login-err').textContent='Invitación inválida o ya utilizada.'; return; }
+  if(inv.email.toLowerCase() !== email.toLowerCase()){ document.getElementById('login-err').textContent='El email no coincide con la invitación.'; return; }
+
+  const {data, error} = await _sb.auth.signUp({email, password:pass});
+  if(error){ document.getElementById('login-err').textContent = _tradError(error.message); return; }
+  if(!data.session){
+    document.getElementById('login-err').style.color='#16a34a';
+    document.getElementById('login-err').textContent = '✅ Revisa tu email para confirmar tu cuenta y luego inicia sesión.';
+    return;
+  }
+  await _sb.from('user_profiles').insert({id:data.user.id, empresa_id:inv.empresa_id, role:inv.role, nombre, activo:true});
+  await _sb.from('pending_invites').update({used:true}).eq('token', token);
   await _iniciarApp(data.user);
 }
 
 async function doLogout(){
   await _flushSync();
   await _sb.auth.signOut();
-  _empresaId = null; _dbCache = {};
+  _empresaId = null; _dbCache = {}; _currentRole = 'admin'; _currentUserId = null;
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('l-email').value='';
   document.getElementById('l-pass').value='';
   document.getElementById('login-err').textContent='';
+  // Resetear visibilidad de nav
+  document.querySelectorAll('#sidebar .nav-item, #sidebar .nav-item-parent, #sidebar .nav-subitem').forEach(el=>el.style.display='');
 }
 
 async function _iniciarApp(user){
-  // Buscar empresa del usuario
-  const {data: emp, error} = await _sb.from('empresas').select('id,nombre').eq('owner_id', user.id).maybeSingle();
-  if(!emp){ document.getElementById('login-err').textContent='No se encontró la empresa. Vuelve a registrarte.'; return; }
-  _empresaId = emp.id;
+  _currentUserId = user.id;
+
+  // 1. Buscar perfil en user_profiles (staff)
+  const {data: profile} = await _sb.from('user_profiles').select('empresa_id,role,nombre,activo').eq('id', user.id).maybeSingle();
+
+  let empresaId, empresaNombre;
+
+  if(profile && profile.empresa_id){
+    if(profile.activo === false){
+      document.getElementById('login-err').textContent = 'Tu cuenta está desactivada. Contacta al administrador.';
+      await _sb.auth.signOut(); return;
+    }
+    const {data: emp} = await _sb.from('empresas').select('id,nombre').eq('id', profile.empresa_id).maybeSingle();
+    if(!emp){ document.getElementById('login-err').textContent='Error: empresa no encontrada.'; return; }
+    empresaId = emp.id; empresaNombre = emp.nombre;
+    _currentRole = profile.role||'tecnico';
+    _currentUserNombre = profile.nombre||user.email;
+  } else {
+    // Propietario (flujo original)
+    const {data: emp} = await _sb.from('empresas').select('id,nombre').eq('owner_id', user.id).maybeSingle();
+    if(!emp){ document.getElementById('login-err').textContent='No se encontró la empresa. Vuelve a registrarte.'; return; }
+    empresaId = emp.id; empresaNombre = emp.nombre;
+    _currentRole = 'admin';
+    _currentUserNombre = empresaNombre;
+    // Crear perfil admin para el propietario (idempotente)
+    await _sb.from('user_profiles').upsert({id:user.id, empresa_id:emp.id, role:'admin', nombre:empresaNombre, activo:true},{onConflict:'id',ignoreDuplicates:true});
+  }
+
+  _empresaId = empresaId;
   await _cargarDesdeSupabase();
   document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('topbar-empresa').textContent = emp.nombre;
-  document.getElementById('sidebar-user-info').textContent = emp.nombre + ' · v2.0';
-  nav('dashboard');
+  document.getElementById('topbar-empresa').textContent = empresaNombre;
+  document.getElementById('sidebar-user-info').innerHTML = `<span style="font-weight:600">${_currentUserNombre}</span><br><span style="font-size:10px;opacity:.65">${_ROLES_LABEL[_currentRole]||_currentRole}</span>`;
+  _applyRoleAccess();
+  _currentRole === 'tecnico' ? navTaller('orders','Taller — Órdenes') : nav('dashboard');
+}
+
+function _applyRoleAccess(){
+  if(_currentRole === 'admin') return; // ve todo
+  const _hide = (...ids) => ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+
+  if(_currentRole === 'tecnico'){
+    _hide('nav-dashboard','nav-ventas','nav-clientes','nav-proveedores',
+          'nav-inventario-parent','nav-kits','nav-bodegas','nav-estadisticas',
+          'nav-contabilidad','nav-taller-branches','nav-taller-settings',
+          'nav-taller-usuarios','nav-sys-usuarios');
+  }
+  if(_currentRole === 'vendedor'){
+    _hide('nav-ventas','nav-proveedores','nav-inventario-parent','nav-kits',
+          'nav-bodegas','nav-estadisticas','nav-contabilidad',
+          'nav-taller-branches','nav-taller-usuarios','nav-taller-settings',
+          'nav-taller-equipo','nav-sys-usuarios');
+  }
 }
 
 function _tradError(msg){
@@ -898,13 +980,27 @@ function _tradError(msg){
   return msg;
 }
 
-// Verificar sesión activa al cargar
+// Verificar sesión activa + detectar invite token al cargar
 (async()=>{
-  const {data:{session}} = await _sb.auth.getSession();
-  if(session){
-    await _iniciarApp(session.user);
+  const inviteToken = new URLSearchParams(window.location.search).get('invite');
+  if(inviteToken){
+    // Mostrar form de registro con campos de invitado
+    switchTab('register');
+    document.getElementById('r-empresa-group').style.display='none';
+    document.getElementById('r-nombre-group').style.display='block';
+    const {data: inv} = await _sb.from('pending_invites').select('email,nombre,role').eq('token', inviteToken).eq('used', false).maybeSingle();
+    if(inv){
+      const emailEl=document.getElementById('r-email'); if(emailEl){ emailEl.value=inv.email; emailEl.readOnly=true; emailEl.style.background='#f9fafb'; }
+      const nombreEl=document.getElementById('r-nombre'); if(nombreEl && inv.nombre) nombreEl.value=inv.nombre;
+      document.getElementById('login-err').style.color='#1d4ed8';
+      document.getElementById('login-err').textContent=`✉️ Fuiste invitado como ${_ROLES_LABEL[inv.role]||inv.role}. Crea tu contraseña para continuar.`;
+    } else {
+      document.getElementById('login-err').textContent='Este link de invitación es inválido o ya fue usado.';
+    }
+    return;
   }
-  // Si no hay sesión, la pantalla de login ya está visible
+  const {data:{session}} = await _sb.auth.getSession();
+  if(session) await _iniciarApp(session.user);
 })();
 
 // ─────────────────────────────────────────────
@@ -1094,7 +1190,8 @@ function nav(page){
   // Restaurar topbar al salir de taller
   const tb=document.getElementById('topbar');if(tb)tb.style.display='';
   ({dashboard:renderDashboard,ventas:renderVentas,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
-    productos:renderProductos,categorias:renderCategorias,kits:renderKits,traslados:renderTraslados,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad
+    productos:renderProductos,categorias:renderCategorias,kits:renderKits,traslados:renderTraslados,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad,
+    'sys-usuarios':renderSysUsuarios
   }[page]||renderDashboard)();
 }
 
@@ -6493,6 +6590,24 @@ function renderTaller() {
     </div>
   </div>
 
+  <!-- PAGE: ACCESOS (gestión de usuarios del sistema) -->
+  <div id="page-sys-usuarios" class="page-content" style="display:none">
+    <div class="content">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-top:4px">
+        <div>
+          <div style="font-size:18px;font-weight:700">Accesos al sistema</div>
+          <div style="font-size:13px;color:var(--text3)">Gestiona quién puede ingresar al ERP y con qué permisos</div>
+        </div>
+        <button class="btn btn-primary" onclick="sysInviteModal()">+ Invitar usuario</button>
+      </div>
+      <div id="sys-usuarios-list"></div>
+      <div style="margin-top:28px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text2)">Invitaciones pendientes</div>
+        <div id="sys-invites-list"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- PAGE: USUARIOS -->
   <div id="page-usuarios" class="page-content" style="display:none">
     <div class="content">
@@ -9352,6 +9467,146 @@ function tp_addListeners(){
   // Click-outside-to-close desactivado intencionalmente
 }
 
+
+// ─────────────────────────────────────────────
+// GESTIÓN DE ACCESOS (admin only)
+// ─────────────────────────────────────────────
+async function renderSysUsuarios(){
+  // Usuarios activos
+  const {data: perfiles} = await _sb.from('user_profiles').select('id,nombre,role,activo').eq('empresa_id', _empresaId);
+  const listEl = document.getElementById('sys-usuarios-list');
+  if(listEl){
+    if(!perfiles?.length){
+      listEl.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">No hay usuarios registrados aún.</div>`;
+    } else {
+      listEl.innerHTML = perfiles.map(p=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" style="width:18px;height:18px"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text)">${p.nombre}</div>
+              <div style="font-size:12px;color:var(--text3)">${_ROLES_LABEL[p.role]||p.role}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;${p.activo?'background:#f0fdf4;color:#166534':'background:#fef2f2;color:#991b1b'}">${p.activo?'Activo':'Inactivo'}</span>
+            ${p.id !== _currentUserId ? `
+              <button onclick="sysToggleActivo('${p.id}',${!p.activo})" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">${p.activo?'Desactivar':'Activar'}</button>
+              <button onclick="sysEditRole('${p.id}','${p.role}','${p.nombre}')" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">Cambiar rol</button>
+            ` : `<span style="font-size:11px;color:var(--text3);padding:0 4px">(tú)</span>`}
+          </div>
+        </div>`).join('');
+    }
+  }
+
+  // Invitaciones pendientes
+  const {data: invites} = await _sb.from('pending_invites').select('id,email,role,nombre,token,created_at').eq('empresa_id', _empresaId).eq('used', false).order('created_at', {ascending:false});
+  const invEl = document.getElementById('sys-invites-list');
+  if(invEl){
+    if(!invites?.length){
+      invEl.innerHTML = `<div style="color:var(--text3);font-size:13px">Sin invitaciones pendientes.</div>`;
+    } else {
+      invEl.innerHTML = invites.map(inv=>{
+        const url = `${window.location.origin}${window.location.pathname}?invite=${inv.token}`;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:9px;margin-bottom:6px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${inv.email}</div>
+            <div style="font-size:11px;color:var(--text3)">${_ROLES_LABEL[inv.role]||inv.role} · Pendiente de activación</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="sysCopiarLink('${url}')" style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--accent);background:transparent;font-size:12px;cursor:pointer;color:var(--accent);font-weight:600;font-family:inherit">Copiar link</button>
+            <button onclick="sysCancelarInvite('${inv.id}')" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--red);font-family:inherit">Cancelar</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+function sysCopiarLink(url){
+  navigator.clipboard.writeText(url).then(()=>toast('Link copiado al portapapeles ✓','success'));
+}
+
+async function sysToggleActivo(userId, activo){
+  await _sb.from('user_profiles').update({activo}).eq('id', userId);
+  renderSysUsuarios();
+}
+
+function sysEditRole(userId, currentRole, nombre){
+  showModal(`<div class="modal-overlay" onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000">
+    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:14px;width:380px;max-width:96vw;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="font-size:15px;font-weight:700;margin-bottom:16px">Cambiar rol — ${nombre}</div>
+      <select id="edit-role-select" class="form-input" style="margin-bottom:16px">
+        <option value="admin" ${currentRole==='admin'?'selected':''}>Administrador</option>
+        <option value="tecnico" ${currentRole==='tecnico'?'selected':''}>Técnico</option>
+        <option value="vendedor" ${currentRole==='vendedor'?'selected':''}>Vendedor</option>
+      </select>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeModal()" class="btn btn-default">Cancelar</button>
+        <button onclick="_sysGuardarRole('${userId}')" class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </div>`);
+}
+
+async function _sysGuardarRole(userId){
+  const role = document.getElementById('edit-role-select').value;
+  await _sb.from('user_profiles').update({role}).eq('id', userId);
+  closeModal(); toast('Rol actualizado ✓','success'); renderSysUsuarios();
+}
+
+function sysInviteModal(){
+  showModal(`<div class="modal-overlay" onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000">
+    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:14px;width:420px;max-width:96vw;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">Invitar usuario</div>
+      <div style="font-size:12.5px;color:var(--text3);margin-bottom:18px">Se generará un link de acceso único para que el usuario cree su contraseña.</div>
+      <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-input" id="inv-nombre" placeholder="Juan Pérez"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="inv-email" placeholder="juan@empresa.com"></div>
+      <div class="form-group"><label class="form-label">Rol</label>
+        <select class="form-input" id="inv-role">
+          <option value="tecnico">Técnico — solo Taller</option>
+          <option value="vendedor">Vendedor — Taller + Clientes</option>
+          <option value="admin">Administrador — acceso total</option>
+        </select>
+      </div>
+      <div id="inv-link-result" style="display:none;margin-bottom:14px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">LINK GENERADO — compártelo con el usuario</div>
+        <div id="inv-link-text" style="font-size:12px;word-break:break-all;color:var(--accent);margin-bottom:8px"></div>
+        <button onclick="sysCopiarLink(document.getElementById('inv-link-text').textContent)" style="padding:5px 14px;border-radius:6px;border:1.5px solid var(--accent);background:transparent;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;font-family:inherit">Copiar link</button>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeModal()" class="btn btn-default">Cerrar</button>
+        <button id="inv-btn" onclick="sysCrearInvitacion()" class="btn btn-primary">Generar link</button>
+      </div>
+    </div>
+  </div>`);
+}
+
+async function sysCrearInvitacion(){
+  const nombre = (document.getElementById('inv-nombre')?.value||'').trim();
+  const email  = (document.getElementById('inv-email')?.value||'').trim();
+  const role   = document.getElementById('inv-role')?.value||'tecnico';
+  if(!nombre||!email){ toast('Completa nombre y email','error'); return; }
+  const token = Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+  const {error} = await _sb.from('pending_invites').insert({empresa_id:_empresaId, email, nombre, role, token, used:false});
+  if(error){ toast('Error: '+error.message,'error'); return; }
+  const url = `${window.location.origin}${window.location.pathname}?invite=${token}`;
+  const linkEl = document.getElementById('inv-link-result');
+  const linkText = document.getElementById('inv-link-text');
+  const btn = document.getElementById('inv-btn');
+  if(linkEl) linkEl.style.display='block';
+  if(linkText) linkText.textContent = url;
+  if(btn) btn.style.display='none';
+  renderSysUsuarios();
+}
+
+async function sysCancelarInvite(id){
+  if(!confirm('¿Cancelar esta invitación?')) return;
+  await _sb.from('pending_invites').delete().eq('id', id);
+  renderSysUsuarios();
+}
 
 // ─────────────────────────────────────────────
 // INIT — manejado por auth (ver _iniciarApp)
