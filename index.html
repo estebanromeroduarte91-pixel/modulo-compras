@@ -8320,7 +8320,8 @@ function tp_renderBranchScreen(){
     container.innerHTML=`<div style="text-align:center;padding:32px;font-size:13px;color:var(--text2)">Sin resultados para "${q}"</div>`;
     return;
   }
-  container.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:20px">
+  const storeIcon=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
+  container.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:20px">
     ${list.map(b=>{
       const bo=tp_orders.filter(o=>o.branchId===b.id);
       const abiertas=bo.filter(o=>!['Entregado'].includes(o.status)).length;
@@ -8328,25 +8329,39 @@ function tp_renderBranchScreen(){
       const reparacion=bo.filter(o=>o.status==='Reparación').length;
       const nombre=b.nombre||b.name||'Sin nombre';
       const dir=b.direccion||'';
-      const statsHtml=[
-        abiertas?`<span style="font-size:11px;font-weight:500;background:#eff6ff;color:#1d4ed8;padding:3px 9px;border-radius:20px">${abiertas} abierta${abiertas!==1?'s':''}</span>`:'',
-        listas?`<span style="font-size:11px;font-weight:500;background:#f0fdf4;color:#15803d;padding:3px 9px;border-radius:20px">${listas} lista${listas!==1?'s':''}</span>`:'',
-        reparacion?`<span style="font-size:11px;font-weight:500;background:#fef9c3;color:#854d0e;padding:3px 9px;border-radius:20px">${reparacion} reparación</span>`:'',
-        !bo.length?`<span style="font-size:11px;color:var(--text2)">Sin órdenes</span>`:'',
-      ].filter(Boolean).join('');
-      return `<div onclick="tp_enterBranch('${b.id}')" style="background:var(--card-bg,#fff);border:1.5px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
-          <div style="width:38px;height:38px;border-radius:10px;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0">🏪</div>
-          <button onclick="event.stopPropagation();tp_openEditBranch('${b.id}')" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)" title="Editar sucursal">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-          </button>
+      const ultimaOT=bo.length?bo.reduce((a,c)=>(!a.fecha||c.fecha>a.fecha)?c:a,{}):{};
+      const diasStr=ultimaOT.fecha?`Última OT: hace ${tp_getOrderAge(ultimaOT)} día${tp_getOrderAge(ultimaOT)!==1?'s':''}`:'Sin órdenes aún';
+      return `<div onclick="tp_enterBranch('${b.id}')" style="background:var(--card-bg,var(--surface,#fff));border:1.5px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <!-- Card top -->
+        <div style="padding:18px 18px 14px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+            <div style="width:42px;height:42px;border-radius:11px;background:#1a3326;display:flex;align-items:center;justify-content:center;flex-shrink:0">${storeIcon}</div>
+            <button onclick="event.stopPropagation();tp_openEditBranch('${b.id}')" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg2,#f8fafc);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)" title="Editar sucursal">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            </button>
+          </div>
+          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:${dir?'3px':'0'}">${nombre}</div>
+          ${dir?`<div style="font-size:12px;color:var(--text2)">${dir}</div>`:''}
         </div>
-        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:${dir?'3px':'12px'}">${nombre}</div>
-        ${dir?`<div style="font-size:12px;color:var(--text2);margin-bottom:12px">${dir}</div>`:''}
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${statsHtml}</div>
-        <div style="display:flex;align-items:center;justify-content:flex-end;color:var(--accent);font-size:12px;font-weight:500;gap:4px">
-          Ver órdenes
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <!-- Métricas -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--border)">
+          <div style="padding:10px 0;text-align:center;border-right:1px solid var(--border)">
+            <span style="display:block;font-size:17px;font-weight:600;color:#1d4ed8">${abiertas}</span>
+            <span style="display:block;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:1px">Abiertas</span>
+          </div>
+          <div style="padding:10px 0;text-align:center;border-right:1px solid var(--border)">
+            <span style="display:block;font-size:17px;font-weight:600;color:#854d0e">${reparacion}</span>
+            <span style="display:block;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:1px">Reparación</span>
+          </div>
+          <div style="padding:10px 0;text-align:center">
+            <span style="display:block;font-size:17px;font-weight:600;color:#15803d">${listas}</span>
+            <span style="display:block;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:1px">Listas</span>
+          </div>
+        </div>
+        <!-- Footer -->
+        <div style="padding:10px 18px;background:var(--bg2,#f8fafc);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;color:var(--text2)">${diasStr}</span>
+          <span style="font-size:12px;font-weight:500;color:var(--accent);display:flex;align-items:center;gap:4px">Ver órdenes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
         </div>
       </div>`;
     }).join('')}
