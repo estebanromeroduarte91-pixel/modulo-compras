@@ -8224,9 +8224,10 @@ function tp_showPage(id, btn) {
   wrap.querySelectorAll('.page-content').forEach(p => p.style.display='none');
   const page = document.getElementById('page-'+id);
   if(page) page.style.display = 'block';
-  // Actualizar sidebar activo
+  // Actualizar sidebar activo — branches se trata como orders
   document.querySelectorAll('#submenu-taller .nav-subitem').forEach(n=>n.classList.remove('active'));
-  const si = document.getElementById('nav-taller-'+id);
+  const navId = id==='branches' ? 'orders' : id;
+  const si = document.getElementById('nav-taller-'+navId);
   if(si) si.classList.add('active');
   const tpHeader=document.querySelector('#tp-wrap .tp-header');
   if(tpHeader) tpHeader.style.display = (id==='equipo'||id==='branches'||id==='settings'||id==='usuarios') ? 'none' : '';
