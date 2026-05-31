@@ -728,6 +728,15 @@ select{cursor:pointer}
     <h1>🛒 ERP Compras</h1>
     <p>Módulo de Abastecimiento</p>
   </div>
+  <div id="sidebar-branch-badge" style="display:none;margin:0 10px 6px;background:rgba(255,255,255,.06);border:0.5px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;cursor:pointer" onclick="_superAdminExitBranch()" title="Volver a vista global">
+    <div style="display:flex;align-items:center;gap:6px">
+      <div id="sidebar-branch-dot" style="width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0"></div>
+      <div style="flex:1;min-width:0"><div id="sidebar-branch-name" style="font-size:11px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div><div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:1px">Clic para vista global</div></div>
+    </div>
+  </div>
+  <div id="sidebar-global-badge" style="display:none;margin:0 10px 6px;background:rgba(138,99,210,.1);border:0.5px solid rgba(138,99,210,.25);border-radius:8px;padding:6px 10px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px">👑</span><span style="font-size:11px;color:#afa9ec">Vista global</span></div>
+  </div>
   <div class="nav-item active" id="nav-dashboard" onclick="nav('dashboard')"><span class="icon">📊</span> Dashboard</div>
   <div class="nav-item-parent" id="nav-ventas-parent" onclick="toggleVentas()"><span class="icon">🛒</span> Ventas<span class="arrow">▶</span></div>
   <div class="nav-submenu" id="submenu-ventas">
@@ -753,6 +762,7 @@ select{cursor:pointer}
   <div class="nav-item" id="nav-bodegas" onclick="nav('bodegas')"><span class="icon">🏭</span> Bodegas / Sucursales</div>
   <div class="nav-item" id="nav-estadisticas" onclick="nav('estadisticas')"><span class="icon">📈</span> Estadísticas</div>
   <div class="nav-item" id="nav-sys-usuarios" onclick="nav('sys-usuarios')"><span class="icon">🔐</span> Accesos</div>
+  <div class="nav-item" id="nav-cargos" onclick="nav('cargos')"><span class="icon">🪪</span> Cargos</div>
   <div style="border-top:1px solid rgba(255,255,255,.1);margin:8px 16px"></div>
   <div class="nav-item-parent" id="nav-contabilidad" onclick="toggleContabilidad()"><span class="icon">📒</span> Contabilidad<span class="arrow">▶</span></div>
   <div class="nav-submenu" id="submenu-contabilidad">
@@ -786,9 +796,11 @@ const _SB_URL = 'https://nfcdqdbhrsjhbnbtqewl.supabase.co';
 const _SB_KEY = 'sb_publishable_hbmva0O8zTFwr-EfnqBUdw_X8lwOPoZ';
 const _sb = supabase.createClient(_SB_URL, _SB_KEY);
 let _empresaId = null;
-let _currentRole = 'admin';      // admin | tecnico | vendedor
+let _currentRole = 'admin';      // admin | tecnico | vendedor | cargoId
 let _currentUserNombre = '';
 let _currentUserId = null;
+let _currentCargoId = null;      // id del cargo asignado al usuario
+let _currentBranchContext = null; // null = global (super-admin), branchId = operando en esa sucursal
 let _dbCache = {};
 let _syncQueue = {};
 let _syncTimer = null;
@@ -841,6 +853,58 @@ async function _cargarDesdeSupabase(){
 // AUTH — multi-usuario con roles
 // ─────────────────────────────────────────────
 const _ROLES_LABEL = {admin:'Administrador', tecnico:'Técnico', vendedor:'Vendedor'};
+
+// ─── CARGOS Y PERMISOS ────────────────────────
+const _MODULOS = ['dashboard','ventas','taller','clientes','inventario','compras','estadisticas','configuracion'];
+const _MODULOS_LABEL = {dashboard:'Dashboard',ventas:'Ventas / POS',taller:'Taller (órdenes)',clientes:'Clientes',inventario:'Inventario',compras:'Compras / OCs',estadisticas:'Estadísticas',configuracion:'Configuración & Accesos'};
+const _MODULOS_ICON = {dashboard:'📊',ventas:'🛒',taller:'🔧',clientes:'👥',inventario:'📦',compras:'📋',estadisticas:'📈',configuracion:'⚙️'};
+const _CARGOS_DEFAULT = [
+  {id:'tecnico',  nombre:'Técnico',    sistema:true, permisos:{dashboard:false,ventas:false,taller:true, clientes:true, inventario:false,compras:false,estadisticas:false,configuracion:false}},
+  {id:'vendedor', nombre:'Vendedor',   sistema:true, permisos:{dashboard:false,ventas:true, taller:false,clientes:true, inventario:false,compras:false,estadisticas:false,configuracion:false}},
+  {id:'encargado',nombre:'Encargado',  sistema:true, permisos:{dashboard:true, ventas:true, taller:true, clientes:true, inventario:true, compras:false,estadisticas:true, configuracion:false}},
+];
+function getCargos(){ const s=DB.get('cargos'); return (s&&s.length)?s:[..._CARGOS_DEFAULT]; }
+function setCargos(v){ DB.set('cargos',v); }
+function getUserCargoMap(){ return DB.get('user_cargo_map')||{}; }
+function setUserCargoMap(v){ DB.set('user_cargo_map',v); }
+function getUserConfig(uid){ return (getUserCargoMap())[uid]||{}; }
+function setUserConfig(uid,cfg){ const m=getUserCargoMap(); m[uid]=cfg; setUserCargoMap(m); }
+
+function _updateSidebarBadge(){
+  const branchBadge=document.getElementById('sidebar-branch-badge');
+  const globalBadge=document.getElementById('sidebar-global-badge');
+  const branchName=document.getElementById('sidebar-branch-name');
+  if(_currentRole==='admin'){
+    if(_currentBranchContext){
+      const b=getBodegas().find(x=>x.id===_currentBranchContext);
+      if(branchBadge){ branchBadge.style.display='block'; if(branchName) branchName.textContent=b?(b.nombre||b.name):'Sucursal'; }
+      if(globalBadge) globalBadge.style.display='none';
+    } else {
+      if(branchBadge) branchBadge.style.display='none';
+      if(globalBadge) globalBadge.style.display='block';
+    }
+  } else {
+    const b=getBodegas().find(x=>x.id===_currentBranchContext);
+    if(branchBadge){ branchBadge.style.display=b?'block':'none'; branchBadge.style.cursor='default'; branchBadge.onclick=null; if(branchName&&b) branchName.textContent=b.nombre||b.name; }
+    const dot=document.getElementById('sidebar-branch-dot'); if(dot) dot.style.background='#60a5fa';
+    const sub=branchBadge?.querySelector('div>div:last-child'); if(sub) sub.style.display='none';
+    if(globalBadge) globalBadge.style.display='none';
+  }
+}
+
+function _superAdminEnterBranch(branchId){
+  _currentBranchContext=branchId;
+  tp_currentBranchId=branchId;
+  _updateSidebarBadge();
+  nav('dashboard');
+}
+function _superAdminExitBranch(){
+  if(_currentRole!=='admin') return;
+  _currentBranchContext=null;
+  tp_currentBranchId=null;
+  _updateSidebarBadge();
+  nav('dashboard');
+}
 
 function switchTab(t){
   document.getElementById('login-form').style.display = t==='login'?'block':'none';
@@ -906,6 +970,9 @@ async function _doRegisterInvitado(token){
   }
   await _sb.from('user_profiles').insert({id:data.user.id, empresa_id:inv.empresa_id, role:inv.role, nombre, activo:true});
   await _sb.from('pending_invites').update({used:true}).eq('token', token);
+  // Aplicar cargo y sucursal si estaban guardados en la invitación
+  const _pendingCargoStr=DB.get('pending_cargo_'+token);
+  if(_pendingCargoStr){ try{ const pc=JSON.parse(_pendingCargoStr); setUserConfig(data.user.id,pc); DB.set('pending_cargo_'+token,null); }catch(e){} }
   await _iniciarApp(data.user);
 }
 
@@ -953,31 +1020,48 @@ async function _iniciarApp(user){
 
   _empresaId = empresaId;
   await _cargarDesdeSupabase();
+
+  // Cargar cargo y sucursal del usuario desde config local
+  const _uCfg = getUserConfig(_currentUserId);
+  _currentCargoId = _uCfg.cargoId || (_currentRole==='admin'?null:_currentRole); // fallback a role legacy
+  _currentBranchContext = (_currentRole==='admin') ? null : (_uCfg.branchId||null);
+  if(_currentBranchContext){ tp_currentBranchId=_currentBranchContext; try{tp_loadState();}catch(e){} }
+  else { try{tp_loadState();}catch(e){} }
+
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('topbar-empresa').textContent = empresaNombre;
-  document.getElementById('sidebar-user-info').innerHTML = `<span style="font-weight:600">${_currentUserNombre}</span><br><span style="font-size:10px;opacity:.65">${_ROLES_LABEL[_currentRole]||_currentRole}</span>`;
+  const _cargoLabel = _currentRole==='admin' ? 'Super-admin' : (getCargos().find(c=>c.id===_currentCargoId)?.nombre || _ROLES_LABEL[_currentRole]||_currentRole);
+  document.getElementById('sidebar-user-info').innerHTML = `<span style="font-weight:600">${_currentUserNombre}</span><br><span style="font-size:10px;opacity:.65">${_cargoLabel}</span>`;
   _applyRoleAccess();
-  // Cargar estado del taller para que POS tenga acceso a órdenes desde el arranque
-  try { tp_loadState(); } catch(e){}
-  _currentRole === 'tecnico' ? navTaller('orders','Taller — Órdenes') : nav('dashboard');
+
+  // Navegación inicial según rol
+  if(_currentRole==='admin') nav('dashboard');
+  else if(_currentCargoId==='tecnico'||_currentRole==='tecnico') navTaller('orders','Taller — Órdenes');
+  else nav('dashboard');
 }
 
 function _applyRoleAccess(){
-  if(_currentRole === 'admin') return; // ve todo
-  const _hide = (...ids) => ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const _hide=(...ids)=>ids.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  if(_currentRole==='admin'){
+    // Super-admin: ve todo, incluyendo Cargos y Accesos
+    _updateSidebarBadge();
+    return;
+  }
+  // Ocultar items solo de admin
+  _hide('nav-sys-usuarios','nav-cargos','nav-bodegas','nav-taller-settings','nav-taller-usuarios','nav-proveedores','nav-contabilidad','submenu-contabilidad');
 
-  if(_currentRole === 'tecnico'){
-    _hide('nav-dashboard','nav-ventas-parent','submenu-ventas','nav-clientes','nav-proveedores',
-          'nav-inventario-parent','nav-kits','nav-bodegas','nav-estadisticas',
-          'nav-contabilidad','nav-taller-branches','nav-taller-settings',
-          'nav-taller-usuarios','nav-sys-usuarios');
-  }
-  if(_currentRole === 'vendedor'){
-    _hide('nav-proveedores','nav-inventario-parent','nav-kits',
-          'nav-bodegas','nav-estadisticas','nav-contabilidad',
-          'nav-taller-branches','nav-taller-usuarios','nav-taller-settings',
-          'nav-taller-equipo','nav-sys-usuarios');
-  }
+  // Aplicar permisos del cargo
+  const cargo=getCargos().find(c=>c.id===_currentCargoId);
+  const p=cargo?.permisos||{};
+  if(!p.dashboard)   _hide('nav-dashboard');
+  if(!p.ventas)      _hide('nav-ventas-parent','submenu-ventas');
+  if(!p.taller)      _hide('nav-taller-parent','submenu-taller');
+  if(!p.clientes)    _hide('nav-clientes');
+  if(!p.inventario)  _hide('nav-inventario-parent','submenu-inventario','nav-kits');
+  if(!p.compras)     _hide('nav-contabilidad','submenu-contabilidad');
+  if(!p.estadisticas)_hide('nav-estadisticas');
+
+  _updateSidebarBadge();
 }
 
 function _tradError(msg){
@@ -1241,7 +1325,7 @@ function nav(page){
   const tb=document.getElementById('topbar');if(tb)tb.style.display='';
   ({dashboard:renderDashboard,ventas:renderVentas,'ventas-config':renderVentasConfig,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
     productos:renderProductos,categorias:renderCategorias,kits:renderKits,traslados:renderTraslados,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad,
-    'sys-usuarios':renderSysUsuarios
+    'sys-usuarios':renderSysUsuarios,cargos:renderCargos
   }[page]||renderDashboard)();
 }
 
@@ -1249,6 +1333,10 @@ function nav(page){
 // DASHBOARD
 // ─────────────────────────────────────────────
 function renderDashboard(){
+  if(_currentRole==='admin' && !_currentBranchContext){ _renderDashboardGlobal(); return; }
+  _renderDashboardLocal();
+}
+function _renderDashboardLocal(){
   const ocs=getOCs(), gastos=getGastos(), provs=getProveedores(), prods=getProductos(), ventas=getVentas();
   const ocActivas=ocs.filter(o=>o.estado==='borrador'||o.estado==='recibida'||o.estado==='confirmada').length;
   const mesActual=today().slice(0,7);
@@ -1313,6 +1401,54 @@ function renderDashboard(){
       </div>
     </div>
   </div>`;
+}
+
+function _renderDashboardGlobal(){
+  const ventas=getVentas(); const mesActual=today().slice(0,7);
+  const ventasMes=ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesActual));
+  const totalMes=ventasMes.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const bodegas=getBodegas();
+  try{ if(typeof tp_loadState==='function') tp_loadState(); }catch(e){}
+  const allOrders=(() => { try{ return JSON.parse(DB.get('tp_orders')||'[]'); }catch(e){ return []; } })();
+  const otAbiertas=allOrders.filter(o=>!['Entregado'].includes(o.status)).length;
+
+  const branchCards=bodegas.map(b=>{
+    const bv=ventasMes.filter(v=>v.branchId===b.id);
+    const bOT=allOrders.filter(o=>o.branchId===b.id&&!['Entregado'].includes(o.status));
+    const nombre=b.nombre||b.name||'Sin nombre';
+    return `<div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">🏪 ${nombre}</div>
+        <button onclick="_superAdminEnterBranch('${b.id}')" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit">Operar →</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
+        <div><div style="font-size:16px;font-weight:600;color:var(--text)">${fmt$(bv.reduce((s,v)=>s+(+v.total_iva||0),0))}</div><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Ventas mes</div></div>
+        <div><div style="font-size:16px;font-weight:600;color:var(--text)">${bOT.length}</div><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">OTs abiertas</div></div>
+        <div><div style="font-size:16px;font-weight:600;color:var(--text)">${bv.length}</div><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Ventas</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('page-content').innerHTML=`
+  <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:20px">👑</span>
+    <div><div style="font-size:16px;font-weight:700;color:var(--text)">Vista global — todas las sucursales</div>
+    <div style="font-size:12px;color:var(--text2)">Selecciona una sucursal para operar en ella</div></div>
+  </div>
+  <div class="kpi-grid" style="margin-bottom:20px">
+    <div class="kpi-card green"><div class="kpi-label">Ventas del mes</div><div class="kpi-value">${fmt$(totalMes)}</div><div class="kpi-sub">${ventasMes.length} ventas · todas las sucursales</div></div>
+    <div class="kpi-card"><div class="kpi-label">OTs abiertas</div><div class="kpi-value">${otAbiertas}</div><div class="kpi-sub">Todas las sucursales</div></div>
+    <div class="kpi-card"><div class="kpi-label">Sucursales</div><div class="kpi-value">${bodegas.length}</div><div class="kpi-sub">Activas</div></div>
+    <div class="kpi-card"><div class="kpi-label">Usuarios</div><div class="kpi-value" id="dash-global-users">—</div><div class="kpi-sub">Registrados</div></div>
+  </div>
+  ${bodegas.length?`<div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Sucursales</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">${branchCards}</div>`
+  :'<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px">No hay sucursales creadas aún. Ve a <b>Configuración → Sucursales</b> para crear la primera.</div>'}`;
+
+  // Contar usuarios async
+  _sb.from('user_profiles').select('id',{count:'exact'}).eq('empresa_id',_empresaId).then(({count})=>{
+    const el=document.getElementById('dash-global-users'); if(el) el.textContent=count||0;
+  });
 }
 
 function badgeEstado(e){
@@ -8257,7 +8393,20 @@ function renderTaller() {
 </div>`;
   tp_loadState();
   tp_addListeners();
-  tp_showPage('branches', null);
+  // Si el usuario tiene sucursal asignada (no super-admin), entrar directo a sus órdenes
+  if(_currentBranchContext && _currentRole!=='admin'){
+    tp_currentBranchId=_currentBranchContext;
+    const _b=tp_branches.find(b=>b.id===_currentBranchContext);
+    const _badge=document.getElementById('branch-context-badge');
+    const _badgeName=document.getElementById('branch-badge-name');
+    const _backBtn=document.getElementById('branch-back-btn');
+    if(_badge)_badge.style.display='flex';
+    if(_badgeName&&_b)_badgeName.textContent=_b.nombre||_b.name;
+    if(_backBtn)_backBtn.style.display='none'; // no puede volver a seleccionar
+    tp_showPage('orders',null); tp_renderAll();
+  } else {
+    tp_showPage('branches', null);
+  }
   tp_updateNotifBadge();
 }
 
@@ -10673,6 +10822,117 @@ function tp_addListeners(){
 
 
 // ─────────────────────────────────────────────
+// GESTIÓN DE CARGOS (super-admin only)
+// ─────────────────────────────────────────────
+let _cargosSelected = null; // id del cargo seleccionado en el panel
+
+function renderCargos(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const cargos=getCargos();
+  if(!_cargosSelected || !cargos.find(c=>c.id===_cargosSelected)) _cargosSelected=cargos[0]?.id||null;
+  _renderCargosPanel();
+}
+
+function _renderCargosPanel(){
+  const cargos=getCargos();
+  const sel=cargos.find(c=>c.id===_cargosSelected)||cargos[0];
+  const p=sel?.permisos||{};
+  document.getElementById('page-content').innerHTML=`
+  <div style="max-width:820px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div><div style="font-size:17px;font-weight:700;color:var(--text)">Cargos y permisos</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:2px">Define qué módulos puede ver y usar cada cargo</div></div>
+      <button class="btn btn-primary" onclick="_cargosNuevoModal()">+ Nuevo cargo</button>
+    </div>
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:0;background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <!-- Lista de cargos -->
+      <div style="border-right:1px solid var(--border)">
+        ${cargos.map(c=>`
+          <div onclick="_cargosSelect('${c.id}')" style="padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${c.id===_cargosSelected?'var(--bg2,#f8fafc)':'transparent'};border-left:${c.id===_cargosSelected?'3px solid var(--accent)':'3px solid transparent'}">
+            <div><div style="font-size:13px;font-weight:${c.id===_cargosSelected?'600':'400'};color:var(--text)">${c.nombre}</div>
+            ${c.sistema?'':'<div style="font-size:10px;color:var(--text3);margin-top:1px">Personalizado</div>'}</div>
+          </div>`).join('')}
+        <div onclick="_cargosNuevoModal()" style="padding:10px 14px;cursor:pointer;color:var(--accent);font-size:12px;display:flex;align-items:center;gap:5px">
+          <span style="font-size:16px">+</span> Nuevo cargo
+        </div>
+      </div>
+      <!-- Switches de permisos -->
+      <div>
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);background:var(--bg2,#f8fafc);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Permisos — ${sel?.nombre||'—'}</div>
+          ${sel&&!sel.sistema?`<button onclick="_cargosEliminar('${sel.id}')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:1px solid var(--red,#ef4444);background:transparent;color:var(--red,#ef4444);cursor:pointer;font-family:inherit">Eliminar</button>`:''}
+        </div>
+        ${_MODULOS.map(mod=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:18px">${_MODULOS_ICON[mod]}</span>
+              <span style="font-size:13px;color:var(--text)">${_MODULOS_LABEL[mod]}</span>
+            </div>
+            <label style="position:relative;display:inline-block;width:42px;height:24px;cursor:pointer">
+              <input type="checkbox" ${p[mod]?'checked':''} onchange="_cargosToggle('${sel?.id}','${mod}',this.checked)" style="opacity:0;width:0;height:0">
+              <span style="position:absolute;inset:0;border-radius:12px;background:${p[mod]?'var(--accent,#16a34a)':'#d1d5db'};transition:.2s"></span>
+              <span style="position:absolute;top:3px;left:${p[mod]?'21px':'3px'};width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span>
+            </label>
+          </div>`).join('')}
+        <div style="padding:14px 18px;display:flex;justify-content:flex-end">
+          <button class="btn btn-primary" onclick="_cargosGuardar()">Guardar permisos</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function _cargosSelect(id){ _cargosSelected=id; _renderCargosPanel(); }
+
+function _cargosToggle(cargoId, mod, val){
+  const cargos=getCargos();
+  const c=cargos.find(x=>x.id===cargoId); if(!c) return;
+  c.permisos[mod]=val;
+  setCargos(cargos);
+}
+
+function _cargosGuardar(){
+  toast('Permisos guardados ✓','success');
+  // ya se guardó en _cargosToggle, solo feedback visual
+}
+
+function _cargosNuevoModal(){
+  showModal(`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-header"><h3>Nuevo cargo</h3><button class="close-btn" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <label class="form-label">Nombre del cargo</label>
+      <input class="form-input" id="new-cargo-nombre" placeholder="Ej: Recepcionista" style="width:100%">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="_cargosCrear()">Crear</button>
+    </div>
+  </div></div>`);
+}
+
+function _cargosCrear(){
+  const nombre=(document.getElementById('new-cargo-nombre')?.value||'').trim();
+  if(!nombre){ toast('Ingresa un nombre','error'); return; }
+  const cargos=getCargos();
+  const id='cargo_'+uid();
+  cargos.push({id,nombre,sistema:false,permisos:{dashboard:false,ventas:false,taller:false,clientes:false,inventario:false,compras:false,estadisticas:false,configuracion:false}});
+  setCargos(cargos);
+  _cargosSelected=id;
+  closeModal(); _renderCargosPanel();
+  toast('Cargo creado ✓','success');
+}
+
+function _cargosEliminar(id){
+  if(!confirm('¿Eliminar este cargo?')) return;
+  const cargos=getCargos().filter(c=>c.id!==id);
+  setCargos(cargos);
+  _cargosSelected=cargos[0]?.id||null;
+  _renderCargosPanel();
+  toast('Cargo eliminado','success');
+}
+
+// ─────────────────────────────────────────────
 // GESTIÓN DE ACCESOS (admin only)
 // ─────────────────────────────────────────────
 async function renderSysUsuarios(){
@@ -10695,30 +10955,38 @@ async function renderSysUsuarios(){
 
   // Usuarios activos
   const {data: perfiles} = await _sb.from('user_profiles').select('id,nombre,role,activo').eq('empresa_id', _empresaId);
+  const bodegas=getBodegas(); const cargos=getCargos(); const uMap=getUserCargoMap();
   const listEl = document.getElementById('sys-usuarios-list');
   if(listEl){
     if(!perfiles?.length){
       listEl.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">No hay usuarios registrados aún.</div>`;
     } else {
-      listEl.innerHTML = perfiles.map(p=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px">
+      listEl.innerHTML = perfiles.map(p=>{
+        const uCfg=uMap[p.id]||{};
+        const cargo=cargos.find(c=>c.id===uCfg.cargoId)||null;
+        const branch=bodegas.find(b=>b.id===uCfg.branchId)||null;
+        const isMe=p.id===_currentUserId;
+        const rolLabel=p.role==='admin'?'Super-admin':(cargo?.nombre||_ROLES_LABEL[p.role]||p.role);
+        const branchLabel=p.role==='admin'?'Global':(branch?(branch.nombre||branch.name):'Sin sucursal');
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px">
           <div style="display:flex;align-items:center;gap:12px">
             <div style="width:36px;height:36px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center">
               <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" style="width:18px;height:18px"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
             <div>
               <div style="font-size:14px;font-weight:600;color:var(--text)">${p.nombre}</div>
-              <div style="font-size:12px;color:var(--text3)">${_ROLES_LABEL[p.role]||p.role}</div>
+              <div style="font-size:12px;color:var(--text3)">${rolLabel} · ${branchLabel}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;${p.activo?'background:#f0fdf4;color:#166534':'background:#fef2f2;color:#991b1b'}">${p.activo?'Activo':'Inactivo'}</span>
-            ${p.id !== _currentUserId ? `
+            ${!isMe ? `
               <button onclick="sysToggleActivo('${p.id}',${!p.activo})" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">${p.activo?'Desactivar':'Activar'}</button>
-              <button data-uid="${p.id}" data-role="${p.role}" data-nombre="${escAttr(p.nombre)}" onclick="sysEditRole(this.dataset.uid,this.dataset.role,this.dataset.nombre)" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">Cambiar rol</button>
+              <button onclick="sysEditUserConfig('${p.id}','${escAttr(p.nombre)}','${p.role}')" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">Editar</button>
             ` : `<span style="font-size:11px;color:var(--text3);padding:0 4px">(tú)</span>`}
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
   }
 
@@ -10755,28 +11023,50 @@ async function sysToggleActivo(userId, activo){
   renderSysUsuarios();
 }
 
-function sysEditRole(userId, currentRole, nombre){
-  showModal(`<div onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000">
-    <div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;width:360px;max-width:96vw;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
-      <div style="font-size:16px;font-weight:700;color:#111;margin-bottom:16px">Cambiar rol — ${nombre}</div>
-      <select id="edit-role-select" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;background:#fff;margin-bottom:20px">
-        <option value="admin" ${currentRole==='admin'?'selected':''}>Administrador — acceso total</option>
-        <option value="tecnico" ${currentRole==='tecnico'?'selected':''}>Técnico — solo Taller</option>
-        <option value="vendedor" ${currentRole==='vendedor'?'selected':''}>Vendedor — Taller + Clientes</option>
-      </select>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button onclick="closeModal()" style="padding:9px 18px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:14px;cursor:pointer;font-family:inherit">Cancelar</button>
-        <button onclick="_sysGuardarRole('${userId}')" style="padding:9px 20px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Guardar</button>
+function sysEditUserConfig(userId, nombre, currentRole){
+  const cargos=getCargos(); const bodegas=getBodegas(); const uCfg=getUserConfig(userId);
+  const cargoOpts=cargos.map(c=>`<option value="${c.id}" ${uCfg.cargoId===c.id?'selected':''}>${c.nombre}</option>`).join('');
+  const branchOpts=bodegas.map(b=>`<option value="${b.id}" ${uCfg.branchId===b.id?'selected':''}>${b.nombre||b.name}</option>`).join('');
+  showModal(`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><h3>Editar usuario — ${nombre}</h3><button class="close-btn" onclick="closeModal()">×</button></div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label class="form-label">Cargo</label>
+        <select class="form-input" id="edit-cargo-sel" style="width:100%">
+          ${currentRole==='admin'?'<option value="__admin" selected>Super-admin (acceso total)</option>':''}
+          ${!currentRole||currentRole!=='admin'?cargoOpts:''}
+        </select>
       </div>
+      ${currentRole!=='admin'?`<div>
+        <label class="form-label">Sucursal</label>
+        <select class="form-input" id="edit-branch-sel" style="width:100%">
+          <option value="">Sin sucursal</option>${branchOpts}
+        </select>
+      </div>`:''}
     </div>
-  </div>`);
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="_sysGuardarUserConfig('${userId}','${currentRole}')">Guardar</button>
+    </div>
+  </div></div>`);
 }
 
-async function _sysGuardarRole(userId){
-  const role = document.getElementById('edit-role-select').value;
-  await _sb.from('user_profiles').update({role}).eq('id', userId);
-  closeModal(); toast('Rol actualizado ✓','success'); renderSysUsuarios();
+async function _sysGuardarUserConfig(userId, currentRole){
+  const cargoId=document.getElementById('edit-cargo-sel')?.value||'';
+  const branchId=document.getElementById('edit-branch-sel')?.value||'';
+  if(cargoId==='__admin'){ /* no cambiar rol admin */ }
+  else if(cargoId){
+    // Mapear cargo a role legacy para compatibilidad
+    const roleMap={tecnico:'tecnico',vendedor:'vendedor',encargado:'admin'};
+    const newRole=roleMap[cargoId]||'tecnico';
+    await _sb.from('user_profiles').update({role:newRole}).eq('id',userId);
+    setUserConfig(userId,{cargoId,branchId});
+  }
+  closeModal(); toast('Usuario actualizado ✓','success'); renderSysUsuarios();
 }
+
+function sysEditRole(userId, currentRole, nombre){ sysEditUserConfig(userId,nombre,currentRole); }
 
 function sysInviteModal(){
   showModal(`<div onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000">
@@ -10785,11 +11075,15 @@ function sysInviteModal(){
       <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Se generará un link único para que el usuario cree su contraseña.</div>
       <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Nombre completo</label><input style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none" id="inv-nombre" placeholder="Juan Pérez"></div>
       <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Email</label><input style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none" type="email" id="inv-email" placeholder="juan@empresa.com"></div>
-      <div style="margin-bottom:20px"><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Rol</label>
+      <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Cargo</label>
         <select style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;background:#fff" id="inv-role">
-          <option value="tecnico">Técnico — solo Taller</option>
-          <option value="vendedor">Vendedor — Taller + Clientes</option>
-          <option value="admin">Administrador — acceso total</option>
+          ${getCargos().map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('')}
+        </select>
+      </div>
+      <div style="margin-bottom:20px"><label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Sucursal</label>
+        <select style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;background:#fff" id="inv-branch">
+          <option value="">Sin sucursal asignada</option>
+          ${getBodegas().map(b=>`<option value="${b.id}">${b.nombre||b.name}</option>`).join('')}
         </select>
       </div>
       <div id="inv-link-result" style="display:none;margin-bottom:16px;padding:12px 14px;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe">
@@ -10808,9 +11102,16 @@ function sysInviteModal(){
 async function sysCrearInvitacion(){
   const nombre = (document.getElementById('inv-nombre')?.value||'').trim();
   const email  = (document.getElementById('inv-email')?.value||'').trim();
-  const role   = document.getElementById('inv-role')?.value||'tecnico';
+  const cargoId= document.getElementById('inv-role')?.value||'tecnico';
+  const branchId=document.getElementById('inv-branch')?.value||'';
   if(!nombre||!email){ toast('Completa nombre y email','error'); return; }
+  // Mapear cargo a role legacy
+  const roleMap={tecnico:'tecnico',vendedor:'vendedor',encargado:'admin'};
+  const role=roleMap[cargoId]||'tecnico';
   const token = Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+  // Guardar config cargo+branch para cuando el usuario active su cuenta
+  // Se guardará en user_cargo_map cuando complete el registro
+  DB.set('pending_cargo_'+token, JSON.stringify({cargoId, branchId}));
   const {error} = await _sb.from('pending_invites').insert({empresa_id:_empresaId, email, nombre, role, token, used:false});
   if(error){ toast('Error: '+error.message,'error'); return; }
   const url = `${_APP_BASE_URL}?invite=${token}`;
