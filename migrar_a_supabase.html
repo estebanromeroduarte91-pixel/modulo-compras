@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TallerPro — Migrar Productos a Supabase</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 32px 16px; }
+  .container { max-width: 920px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #94a3b8; margin-bottom: 32px; font-size: 14px; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .badge { font-size: 11px; background: #3b82f6; color: white; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+  .badge.green { background: #10b981; }
+  .badge.yellow { background: #f59e0b; color: #000; }
+  label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+  input, select, textarea {
+    width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid #334155;
+    border-radius: 8px; color: #e2e8f0; font-size: 14px; outline: none; transition: border-color .2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #3b82f6; }
+  select option { background: #1e293b; }
+  textarea { font-family: monospace; font-size: 12px; resize: vertical; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .form-group { display: flex; flex-direction: column; }
+  .form-group.full { grid-column: 1/-1; }
+  .btn { padding: 10px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .btn-primary { background: #3b82f6; color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+  .btn-success { background: #10b981; color: white; }
+  .btn-success:hover { background: #059669; }
+  .btn-success:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat { background: #0f172a; border-radius: 8px; padding: 16px; text-align: center; }
+  .stat-val { font-size: 28px; font-weight: 700; color: #3b82f6; }
+  .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; background: #0f172a; color: #64748b; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  td { padding: 9px 12px; border-top: 1px solid #1e293b22; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .dot-pending { background: #64748b; }
+  .dot-ok { background: #10b981; }
+  .dot-error { background: #ef4444; }
+  .log { background: #0f172a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 13px; max-height: 220px; overflow-y: auto; }
+  .log-entry { margin-bottom: 6px; }
+  .log-ok { color: #10b981; }
+  .log-err { color: #ef4444; }
+  .log-info { color: #94a3b8; }
+  .log-warn { color: #f59e0b; }
+  progress { width: 100%; height: 6px; border-radius: 3px; margin-top: 12px; accent-color: #3b82f6; }
+  .tip { background: #1e3a5f; border: 1px solid #2563eb44; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #93c5fd; line-height: 1.7; margin-top: 16px; }
+  .tip strong { color: #bfdbfe; }
+  .tip code { background: #0f172a; padding: 2px 7px; border-radius: 4px; font-family: monospace; color: #fbbf24; font-size: 12px; }
+  .cat-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .cat-pill { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid #334155; background: transparent; color: #94a3b8; transition: all .15s; }
+  .cat-pill:hover { border-color: #3b82f6; color: #93c5fd; }
+  .cat-pill.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+  .cat-pill.active-all { background: #334155; border-color: #475569; color: #e2e8f0; }
+  .filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  #step2, #step3 { display: none; }
+  .json-paste-area { min-height: 120px; }
+  .copy-hint { background: #1e293b; border: 1px dashed #334155; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 13px; color: #fbbf24; margin-bottom: 12px; text-align: center; letter-spacing: 0.3px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🚀 Migrar Productos a Supabase</h1>
+  <p class="subtitle">Pega tu lista de productos del ERP y súbelos directamente a Supabase — filtra por categoría antes de subir</p>
+
+  <!-- PASO 1: Config + JSON -->
+  <div class="card" id="step1">
+    <h2>1️⃣ Conexión y datos del ERP <span class="badge">Requerido</span></h2>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Project URL</label>
+        <input type="text" id="sb-url" value="https://nfcdqdbhrsjhbnbtqewl.supabase.co" />
+      </div>
+      <div class="form-group">
+        <label>Anon Key (public)</label>
+        <input type="text" id="sb-key" value="sb_publishable_hbmva0O8zTFwr-EfnqBUdw_X8lwOPoZ" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Empresa ID</label>
+        <input type="text" id="sb-empresa" value="default" />
+      </div>
+    </div>
+
+    <!-- Instrucción para copiar desde consola -->
+    <div class="tip" style="margin-bottom:16px">
+      <strong>📋 ¿Cómo obtener la lista de productos?</strong><br>
+      1. Abre el ERP en Chrome y presiona <strong>⌘ + Option + J</strong> (o clic derecho → Inspeccionar → Consola)<br>
+      2. Escribe <code>allow pasting</code> y presiona Enter (es normal que salga un error)<br>
+      3. Ahora pega este comando y presiona Enter:<br>
+      <div style="margin-top:10px;padding:10px 14px;background:#0f172a;border-radius:6px;color:#fbbf24;font-family:monospace;font-size:13px;word-break:break-all">copy(JSON.stringify(getProductos()))</div>
+      4. Vuelve aquí y pega el resultado (⌘V) en el cuadro de abajo
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Pega aquí el JSON de productos copiado desde la consola del ERP</label>
+      <textarea id="json-input" class="json-paste-area" rows="7" placeholder='[{"id":"p_abc123","nombre":"Cable USB-C","sku":"CAB-001","categoria":"Accesorios",...}, ...]'></textarea>
+    </div>
+
+    <button class="btn btn-primary" onclick="conectarYParsear()">🔍 Cargar productos</button>
+  </div>
+
+  <!-- PASO 2: Vista previa con filtros -->
+  <div class="card" id="step2">
+    <h2>2️⃣ Selecciona los productos a subir <span class="badge yellow" id="badge-count">0</span></h2>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-val" id="stat-total">0</div>
+        <div class="stat-label">Productos totales</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-seleccionados">0</div>
+        <div class="stat-label">Seleccionados</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-cats">0</div>
+        <div class="stat-label">Categorías</div>
+      </div>
+    </div>
+
+    <!-- Filtro por categoría (pills) -->
+    <label style="margin-bottom:8px">Filtrar por categoría:</label>
+    <div class="cat-pills" id="cat-pills"></div>
+
+    <!-- Búsqueda + controles -->
+    <div class="filter-row">
+      <input type="text" id="filtro-prod" placeholder="🔍 Buscar por nombre o SKU..." oninput="filtrarTabla()" style="flex:1;min-width:180px" />
+      <button class="btn btn-sm" onclick="selectVisible(true)" style="background:#334155;color:#e2e8f0">☑ Todos visibles</button>
+      <button class="btn btn-sm" onclick="selectVisible(false)" style="background:#334155;color:#e2e8f0">☐ Ninguno visible</button>
+      <span id="label-seleccionados" style="font-size:13px;color:#94a3b8">0 seleccionados</span>
+    </div>
+
+    <div style="overflow-x:auto;max-height:420px;overflow-y:auto">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" id="chk-all" onchange="selectVisible(this.checked)" /></th>
+            <th>Estado</th>
+            <th>Nombre</th>
+            <th>SKU</th>
+            <th>Stock</th>
+            <th>P. Compra</th>
+            <th>P. Venta</th>
+            <th>Categoría</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-productos"></tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-success" id="btn-migrar" onclick="migrar()" disabled>⬆️ Subir seleccionados a Supabase</button>
+      <span style="color:#64748b;font-size:13px">Solo se suben los marcados. Los existentes (mismo id) se actualizarán sin borrar otros datos.</span>
+    </div>
+  </div>
+
+  <!-- PASO 3: Progreso -->
+  <div class="card" id="step3">
+    <h2>3️⃣ Progreso de migración</h2>
+    <progress id="prog" value="0" max="100"></progress>
+    <p id="prog-label" style="margin-top:8px;font-size:13px;color:#94a3b8">Iniciando...</p>
+    <div class="log" id="log" style="margin-top:16px"></div>
+
+    <div id="resumen-final" style="display:none;margin-top:20px">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-val" id="res-ok" style="color:#10b981">0</div>
+          <div class="stat-label">Subidos OK</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="res-err" style="color:#ef4444">0</div>
+          <div class="stat-label">Con error</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="res-total">0</div>
+          <div class="stat-label">Total</div>
+        </div>
+      </div>
+      <div class="tip" style="background:#0f2a1e;border-color:#10b98144;color:#86efac;margin-top:0">
+        ✅ <strong>¡Migración completada!</strong> Tus productos ya están en Supabase.<br>
+        El próximo paso es configurar los webhooks de WooCommerce para sincronizar stock.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createClient } = supabase;
+let sb = null;
+let _productos = [];
+let _empresaId = 'default';
+let _catActiva = null; // null = todas
+
+// ── PASO 1: Conectar y parsear JSON ──────────────────────────────
+async function conectarYParsear() {
+  const url     = document.getElementById('sb-url').value.trim();
+  const key     = document.getElementById('sb-key').value.trim();
+  const jsonRaw = document.getElementById('json-input').value.trim();
+  _empresaId    = document.getElementById('sb-empresa').value.trim() || 'default';
+
+  if (!url || !key) { alert('Completa la URL y la Anon Key de Supabase.'); return; }
+  if (!jsonRaw)     { alert('Pega el JSON de productos en el cuadro de texto.'); return; }
+
+  // Parsear JSON
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonRaw);
+    if (!Array.isArray(parsed)) throw new Error('El JSON no es un array.');
+    if (parsed.length === 0)   throw new Error('El array está vacío.');
+    if (!parsed[0].nombre)     throw new Error('Los objetos no parecen ser productos (falta campo "nombre").');
+  } catch(e) {
+    alert('❌ Error al parsear el JSON:\n' + e.message + '\n\nAsegúrate de haber pegado el resultado completo del comando copy().');
+    return;
+  }
+
+  // Conectar Supabase
+  try {
+    sb = createClient(url, key);
+    const { error } = await sb.from('productos').select('id').limit(1);
+    if (error && error.code !== 'PGRST116') throw error;
+  } catch(e) {
+    alert('❌ No se pudo conectar a Supabase:\n' + e.message);
+    return;
+  }
+
+  _productos = parsed;
+
+  // Categorías únicas
+  const cats = [...new Set(_productos.map(p => p.categoria || 'Sin categoría').filter(Boolean))].sort();
+
+  // Stats
+  document.getElementById('stat-total').textContent = _productos.length;
+  document.getElementById('stat-cats').textContent  = cats.length;
+  document.getElementById('badge-count').textContent = _productos.length;
+
+  // Crear pills de categorías
+  const pillsEl = document.getElementById('cat-pills');
+  pillsEl.innerHTML = '';
+
+  // Pill "Todas"
+  const allPill = document.createElement('button');
+  allPill.className = 'cat-pill';
+  allPill.textContent = `Todas (${_productos.length})`;
+  allPill.dataset.cat = '__all__';
+  allPill.onclick = () => activarCategoria(null);
+  pillsEl.appendChild(allPill);
+
+  cats.forEach(cat => {
+    const count = _productos.filter(p => (p.categoria || 'Sin categoría') === cat).length;
+    const pill = document.createElement('button');
+    pill.className = 'cat-pill';
+    pill.textContent = `${cat} (${count})`;
+    pill.dataset.cat = cat;
+    pill.onclick = () => activarCategoria(cat);
+    pillsEl.appendChild(pill);
+  });
+
+  // Activar "Accesorios" por defecto si existe, si no la primera cat
+  const accesoriosPill = [...pillsEl.querySelectorAll('.cat-pill')].find(p => p.dataset.cat === 'Accesorios');
+  if (accesoriosPill) {
+    activarCategoria('Accesorios');
+  } else {
+    activarCategoria(null);
+  }
+
+  document.getElementById('step2').style.display = 'block';
+  document.getElementById('step2').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Activar categoría ─────────────────────────────────────────────
+function activarCategoria(cat) {
+  _catActiva = cat;
+
+  // Actualizar pills
+  document.querySelectorAll('.cat-pill').forEach(pill => {
+    pill.classList.remove('active', 'active-all');
+    if (cat === null && pill.dataset.cat === '__all__') pill.classList.add('active-all');
+    else if (pill.dataset.cat === cat) pill.classList.add('active');
+  });
+
+  // Filtrar y renderizar tabla
+  const lista = cat === null ? _productos : _productos.filter(p => (p.categoria || 'Sin categoría') === cat);
+  renderTabla(lista);
+  document.getElementById('filtro-prod').value = '';
+  actualizarContador();
+}
+
+// ── Render tabla ──────────────────────────────────────────────────
+function renderTabla(lista) {
+  const tbody = document.getElementById('tbl-productos');
+  tbody.innerHTML = lista.map(p => `
+    <tr id="fila-${p.id}"
+        data-id="${p.id}"
+        data-nombre="${(p.nombre||'').toLowerCase()}"
+        data-sku="${(p.sku||'').toLowerCase()}">
+      <td><input type="checkbox" class="chk-prod" data-id="${p.id}" checked onchange="actualizarContador()" /></td>
+      <td><span class="status-dot dot-pending" id="dot-${p.id}"></span><span id="status-${p.id}">Pendiente</span></td>
+      <td>${p.nombre || '—'}</td>
+      <td style="color:#64748b">${p.sku || '—'}</td>
+      <td>${p.stock ?? 0}</td>
+      <td style="color:#94a3b8">${p.precio_compra ? fmt$(p.precio_compra) : '—'}</td>
+      <td style="color:#10b981">${p.precio_venta ? fmt$(p.precio_venta) : '—'}</td>
+      <td style="color:#64748b;font-size:12px">${p.categoria || '—'}</td>
+    </tr>
+  `).join('');
+  actualizarContador();
+}
+
+function filtrarTabla() {
+  const q = document.getElementById('filtro-prod').value.toLowerCase().trim();
+  document.querySelectorAll('#tbl-productos tr').forEach(tr => {
+    if (!q) { tr.style.display = ''; return; }
+    const match = tr.dataset.nombre?.includes(q) || tr.dataset.sku?.includes(q);
+    tr.style.display = match ? '' : 'none';
+  });
+  actualizarContador();
+}
+
+function selectVisible(checked) {
+  document.querySelectorAll('#tbl-productos tr').forEach(tr => {
+    if (tr.style.display !== 'none') {
+      const chk = tr.querySelector('.chk-prod');
+      if (chk) chk.checked = checked;
+    }
+  });
+  document.getElementById('chk-all').checked = checked;
+  actualizarContador();
+}
+
+function actualizarContador() {
+  const total = document.querySelectorAll('.chk-prod:checked').length;
+  document.getElementById('label-seleccionados').textContent = `${total} seleccionado${total !== 1 ? 's' : ''}`;
+  document.getElementById('stat-seleccionados').textContent = total;
+  document.getElementById('btn-migrar').disabled = total === 0;
+}
+
+function getSeleccionados() {
+  return [...document.querySelectorAll('.chk-prod:checked')]
+    .map(chk => _productos.find(p => p.id === chk.dataset.id))
+    .filter(Boolean);
+}
+
+function fmt$(n) {
+  return '$' + Math.round(n||0).toLocaleString('es-CL');
+}
+
+// ── Log helper ────────────────────────────────────────────────────
+function log(msg, tipo='info') {
+  const div = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = `log-entry log-${tipo}`;
+  const time = new Date().toLocaleTimeString('es-CL');
+  entry.textContent = `[${time}] ${msg}`;
+  div.appendChild(entry);
+  div.scrollTop = div.scrollHeight;
+}
+
+// ── PASO 3: Migrar ────────────────────────────────────────────────
+async function migrar() {
+  const seleccionados = getSeleccionados();
+  if (seleccionados.length === 0) { alert('No hay productos seleccionados.'); return; }
+
+  document.getElementById('btn-migrar').disabled = true;
+  document.getElementById('step3').style.display = 'block';
+  document.getElementById('step3').scrollIntoView({ behavior: 'smooth' });
+
+  const prog = document.getElementById('prog');
+  const progLabel = document.getElementById('prog-label');
+  let ok = 0, err = 0;
+
+  log(`Iniciando migración de ${seleccionados.length} productos...`, 'info');
+  log(`Empresa ID: ${_empresaId}`, 'info');
+  if (_catActiva) log(`Categoría: ${_catActiva}`, 'info');
+
+  // Subir en lotes de 50
+  const BATCH = 50;
+  const filas = seleccionados.map(p => ({
+    id:            p.id,
+    empresa_id:    _empresaId,
+    nombre:        p.nombre || '',
+    sku:           p.sku || null,
+    unidad:        p.unidad || 'unidad',
+    precio_compra: +(p.precio_compra) || 0,
+    precio_venta:  +(p.precio_venta)  || 0,
+    stock:         +(p.stock)         || 0,
+    stock_min:     +(p.stock_min)     || 0,
+    categoria:     p.categoria        || null,
+    subcategoria:  p.subcategoria     || null,
+    enlace:        p.enlace           || null,
+    descripcion:   p.descripcion      || null,
+    activo:        true,
+    updated_at:    new Date().toISOString(),
+  }));
+
+  for (let i = 0; i < filas.length; i += BATCH) {
+    const lote = filas.slice(i, i + BATCH);
+    const pct  = Math.round(((i + lote.length) / filas.length) * 100);
+    prog.value = pct;
+    progLabel.textContent = `Subiendo ${Math.min(i + BATCH, filas.length)} de ${filas.length}...`;
+
+    const { error } = await sb.from('productos').upsert(lote, { onConflict: 'id' });
+
+    if (error) {
+      log(`✗ Error en lote ${i+1}–${i+lote.length}: ${error.message}`, 'err');
+      err += lote.length;
+      // Marcar individualmente como error
+      lote.forEach(f => {
+        const dot = document.getElementById(`dot-${f.id}`);
+        const st  = document.getElementById(`status-${f.id}`);
+        if (dot) dot.className = 'status-dot dot-error';
+        if (st)  st.textContent = 'Error';
+      });
+    } else {
+      ok += lote.length;
+      log(`✓ Lote ${Math.ceil((i+1)/BATCH)}: ${lote.length} productos subidos`, 'ok');
+      lote.forEach(f => {
+        const dot = document.getElementById(`dot-${f.id}`);
+        const st  = document.getElementById(`status-${f.id}`);
+        if (dot) dot.className = 'status-dot dot-ok';
+        if (st)  st.textContent = 'OK';
+      });
+    }
+
+    // Pequeña pausa entre lotes
+    await new Promise(r => setTimeout(r, 120));
+  }
+
+  prog.value = 100;
+  progLabel.textContent = 'Completado';
+  log(`\n🏁 Finalizado: ${ok} OK, ${err} errores`, ok > 0 ? 'ok' : 'err');
+
+  document.getElementById('res-ok').textContent    = ok;
+  document.getElementById('res-err').textContent   = err;
+  document.getElementById('res-total').textContent = ok + err;
+  document.getElementById('resumen-final').style.display = 'block';
+
+  if (err > 0) {
+    document.getElementById('btn-migrar').disabled = false;
+  }
+}
+</script>
+</body>
+</html>
