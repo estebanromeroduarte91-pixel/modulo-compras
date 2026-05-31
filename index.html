@@ -1347,13 +1347,17 @@ function _renderPOS(){
         <!-- Cliente -->
         <div>
           <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Cliente</div>
-          <div style="position:relative">
-            <input id="pos-cliente" type="text" placeholder="Cliente genérico" value="${escAttr(_posCliente)}" autocomplete="off"
-              oninput="_posCliente=this.value;posBuscarClientePos(this.value)"
-              onfocus="posShowClienteInfo()"
-              onblur="setTimeout(()=>{const d=document.getElementById('pos-cli-drop');if(d)d.style.display='none'},280)"
-              style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13px;box-sizing:border-box;background:#fff">
-            <div id="pos-cli-drop" class="prod-dropdown" style="min-width:100%"></div>
+          <div style="display:flex;gap:6px;align-items:flex-start">
+            <div style="position:relative;flex:1">
+              <input id="pos-cliente" type="text" placeholder="Cliente genérico" value="${escAttr(_posCliente)}" autocomplete="off"
+                oninput="_posCliente=this.value;posBuscarClientePos(this.value)"
+                onfocus="posShowClienteInfo()"
+                onblur="setTimeout(()=>{const d=document.getElementById('pos-cli-drop');if(d)d.style.display='none'},280)"
+                style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13px;box-sizing:border-box;background:#fff">
+              <div id="pos-cli-drop" class="prod-dropdown" style="min-width:100%"></div>
+            </div>
+            <button onclick="posNuevoCliente()" title="Crear nuevo cliente"
+              style="width:36px;height:36px;border-radius:9px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-size:20px;font-weight:300;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
           </div>
           <!-- Panel info cliente (expandible) -->
           <div id="pos-cli-info" style="display:${_posCliente?'block':'none'};margin-top:7px;background:#fff;border:1.5px solid var(--gray-200);border-radius:9px;padding:10px 12px">
@@ -1629,6 +1633,70 @@ function selPosCliente(nombre){
     const emlEl=document.getElementById('pos-cli-email'); if(emlEl) emlEl.value=cli.email||'';
   }
   posShowClienteInfo();
+}
+
+function posNuevoCliente(){
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>👤 Nuevo cliente</h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group" style="margin:0">
+          <label>Nombre <span style="color:var(--danger)">*</span></label>
+          <input id="pos-nc-nombre" type="text" placeholder="Juan" oninput="autoCapNombre(this)" autocomplete="off">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Apellido</label>
+          <input id="pos-nc-apellido" type="text" placeholder="Pérez" oninput="autoCapNombre(this)" autocomplete="off">
+        </div>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>RUT</label>
+        <input id="pos-nc-rut" type="text" placeholder="12.345.678-9" oninput="onRUTInput(this)" maxlength="12">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Teléfono</label>
+        <input id="pos-nc-tel" type="text" placeholder="+56 9 ...">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Email</label>
+        <input id="pos-nc-email" type="email" placeholder="correo@email.com">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="posGuardarClienteRapido()">✅ Crear y seleccionar</button>
+    </div>
+  </div></div>`);
+  setTimeout(()=>document.getElementById('pos-nc-nombre')?.focus(),80);
+}
+
+function posGuardarClienteRapido(){
+  const nombre=(document.getElementById('pos-nc-nombre')?.value||'').trim();
+  const apellido=(document.getElementById('pos-nc-apellido')?.value||'').trim();
+  const rut=(document.getElementById('pos-nc-rut')?.value||'').trim();
+  const tel=(document.getElementById('pos-nc-tel')?.value||'').trim();
+  const email=(document.getElementById('pos-nc-email')?.value||'').trim();
+  if(!nombre){ toast('El nombre es obligatorio','error'); return; }
+  // Guardar en la BD de clientes
+  const clientes=getClientes();
+  const nuevo={id:uid(),nombre,apellido,rut,tel,email,fecha_creacion:today()};
+  clientes.push(nuevo); setClientes(clientes);
+  // Rellenar campos del POS
+  const nombreCompleto=`${nombre} ${apellido}`.trim();
+  _posCliente=nombreCompleto;
+  _posClienteInfo={rut,tel,email};
+  const inp=document.getElementById('pos-cliente'); if(inp) inp.value=nombreCompleto;
+  const rutEl=document.getElementById('pos-cli-rut'); if(rutEl) rutEl.value=rut;
+  const telEl=document.getElementById('pos-cli-tel'); if(telEl) telEl.value=tel;
+  const emlEl=document.getElementById('pos-cli-email'); if(emlEl) emlEl.value=email;
+  posShowClienteInfo();
+  closeModal();
+  toast(`Cliente ${nombreCompleto} creado ✓`,'success');
 }
 
 function posBuscarClientePos(q){
