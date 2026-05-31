@@ -5105,6 +5105,16 @@ function confirmarImportProveedores(){
 // ─────────────────────────────────────────────
 // PRODUCTOS
 // ─────────────────────────────────────────────
+function borrarTodosProductos(){
+  const prods=getProductos();
+  if(!prods.length){ toast('No hay productos para borrar','error'); return; }
+  if(!confirm(`¿Borrar los ${prods.length} productos? Esta acción no se puede deshacer.`)) return;
+  setProductos([]);
+  DB.set('stock',{});
+  toast('Todos los productos fueron eliminados','success');
+  renderProductos();
+}
+
 function renderProductos(){
   const prods=getProductos();
   const cats=[...new Set(prods.map(p=>p.categoria).filter(Boolean))].sort();
@@ -5112,6 +5122,7 @@ function renderProductos(){
   document.getElementById('topbar-actions').innerHTML=`
     <button class="btn btn-secondary" onclick="descargarPlantillaProductos()">📥 Plantilla Excel</button>
     <button class="btn btn-outline" onclick="modalImportarProductos()">📊 Importar Excel</button>
+    <button class="btn btn-outline" onclick="borrarTodosProductos()" style="color:var(--danger);border-color:var(--danger)">🗑 Borrar todos</button>
     <button class="btn btn-primary" onclick="modalNuevoProducto()">➕ Nuevo Producto</button>`;
   document.getElementById('page-content').innerHTML=`
   <div class="card">
