@@ -1431,11 +1431,19 @@ function _renderPOS(){
         <div>
           <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Método de pago</div>
           <div style="display:flex;flex-direction:column;gap:5px">
-            ${getMetodosPago().map(({id:k,icon,label,desc})=>{
+            ${getMetodosPago().map(({id:k,label,desc})=>{
               const active=k===_posMetodo;
+              const svgIcon={
+                efectivo:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>`,
+                transfer:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`,
+                transferencia:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`,
+                tarjeta:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>`,
+                debito:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>`,
+                credito:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>`,
+              }[k] || `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
               return `<button data-metodo="${k}" onclick="_posMetodo='${k}';posRenderResumen()"
-                style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:${active?'2px solid #3b82f6':'1.5px solid #e5e7eb'};background:${active?'#eff6ff':'#fff'};text-align:left;cursor:pointer;width:100%;box-sizing:border-box;transition:all .15s">
-                <span style="font-size:18px;flex-shrink:0;line-height:1">${icon}</span>
+                style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:${active?'2px solid #3b82f6':'1.5px solid #e5e7eb'};background:${active?'#eff6ff':'#fff'};text-align:left;cursor:pointer;width:100%;box-sizing:border-box;transition:all .15s;color:${active?'#3b82f6':'#6b7280'}">
+                <span style="flex-shrink:0;display:flex;align-items:center">${svgIcon}</span>
                 <div style="flex:1;min-width:0">
                   <div style="font-size:12px;font-weight:600;color:${active?'#1d4ed8':'#374151'};line-height:1.3">${escAttr(label)}</div>
                   <div style="font-size:10px;color:#9ca3af;line-height:1.3;margin-top:1px">${escAttr(desc||'')}</div>
