@@ -10855,27 +10855,27 @@ function _renderCargosPanel(){
       <div style="font-size:12px;color:var(--text2);margin-top:2px">Define qué módulos puede ver y usar cada cargo</div></div>
       <button class="btn btn-primary" onclick="_cargosNuevoModal()">+ Nuevo cargo</button>
     </div>
-    <div style="display:grid;grid-template-columns:220px 1fr;background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-      <div style="border-right:1px solid var(--border)">
+    <div style="display:grid;grid-template-columns:220px 1fr;background:#fff;border:1px solid var(--gray-200);border-radius:12px;overflow:hidden">
+      <div style="border-right:1px solid var(--gray-200)">
         ${cargos.map(c=>{
           const isSel=c.id===_cargosSelected;
-          return `<div onclick="_cargosSelect('${c.id}')" style="padding:13px 16px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${isSel?'var(--bg2,#f8f8f6)':'transparent'}">
-            <span style="font-size:13px;font-weight:${isSel?'600':'400'};color:var(--text)">${c.nombre}</span>
-            ${isSel?`<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e">Activo</span>`
-            :(!c.sistema?`<span style="font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);color:var(--text3)">custom</span>`:'')
+          return `<div onclick="_cargosSelect('${c.id}')" style="padding:13px 16px;cursor:pointer;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;background:${isSel?'var(--gray-50,#f9fafb)':'#fff'}">
+            <span style="font-size:13px;font-weight:${isSel?'600':'400'};color:var(--gray-800)">${c.nombre}</span>
+            ${isSel?`<span style="font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px;background:#fef3c7;color:#92400e">Activo</span>`
+            :(!c.sistema?`<span style="font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--gray-200);color:var(--gray-400)">custom</span>`:'')
             }
           </div>`;
         }).join('')}
       </div>
       <div>
-        <div style="padding:14px 18px;border-bottom:1px solid var(--border);background:var(--bg2,#f8f8f6);display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:13px;font-weight:600;color:var(--text)">Permisos del cargo: ${sel?.nombre||'—'}</span>
-          ${sel&&!sel.sistema?`<button onclick="_cargosEliminar('${sel.id}')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:1px solid var(--red,#ef4444);background:transparent;color:var(--red,#ef4444);cursor:pointer;font-family:inherit">Eliminar</button>`:''}
+        <div style="padding:13px 20px;border-bottom:1px solid var(--gray-200);background:var(--gray-50,#f9fafb);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;font-weight:600;color:var(--gray-800)">Permisos del cargo: ${sel?.nombre||'—'}</span>
+          ${sel&&!sel.sistema?`<button onclick="_cargosEliminar('${sel.id}')" style="font-size:11px;padding:3px 10px;border-radius:5px;border:1px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-family:inherit">Eliminar</button>`:''}
         </div>
         ${_MODULOS.map(mod=>`
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)">
-            <div style="display:flex;align-items:center;gap:12px;color:var(--text2)">${_MODULOS_SVG[mod]||''}
-              <span style="font-size:13px;color:var(--text)">${_MODULOS_LABEL[mod]}</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--gray-200)">
+            <div style="display:flex;align-items:center;gap:12px;color:var(--gray-500)">${_MODULOS_SVG[mod]||''}
+              <span style="font-size:13px;color:var(--gray-700)">${_MODULOS_LABEL[mod]}</span>
             </div>
             <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex-shrink:0">
               <input type="checkbox" ${p[mod]?'checked':''} onchange="_cargosToggle('${sel?.id}','${mod}',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
@@ -10883,7 +10883,7 @@ function _renderCargosPanel(){
               <span style="position:absolute;top:3px;left:${p[mod]?'23px':'3px'};width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)"></span>
             </label>
           </div>`).join('')}
-        <div style="padding:14px 18px;display:flex;justify-content:flex-end;background:var(--bg,#fff)">
+        <div style="padding:14px 18px;display:flex;justify-content:flex-end;border-top:1px solid var(--gray-200)">
           <button class="btn btn-primary" onclick="_cargosGuardar()">Guardar permisos</button>
         </div>
       </div>
