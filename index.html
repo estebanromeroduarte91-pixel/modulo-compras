@@ -731,7 +731,8 @@ select{cursor:pointer}
   <div class="nav-item active" id="nav-dashboard" onclick="nav('dashboard')"><span class="icon">📊</span> Dashboard</div>
   <div class="nav-item-parent" id="nav-ventas-parent" onclick="toggleVentas()"><span class="icon">🛒</span> Ventas<span class="arrow">▶</span></div>
   <div class="nav-submenu" id="submenu-ventas">
-    <div class="nav-subitem" id="nav-ventas" onclick="navVentas('pos')"><span class="icon">🛒</span> POS / Historial</div>
+    <div class="nav-subitem" id="nav-ventas" onclick="navVentas('resumen')"><span class="icon">📊</span> Resumen</div>
+    <div class="nav-subitem" id="nav-ventas-pos" onclick="navVentas('pos')"><span class="icon">🛒</span> POS</div>
     <div class="nav-subitem" id="nav-ventas-config" onclick="navVentas('config')"><span class="icon">⚙️</span> Configuración</div>
   </div>
   <div class="nav-item-parent" id="nav-taller-parent" onclick="toggleTaller()"><span class="icon">🔧</span> Taller<span class="arrow">▶</span></div>
@@ -1162,22 +1163,23 @@ function toggleVentas(){
   const isOpen=submenu.classList.contains('open');
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
-  // Si se abre y no hay página activa de ventas, navegar al POS
-  if(!isOpen) navVentas('pos');
+  // Si se abre y no hay página activa de ventas, navegar al Resumen
+  if(!isOpen) navVentas('resumen');
 }
 function navVentas(sub){
   currentPage=sub==='config'?'ventas-config':'ventas';
   document.querySelectorAll('.nav-item,.nav-subitem,.nav-item-parent').forEach(n=>n.classList.remove('active'));
   document.getElementById('submenu-ventas')?.classList.add('open');
   document.getElementById('nav-ventas-parent')?.classList.add('open');
-  const activeId=sub==='config'?'nav-ventas-config':'nav-ventas';
+  const activeId=sub==='config'?'nav-ventas-config':sub==='pos'?'nav-ventas-pos':'nav-ventas';
   document.getElementById(activeId)?.classList.add('active');
   const tb=document.getElementById('topbar'); if(tb) tb.style.display='';
-  document.getElementById('page-title').textContent=sub==='config'?'Ventas — Configuración':'Ventas';
+  document.getElementById('page-title').textContent=sub==='config'?'Ventas — Configuración':sub==='pos'?'Ventas — POS':'Ventas — Resumen';
   document.getElementById('topbar-actions').innerHTML='';
   closeModal();
   if(sub==='config') renderVentasConfig();
-  else renderVentas();
+  else if(sub==='pos'){ _vtaTab='pos'; renderVentas(); }
+  else { _vtaTab='historial'; renderVentas(); }
 }
 function toggleInventario(){
   const parent=document.getElementById('nav-inventario-parent');
@@ -1224,6 +1226,8 @@ function nav(page){
   if(page==='ventas'||page==='ventas-config'){
     document.getElementById('submenu-ventas')?.classList.add('open');
     document.getElementById('nav-ventas-parent')?.classList.add('open');
+    const activeVtaId=page==='ventas-config'?'nav-ventas-config':_vtaTab==='pos'?'nav-ventas-pos':'nav-ventas';
+    document.getElementById(activeVtaId)?.classList.add('active');
   }
   document.getElementById('page-title').textContent=pageTitles[page]||page;
   document.getElementById('topbar-actions').innerHTML='';
@@ -1330,7 +1334,7 @@ function calcularEstadoOC(oc){
 // VENTAS / POS
 // ─────────────────────────────────────────────
 let _vtaFiltro='todas';
-let _vtaTab='pos';
+let _vtaTab='historial';
 let _vtaPeriodo='mes'; // hoy | mes | año | todo | rango
 let _vtaDesde='';     // YYYY-MM-DD
 let _vtaHasta='';     // YYYY-MM-DD
@@ -1343,13 +1347,15 @@ let _posLinkedOrderId=null;
 let _posClienteInfo={rut:'',tel:'',email:''};
 
 function renderVentas(){
-  document.getElementById('topbar-actions').innerHTML=`
-    <div style="display:flex;gap:6px;align-items:center">
-      <button class="btn ${_vtaTab==='pos'?'btn-primary':'btn-secondary'}" onclick="setVtaTab('pos')">🛒 POS</button>
-      <button class="btn ${_vtaTab==='historial'?'btn-primary':'btn-secondary'}" onclick="setVtaTab('historial')">📋 Historial</button>
-    </div>`;
-  if(_vtaTab==='pos') _renderPOS();
-  else _renderHistorial();
+  if(_vtaTab==='pos'){
+    document.getElementById('topbar-actions').innerHTML=`
+      <button class="btn btn-secondary" onclick="navVentas('resumen')">← Resumen</button>`;
+    _renderPOS();
+  } else {
+    document.getElementById('topbar-actions').innerHTML=`
+      <button class="btn btn-primary" onclick="navVentas('pos')">🛒 Ir al POS</button>`;
+    _renderHistorial();
+  }
 }
 
 function setVtaTab(tab){ _vtaTab=tab; renderVentas(); }
@@ -1360,116 +1366,112 @@ function _renderPOS(){
   if(!_mps.find(m=>m.id===_posMetodo)) _posMetodo=_mps[0]?.id||'efectivo';
   const total=_posTotalConIVA();
   document.getElementById('page-content').innerHTML=`
-  <div style="display:grid;grid-template-columns:1fr 330px;gap:0;background:#fff;border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;height:calc(100vh - 136px)">
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:0;background:#fff;border:1px solid var(--gray-200);border-radius:14px;overflow:hidden;height:calc(100vh - 136px)">
     <!-- IZQUIERDA: búsquedas + carrito -->
     <div style="display:flex;flex-direction:column;border-right:1px solid var(--gray-100)">
-      <!-- Búsquedas -->
-      <div style="padding:10px 16px 0;border-bottom:1px solid var(--gray-100)">
-        <div style="display:flex;align-items:center;gap:8px;padding-bottom:9px">
-          <span style="color:var(--gray-400);font-size:14px;flex-shrink:0">🔍</span>
-          <input id="pos-search" type="text" placeholder="Buscar producto…" autocomplete="off"
-            oninput="posBuscarProd(this.value)"
-            onblur="setTimeout(()=>{const d=document.getElementById('pos-prod-drop');if(d)d.style.display='none'},280)"
-            style="flex:1;border:none;outline:none;font-size:13px;background:transparent;color:var(--gray-800)">
-          <div id="pos-prod-drop" class="prod-dropdown"></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;padding-top:8px;padding-bottom:9px;border-top:1px solid var(--gray-100)">
-          <span style="color:var(--gray-400);font-size:14px;flex-shrink:0">🔧</span>
-          <input id="pos-order-search" type="text" placeholder="N° orden, cliente o RUT…" autocomplete="off"
-            oninput="posBuscarOrden(this.value)"
-            onfocus="posBuscarOrden(this.value)"
-            onblur="setTimeout(()=>{const d=document.getElementById('pos-order-drop');if(d)d.style.display='none'},280)"
-            style="flex:1;border:none;outline:none;font-size:13px;background:transparent;color:var(--gray-800)">
-          <div id="pos-order-drop" class="prod-dropdown"></div>
-        </div>
+      <!-- Búsqueda producto -->
+      <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--gray-100)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="pos-search" type="text" placeholder="Buscar producto…" autocomplete="off"
+          oninput="posBuscarProd(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('pos-prod-drop');if(d)d.style.display='none'},280)"
+          style="flex:1;border:none;outline:none;font-size:13px;background:transparent;color:var(--gray-800)">
+        <div id="pos-prod-drop" class="prod-dropdown"></div>
+      </div>
+      <!-- Búsqueda OT -->
+      <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--gray-100)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        <input id="pos-order-search" type="text" placeholder="N° orden, cliente o RUT…" autocomplete="off"
+          oninput="posBuscarOrden(this.value)"
+          onfocus="posBuscarOrden(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('pos-order-drop');if(d)d.style.display='none'},280)"
+          style="flex:1;border:none;outline:none;font-size:13px;background:transparent;color:var(--gray-800)">
+        <div id="pos-order-drop" class="prod-dropdown"></div>
       </div>
       <!-- Badge OT vinculada -->
-      <div id="pos-order-badge" style="display:none;padding:7px 16px;background:#eff6ff;border-bottom:1px solid #bfdbfe;align-items:center;gap:8px"></div>
+      <div id="pos-order-badge" style="display:none;padding:7px 18px;background:#eff6ff;border-bottom:1px solid #bfdbfe;align-items:center;gap:8px"></div>
       <!-- Carrito -->
       <div id="pos-cart" style="flex:1;overflow-y:auto">${_renderPOSCart()}</div>
     </div>
     <!-- DERECHA: resumen -->
-    <div style="display:flex;flex-direction:column;background:#fafafa;border-left:1px solid var(--gray-100)">
-      <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:13px;overflow-y:auto">
+    <div style="display:flex;flex-direction:column;background:#f9fafb;border-left:1px solid var(--gray-100)">
+      <div style="flex:1;padding:18px 16px;display:flex;flex-direction:column;gap:16px;overflow-y:auto">
+
         <!-- Cliente -->
         <div>
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Cliente</div>
+          <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Cliente</div>
           <div style="display:flex;gap:6px;align-items:flex-start">
             <div style="position:relative;flex:1">
               <input id="pos-cliente" type="text" placeholder="Cliente genérico" value="${escAttr(_posCliente)}" autocomplete="off"
                 oninput="_posCliente=this.value;posBuscarClientePos(this.value)"
                 onfocus="posShowClienteInfo()"
                 onblur="setTimeout(()=>{const d=document.getElementById('pos-cli-drop');if(d)d.style.display='none'},280)"
-                style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13px;box-sizing:border-box;background:#fff">
+                style="width:100%;padding:8px 11px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;box-sizing:border-box;background:#fff;color:#111827;transition:border-color .15s">
               <div id="pos-cli-drop" class="prod-dropdown" style="min-width:100%"></div>
             </div>
             <button onclick="posNuevoCliente()" title="Crear nuevo cliente"
               style="width:36px;height:36px;border-radius:9px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-size:20px;font-weight:300;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
           </div>
-          <!-- Panel info cliente (expandible) -->
-          <div id="pos-cli-info" style="display:${_posCliente?'block':'none'};margin-top:7px;background:#fff;border:1.5px solid var(--gray-200);border-radius:9px;padding:10px 12px">
-            <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;font-weight:600">Datos del cliente</div>
-            <div style="display:flex;flex-direction:column;gap:6px">
+          <!-- Panel info cliente -->
+          <div id="pos-cli-info" style="display:${_posCliente?'block':'none'};margin-top:8px;background:#fff;border:1.5px solid #e5e7eb;border-radius:9px;padding:11px 12px">
+            <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Datos del cliente</div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              ${[['RUT','pos-cli-rut','11.111.111-1',_posClienteInfo.rut||''],['Tel','pos-cli-tel','+56 9 …',_posClienteInfo.tel||''],['Email','pos-cli-email','correo@…',_posClienteInfo.email||'']].map(([lbl,id,ph,val])=>`
               <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:11px;color:var(--gray-400);width:34px;flex-shrink:0">RUT</span>
-                <input id="pos-cli-rut" type="text" placeholder="11.111.111-1" value="${escAttr(_posClienteInfo.rut||'')}"
-                  oninput="_posClienteInfo.rut=this.value"
-                  style="flex:1;padding:4px 9px;border:1px solid var(--gray-200);border-radius:7px;font-size:12px;background:var(--gray-50)">
-              </div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:11px;color:var(--gray-400);width:34px;flex-shrink:0">Tel</span>
-                <input id="pos-cli-tel" type="text" placeholder="+56 9 ..." value="${escAttr(_posClienteInfo.tel||'')}"
-                  oninput="_posClienteInfo.tel=this.value"
-                  style="flex:1;padding:4px 9px;border:1px solid var(--gray-200);border-radius:7px;font-size:12px;background:var(--gray-50)">
-              </div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:11px;color:var(--gray-400);width:34px;flex-shrink:0">Email</span>
-                <input id="pos-cli-email" type="text" placeholder="correo@..." value="${escAttr(_posClienteInfo.email||'')}"
-                  oninput="_posClienteInfo.email=this.value"
-                  style="flex:1;padding:4px 9px;border:1px solid var(--gray-200);border-radius:7px;font-size:12px;background:var(--gray-50)">
-              </div>
+                <span style="font-size:11px;color:#9ca3af;width:36px;flex-shrink:0">${lbl}</span>
+                <input id="${id}" type="text" placeholder="${ph}" value="${escAttr(val)}"
+                  oninput="_posClienteInfo.${id.replace('pos-cli-','')}=this.value"
+                  style="flex:1;padding:5px 9px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12px;background:#f9fafb;color:#374151">
+              </div>`).join('')}
             </div>
           </div>
         </div>
+
         <!-- Método de pago -->
         <div>
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Método de pago</div>
+          <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Método de pago</div>
           <div style="display:flex;flex-direction:column;gap:5px">
             ${getMetodosPago().map(({id:k,icon,label,desc})=>{
               const active=k===_posMetodo;
               return `<button data-metodo="${k}" onclick="_posMetodo='${k}';posRenderResumen()"
-                style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:${active?'2px solid var(--primary)':'1.5px solid var(--gray-200)'};background:${active?'var(--primary-light,#eff6ff)':'#fff'};text-align:left;cursor:pointer;width:100%;box-sizing:border-box;transition:border .1s">
-                <span style="font-size:17px;flex-shrink:0">${icon}</span>
+                style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:${active?'2px solid #3b82f6':'1.5px solid #e5e7eb'};background:${active?'#eff6ff':'#fff'};text-align:left;cursor:pointer;width:100%;box-sizing:border-box;transition:all .15s">
+                <span style="font-size:18px;flex-shrink:0;line-height:1">${icon}</span>
                 <div style="flex:1;min-width:0">
-                  <div style="font-size:12px;font-weight:700;color:${active?'var(--primary)':'var(--gray-700)'};line-height:1.3">${escAttr(label)}</div>
-                  <div style="font-size:10px;color:var(--gray-400);line-height:1.2">${escAttr(desc||'')}</div>
+                  <div style="font-size:12px;font-weight:600;color:${active?'#1d4ed8':'#374151'};line-height:1.3">${escAttr(label)}</div>
+                  <div style="font-size:10px;color:#9ca3af;line-height:1.3;margin-top:1px">${escAttr(desc||'')}</div>
                 </div>
-                ${active?`<span style="color:var(--primary);font-size:14px;font-weight:800">✓</span>`:''}
+                ${active?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`:''}
               </button>`;
             }).join('')}
           </div>
         </div>
+
         <!-- Documento -->
         <div>
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Documento</div>
+          <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Documento</div>
           <select id="pos-doc" onchange="_posDocumento=this.value"
-            style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13px;color:var(--gray-700);background:#fff">
+            style="width:100%;padding:9px 11px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;color:#374151;background:#fff;appearance:auto">
             <option value="boleta" ${_posDocumento==='boleta'?'selected':''}>Boleta electrónica</option>
             <option value="factura" ${_posDocumento==='factura'?'selected':''}>Factura</option>
             <option value="ticket" ${_posDocumento==='ticket'?'selected':''}>Sin documento</option>
           </select>
         </div>
-        <div style="height:1px;background:var(--gray-200)"></div>
+
+        <!-- Divisor -->
+        <div style="height:1px;background:#f3f4f6;margin:0 -2px"></div>
+
         <!-- Totales -->
         <div id="pos-totales">${_renderPOSTotales()}</div>
       </div>
-      <div style="padding:14px 16px;border-top:1px solid var(--gray-200);background:#fff">
+
+      <!-- Footer cobrar -->
+      <div style="padding:14px 16px;border-top:1px solid #f3f4f6;background:#fff">
         <button onclick="posCobrar()" id="pos-btn-cobrar"
-          style="width:100%;padding:14px;background:#111827;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.2px">
+          style="width:100%;padding:14px;background:#111827;color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.3px;transition:background .15s">
           Cobrar ${fmt$(total)}
         </button>
         <button onclick="posLimpiar()"
-          style="width:100%;margin-top:8px;padding:8px;background:transparent;color:var(--gray-400);border:none;font-size:12px;cursor:pointer">
+          style="width:100%;margin-top:7px;padding:7px;background:transparent;color:#9ca3af;border:none;font-size:12px;cursor:pointer">
           Limpiar carrito
         </button>
       </div>
@@ -1526,12 +1528,12 @@ function _renderPOSTotales(){
   const iva=totalConIVA-sub;
   const hayDescuento=_posItems.some(it=>(it.descuento||0)>0);
   const bruto=_posItems.reduce((s,it)=>s+it.precio_iva*it.qty,0);
-  return `<div style="display:flex;flex-direction:column;gap:7px">
-    ${hayDescuento?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-400)"><span>Precio sin dcto.</span><span style="text-decoration:line-through">${fmt$(bruto)}</span></div>`:''}
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500)"><span>Subtotal neto</span><span>${fmt$(sub)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500)"><span>IVA (19%)</span><span>${fmt$(iva)}</span></div>
-    <div style="height:1px;background:var(--gray-100);margin:2px 0"></div>
-    <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--gray-900)"><span>Total</span><span>${fmt$(totalConIVA)}</span></div>
+  return `<div style="display:flex;flex-direction:column;gap:6px">
+    ${hayDescuento?`<div style="display:flex;justify-content:space-between;font-size:12px;color:#9ca3af"><span>Precio sin dcto.</span><span style="text-decoration:line-through">${fmt$(bruto)}</span></div>`:''}
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280"><span>Subtotal neto</span><span>${fmt$(sub)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280"><span>IVA (19%)</span><span>${fmt$(iva)}</span></div>
+    <div style="height:1px;background:#f3f4f6;margin:4px 0"></div>
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;color:#111827"><span>Total</span><span>${fmt$(totalConIVA)}</span></div>
   </div>`;
 }
 
@@ -2091,16 +2093,18 @@ function _renderHistorial(){
       </div>
       <!-- Rango fechas derecha (siempre visible) -->
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400)"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div onclick="document.getElementById('vta-desde').showPicker?document.getElementById('vta-desde').showPicker():document.getElementById('vta-desde').focus()"
+          style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff;cursor:pointer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400);pointer-events:none"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           <input type="date" id="vta-desde" value="${_vtaDesde}"
-            style="border:none;outline:none;font-size:12px;color:var(--gray-700);background:transparent;width:120px">
+            style="border:none;outline:none;font-size:12px;color:var(--gray-700);background:transparent;width:120px;cursor:pointer">
         </div>
         <span style="font-size:12px;color:var(--gray-400)">—</span>
-        <div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400)"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div onclick="document.getElementById('vta-hasta').showPicker?document.getElementById('vta-hasta').showPicker():document.getElementById('vta-hasta').focus()"
+          style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff;cursor:pointer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400);pointer-events:none"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           <input type="date" id="vta-hasta" value="${_vtaHasta}"
-            style="border:none;outline:none;font-size:12px;color:var(--gray-700);background:transparent;width:120px">
+            style="border:none;outline:none;font-size:12px;color:var(--gray-700);background:transparent;width:120px;cursor:pointer">
         </div>
         <button onclick="vtaAplicarRango()"
           style="padding:6px 14px;background:#111827;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">
