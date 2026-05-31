@@ -10877,11 +10877,10 @@ function _renderCargosPanel(){
             <div style="display:flex;align-items:center;gap:12px;color:var(--gray-500)">${_MODULOS_SVG[mod]||''}
               <span style="font-size:13px;color:var(--gray-700)">${_MODULOS_LABEL[mod]}</span>
             </div>
-            <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex-shrink:0">
-              <input type="checkbox" ${p[mod]?'checked':''} onchange="_cargosToggle('${sel?.id}','${mod}',this.checked)" style="opacity:0;width:0;height:0;position:absolute">
-              <span style="position:absolute;inset:0;border-radius:34px;background:${p[mod]?'#16a34a':'#d1d5db'};transition:background .2s"></span>
+            <div id="toggle-${sel?.id}-${mod}" onclick="_cargosToggle('${sel?.id}','${mod}')"
+              style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex-shrink:0;border-radius:34px;background:${p[mod]?'#16a34a':'#d1d5db'};transition:background .2s">
               <span style="position:absolute;top:3px;left:${p[mod]?'23px':'3px'};width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)"></span>
-            </label>
+            </div>
           </div>`).join('')}
         <div style="padding:14px 18px;display:flex;justify-content:flex-end;border-top:1px solid var(--gray-200)">
           <button class="btn btn-primary" onclick="_cargosGuardar()">Guardar permisos</button>
@@ -10893,11 +10892,19 @@ function _renderCargosPanel(){
 
 function _cargosSelect(id){ _cargosSelected=id; _renderCargosPanel(); }
 
-function _cargosToggle(cargoId, mod, val){
+function _cargosToggle(cargoId, mod){
   const cargos=getCargos();
   const c=cargos.find(x=>x.id===cargoId); if(!c) return;
-  c.permisos[mod]=val;
+  const newVal=!c.permisos[mod];
+  c.permisos[mod]=newVal;
   setCargos(cargos);
+  // Actualizar visual del toggle sin re-renderizar
+  const el=document.getElementById('toggle-'+cargoId+'-'+mod);
+  if(el){
+    el.style.background=newVal?'#16a34a':'#d1d5db';
+    const thumb=el.querySelector('span');
+    if(thumb) thumb.style.left=newVal?'23px':'3px';
+  }
 }
 
 function _cargosGuardar(){
