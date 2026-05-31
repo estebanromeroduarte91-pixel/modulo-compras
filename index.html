@@ -8610,82 +8610,87 @@ async function tp_enviarCorreoIngreso(order){
   const fechaStr=new Date().toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
   const horaStr=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
 
-  // Checklist
+  // Helper: section header using table (compatible con Apple Mail — sin flex)
+  function secHeader(bgColor, symbol, symbolColor, title){
+    return `<table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e2e8f0;width:100%"><tr>
+      <td style="width:32px;height:32px;vertical-align:middle">
+        <table cellpadding="0" cellspacing="0" border="0"><tr><td style="width:32px;height:32px;background:${bgColor};border-radius:8px;text-align:center;vertical-align:middle;font-size:16px;line-height:32px;color:${symbolColor}">${symbol}</td></tr></table>
+      </td>
+      <td style="padding-left:10px;vertical-align:middle">
+        <span style="font-size:13px;font-weight:600;color:#111827">${title}</span>
+      </td>
+    </tr></table>`;
+  }
+
+  // Checklist rows
   const checkRows=(order.checkIngreso||[]).map(c=>{
-    const color=c.checked===true?'#dcfce7':c.checked===false?'#fee2e2':'#f1f5f9';
-    const stroke=c.checked===true?'#16a34a':c.checked===false?'#dc2626':'#94a3b8';
-    const icon=c.checked===true
-      ?`<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>`
-      :c.checked===false
-      ?`<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/></svg>`
-      :`<span style="font-size:9px;color:#94a3b8">—</span>`;
+    const bg=c.checked===true?'#dcfce7':c.checked===false?'#fee2e2':'#f1f5f9';
+    const txt=c.checked===true?'✓':c.checked===false?'✕':'–';
+    const col=c.checked===true?'#15803d':c.checked===false?'#dc2626':'#94a3b8';
     return `<tr><td style="padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#374151">
-      <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:${color};vertical-align:middle;margin-right:8px">${icon}</span>${c.label}
+      <table cellpadding="0" cellspacing="0" border="0" style="display:inline-table"><tr>
+        <td style="width:18px;height:18px;background:${bg};border-radius:50%;text-align:center;vertical-align:middle;font-size:10px;font-weight:700;color:${col};line-height:18px">${txt}</td>
+        <td style="padding-left:8px;vertical-align:middle;font-size:13px;color:#374151">${c.label}</td>
+      </tr></table>
     </td></tr>`;
   }).join('');
 
-  // Fotos
-  const fotosHtml=(order.photosIngreso||[]).length
-    ? `<div style="margin-top:20px">
-        <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.7px;margin:0 0 10px">Fotos de ingreso</p>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          ${(order.photosIngreso||[]).map(src=>`<img src="${src}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb">`).join('')}
-        </div>
-        <p style="font-size:11px;color:#9ca3af;margin:8px 0 0">Las fotos documentan el estado físico del equipo al momento del ingreso.</p>
-      </div>`
-    : '';
+  // Fotos (tabla 3 columnas para compatibilidad email)
+  let fotosHtml='';
+  if((order.photosIngreso||[]).length){
+    const imgs=order.photosIngreso.map(src=>`<td style="width:33%;padding:3px"><img src="${src}" width="150" style="width:100%;max-width:150px;border-radius:8px;border:1px solid #e5e7eb;display:block"></td>`);
+    const rows=[];
+    for(let i=0;i<imgs.length;i+=3) rows.push(`<tr>${imgs.slice(i,i+3).join('')}</tr>`);
+    fotosHtml=`<div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
+      ${secHeader('#1e2a3a','&#128247;','#7dd3fc','Fotos de ingreso')}
+      <table cellpadding="0" cellspacing="0" border="0" style="width:100%">${rows.join('')}</table>
+      <p style="font-size:11px;color:#9ca3af;margin:10px 0 0">Las fotos documentan el estado físico del equipo al momento del ingreso.</p>
+    </div>`;
+  }
 
-  // Botón WhatsApp sucursal
+  // Botón WhatsApp
   const waBtn=branchTel
-    ? `<a href="https://wa.me/${branchTel.replace(/\D/g,'')}" style="display:inline-flex;align-items:center;gap:6px;background:#25d366;color:#fff;font-size:13px;font-weight:500;padding:8px 16px;border-radius:20px;text-decoration:none">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="white" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.845L.057 23.617a.75.75 0 00.92.92l5.773-1.471A11.943 11.943 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.891 0-3.663-.497-5.198-1.367l-.372-.214-3.853.982.999-3.742-.233-.386A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-        ${branchTel}
-      </a>`
+    ? `<table cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#25d366;border-radius:20px;padding:0"><a href="https://wa.me/${branchTel.replace(/\D/g,'')}" style="display:inline-block;background:#25d366;color:#fff;font-size:13px;font-weight:600;padding:9px 18px;border-radius:20px;text-decoration:none">&#128222; ${branchTel}</a></td></tr></table>`
     : `<span style="font-size:13px;color:#6b7280">Sin teléfono registrado</span>`;
 
-  const bodyHtml=`<div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;background:#f8fafc;padding:24px">
+  const bodyHtml=`<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#f1f5f9;padding:20px">
     <!-- Header -->
     <div style="background:#0f172a;border-radius:12px 12px 0 0;padding:28px 32px">
-      <span style="font-size:11px;font-weight:600;color:#93c5fd;background:#1e3a5f;display:inline-block;padding:3px 10px;border-radius:20px;margin-bottom:10px;letter-spacing:.4px">Orden #OT-${order.num}</span>
-      <h2 style="color:#fff;font-size:18px;font-weight:500;margin:0 0 4px">Tu equipo ingresó al taller</h2>
+      <span style="font-size:11px;font-weight:600;color:#93c5fd;background:#1e3a5f;display:inline-block;padding:4px 12px;border-radius:20px;margin-bottom:12px;letter-spacing:.4px">Orden #OT-${order.num}</span>
+      <h2 style="color:#ffffff;font-size:18px;font-weight:600;margin:0 0 6px">Tu equipo ingresó al taller</h2>
       <p style="color:#94a3b8;font-size:13px;margin:0">${fechaStr} · ${horaStr} hrs</p>
     </div>
     <!-- Body -->
-    <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:28px 32px">
+    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:28px 32px">
       <p style="font-size:15px;color:#111827;margin:0 0 6px">Hola ${order.nombre},</p>
       <p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 24px">Hemos recibido tu equipo correctamente. A continuación el resumen de tu orden de trabajo.</p>
 
       <!-- Equipo -->
       <div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e2e8f0">
-          <div style="width:32px;height:32px;border-radius:8px;background:#1e3a5f;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-          </div>
-          <p style="font-size:13px;font-weight:600;color:#111827;margin:0">Datos del equipo</p>
-        </div>
-        <table style="width:100%;border-collapse:collapse">
+        ${secHeader('#1e3a5f','&#128241;','#93c5fd','Datos del equipo')}
+        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
           <tr>
             <td style="width:50%;padding:0 8px 10px 0;vertical-align:top">
-              <p style="font-size:11px;color:#6b7280;margin:0 0 2px">Modelo</p>
+              <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">Modelo</p>
               <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${order.modelo||'—'}</p>
             </td>
             <td style="width:50%;padding:0 0 10px 8px;vertical-align:top">
-              <p style="font-size:11px;color:#6b7280;margin:0 0 2px">Color</p>
+              <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">Color</p>
               <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${order.color||'—'}</p>
             </td>
           </tr>
           <tr>
             <td colspan="2" style="padding:0 0 10px 0">
-              <p style="font-size:11px;color:#6b7280;margin:0 0 2px">N° serie / IMEI</p>
+              <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">N° serie / IMEI</p>
               <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${order.serie||'—'}</p>
             </td>
           </tr>
           ${order.estadoFisico?`<tr><td colspan="2" style="padding:0 0 10px 0">
-            <p style="font-size:11px;color:#6b7280;margin:0 0 2px">Estado físico</p>
-            <p style="font-size:13px;color:#374151;margin:0;line-height:1.6">${order.estadoFisico}</p>
+            <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">Estado físico</p>
+            <p style="font-size:13px;font-weight:600;color:#111827;margin:0;line-height:1.6">${order.estadoFisico}</p>
           </td></tr>`:''}
           <tr><td colspan="2" style="padding:0">
-            <p style="font-size:11px;color:#6b7280;margin:0 0 2px">Falla reportada</p>
+            <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">Falla reportada</p>
             <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${order.trabajo||'—'}</p>
           </td></tr>
         </table>
@@ -8693,30 +8698,25 @@ async function tp_enviarCorreoIngreso(order){
 
       <!-- Cliente -->
       <div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e2e8f0">
-          <div style="width:32px;height:32px;border-radius:8px;background:#1a3326;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          </div>
-          <p style="font-size:13px;font-weight:600;color:#111827;margin:0">Datos del cliente</p>
-        </div>
-        <table style="width:100%;border-collapse:collapse">
+        ${secHeader('#1a3326','&#128100;','#6ee7b7','Datos del cliente')}
+        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
           <tr>
             <td style="width:50%;padding:0 8px 10px 0;vertical-align:top">
-              <p style="font-size:11px;color:#6b7280;margin:0 0 2px">Nombre</p>
+              <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">Nombre</p>
               <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${order.nombre||'—'}</p>
             </td>
             <td style="width:50%;padding:0 0 10px 8px;vertical-align:top">
-              <p style="font-size:11px;color:#6b7280;margin:0 0 2px">RUT</p>
+              <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">RUT</p>
               <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${order.rut||'—'}</p>
             </td>
           </tr>
           <tr>
             <td style="padding:0 8px 0 0;vertical-align:top">
-              <p style="font-size:11px;color:#6b7280;margin:0 0 2px">Teléfono</p>
+              <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">Teléfono</p>
               <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${order.tel||'—'}</p>
             </td>
             <td style="padding:0 0 0 8px;vertical-align:top">
-              <p style="font-size:11px;color:#6b7280;margin:0 0 2px">Correo</p>
+              <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">Correo</p>
               <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${order.email||'—'}</p>
             </td>
           </tr>
@@ -8725,25 +8725,20 @@ async function tp_enviarCorreoIngreso(order){
 
       <!-- Sucursal -->
       <div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e2e8f0">
-          <div style="width:32px;height:32px;border-radius:8px;background:#2d1f3d;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          </div>
-          <p style="font-size:13px;font-weight:600;color:#111827;margin:0">Sucursal asignada</p>
-        </div>
-        <table style="width:100%;border-collapse:collapse">
+        ${secHeader('#2d1f3d','&#127968;','#c4b5fd','Sucursal asignada')}
+        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
           <tr>
             <td style="width:50%;padding:0 8px 10px 0;vertical-align:top">
-              <p style="font-size:11px;color:#6b7280;margin:0 0 2px">Sucursal</p>
+              <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">Sucursal</p>
               <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${branchNombre}</p>
             </td>
             <td style="width:50%;padding:0 0 10px 8px;vertical-align:top">
-              <p style="font-size:11px;color:#6b7280;margin:0 0 2px">Dirección</p>
+              <p style="font-size:11px;color:#6b7280;margin:0 0 2px;text-transform:uppercase;letter-spacing:.5px">Dirección</p>
               <p style="font-size:13px;font-weight:600;color:#111827;margin:0">${branchDir||'—'}</p>
             </td>
           </tr>
           <tr><td colspan="2" style="padding:6px 0 0">
-            <p style="font-size:11px;color:#6b7280;margin:0 0 6px">Contacto directo</p>
+            <p style="font-size:11px;color:#6b7280;margin:0 0 8px;text-transform:uppercase;letter-spacing:.5px">Contacto directo</p>
             ${waBtn}
           </td></tr>
         </table>
@@ -8751,32 +8746,27 @@ async function tp_enviarCorreoIngreso(order){
 
       <!-- Checklist -->
       ${checkRows?`<div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e2e8f0">
-          <div style="width:32px;height:32px;border-radius:8px;background:#1c2a1c;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86efac" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-          </div>
-          <p style="font-size:13px;font-weight:600;color:#111827;margin:0">Checklist de ingreso</p>
-        </div>
-        <table style="width:100%;border-collapse:collapse">${checkRows}</table>
-        <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:#6b7280">
-          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dcfce7;margin-right:4px;vertical-align:middle"></span>OK</span>
-          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fee2e2;margin-right:4px;vertical-align:middle"></span>No OK</span>
-          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f1f5f9;border:1px solid #e2e8f0;margin-right:4px;vertical-align:middle"></span>No aplica</span>
-        </div>
+        ${secHeader('#1c2a1c','&#10003;','#86efac','Checklist de ingreso')}
+        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">${checkRows}</table>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:10px"><tr>
+          <td style="padding-right:16px;font-size:11px;color:#6b7280"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dcfce7;margin-right:4px;vertical-align:middle"></span>OK</td>
+          <td style="padding-right:16px;font-size:11px;color:#6b7280"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fee2e2;margin-right:4px;vertical-align:middle"></span>No OK</td>
+          <td style="font-size:11px;color:#6b7280"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f1f5f9;border:1px solid #e2e8f0;margin-right:4px;vertical-align:middle"></span>No aplica</td>
+        </tr></table>
       </div>`:''}
 
       <!-- Fotos -->
       ${fotosHtml}
 
       <!-- Nota -->
-      <div style="background:#f8fafc;border-left:3px solid #d1d5db;border-radius:0 8px 8px 0;padding:12px 16px;margin:20px 0 24px">
+      <div style="background:#f8fafc;border-left:3px solid #d1d5db;padding:12px 16px;margin:4px 0 24px">
         <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0"><strong>Nota:</strong> Cualquier trabajo adicional será consultado contigo antes de realizarlo.</p>
       </div>
 
       <p style="font-size:13px;color:#6b7280;margin:0">Consultas respondiendo este correo${branchTel?' o por WhatsApp al <strong style="color:#111827">'+branchTel+'</strong>':''}.</p>
     </div>
     <!-- Footer -->
-    <div style="text-align:center;padding:16px 0 0">
+    <div style="text-align:center;padding:16px 0 4px">
       <p style="font-size:12px;color:#94a3b8;margin:0 0 4px"><strong style="color:#6b7280">${tallerNombre}</strong>${branchNombre&&branchNombre!==tallerNombre?' · '+branchNombre:''}${branchDir?' · '+branchDir:''}</p>
       <p style="font-size:12px;color:#94a3b8;margin:0">Correo generado automáticamente desde el sistema de gestión.</p>
     </div>
