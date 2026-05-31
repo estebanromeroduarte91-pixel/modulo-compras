@@ -1988,24 +1988,66 @@ function moverMetodoPago(idx,dir){
 }
 // ────────────────────────────────────────────────
 
+function _calcUtilidadVentas(lista){
+  const prods=getProductos();
+  return lista.reduce((sum,v)=>{
+    const costo=(v.items||[]).reduce((cs,it)=>{
+      if(!it.producto_id) return cs;
+      const p=prods.find(x=>x.id===it.producto_id);
+      return cs+(it.cantidad||1)*(+(p?.precio_compra)||0);
+    },0);
+    return sum+(+(v.total)||0)-costo;
+  },0);
+}
+
 function _renderHistorial(){
   const ventas=getVentas();
+  const mesActual=today().slice(0,7);
   const counts={};
   ['todas','pendiente','pagada','anulada'].forEach(e=>{ counts[e]=e==='todas'?ventas.length:ventas.filter(v=>v.estado===e).length; });
-  const totalMes=ventas.filter(v=>v.fecha&&v.fecha.startsWith(today().slice(0,7))&&v.estado!=='anulada').reduce((s,v)=>s+(+v.total_iva||0),0);
+  const activas=ventas.filter(v=>v.estado!=='anulada');
+  const mes=activas.filter(v=>v.fecha&&v.fecha.startsWith(mesActual));
+  const totalMes=mes.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const netoMes=mes.reduce((s,v)=>s+(+v.total||0),0);
+  const utilMes=_calcUtilidadVentas(mes);
+  const totalHistorico=activas.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const utilHistorico=_calcUtilidadVentas(activas);
+  const utilColor=(u)=>u>=0?'#10b981':'#ef4444';
   document.getElementById('page-content').innerHTML=`
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
-    <div class="card" style="padding:16px 20px">
-      <div style="font-size:12px;color:var(--gray-400);font-weight:600;margin-bottom:4px">VENTAS DEL MES</div>
+  <!-- Fila 1: Mes actual -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px">
+    <div class="card" style="padding:16px 20px;border-top:3px solid #10b981">
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">VENTAS DEL MES <span style="font-weight:400">(c/IVA)</span></div>
       <div style="font-size:24px;font-weight:800;color:#10b981">${fmt$(totalMes)}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">${mes.length} venta${mes.length!==1?'s':''}</div>
+    </div>
+    <div class="card" style="padding:16px 20px;border-top:3px solid #0ea5e9">
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">VENTAS NETAS DEL MES <span style="font-weight:400">(sin IVA)</span></div>
+      <div style="font-size:24px;font-weight:800;color:#0ea5e9">${fmt$(netoMes)}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">IVA: ${fmt$(totalMes-netoMes)}</div>
+    </div>
+    <div class="card" style="padding:16px 20px;border-top:3px solid #8b5cf6">
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">UTILIDAD NETA DEL MES</div>
+      <div style="font-size:24px;font-weight:800;color:${utilColor(utilMes)}">${fmt$(utilMes)}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Neto − costo de productos</div>
+    </div>
+  </div>
+  <!-- Fila 2: Histórico total -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+    <div class="card" style="padding:16px 20px">
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">TOTAL VENTAS HISTÓRICAS</div>
+      <div style="font-size:24px;font-weight:800;color:var(--gray-800)">${activas.length}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Todas las ventas registradas</div>
     </div>
     <div class="card" style="padding:16px 20px">
-      <div style="font-size:12px;color:var(--gray-400);font-weight:600;margin-bottom:4px">TOTAL VENTAS</div>
-      <div style="font-size:24px;font-weight:800;color:var(--gray-800)">${ventas.filter(v=>v.estado!=='anulada').length}</div>
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">ACUMULADO HISTÓRICO <span style="font-weight:400">(c/IVA)</span></div>
+      <div style="font-size:24px;font-weight:800;color:var(--primary)">${fmt$(totalHistorico)}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Suma de todas las ventas</div>
     </div>
     <div class="card" style="padding:16px 20px">
-      <div style="font-size:12px;color:var(--gray-400);font-weight:600;margin-bottom:4px">ACUMULADO</div>
-      <div style="font-size:24px;font-weight:800;color:var(--primary)">${fmt$(ventas.filter(v=>v.estado!=='anulada').reduce((s,v)=>s+(+v.total_iva||0),0))}</div>
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">UTILIDAD HISTÓRICA TOTAL</div>
+      <div style="font-size:24px;font-weight:800;color:${utilColor(utilHistorico)}">${fmt$(utilHistorico)}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Neto acumulado − costo total</div>
     </div>
   </div>
   <div class="card">
