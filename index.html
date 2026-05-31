@@ -737,7 +737,7 @@ select{cursor:pointer}
   </div>
   <div class="nav-item-parent" id="nav-taller-parent" onclick="toggleTaller()"><span class="icon">🔧</span> Taller<span class="arrow">▶</span></div>
   <div class="nav-submenu" id="submenu-taller">
-    <div class="nav-subitem" id="nav-taller-orders" onclick="navTaller('orders','Taller — Órdenes')"><span class="icon">📋</span> Órdenes</div>
+    <div class="nav-subitem" id="nav-taller-orders" onclick="navTaller('branches','Taller — Sucursales')"><span class="icon">📋</span> Órdenes</div>
     <div class="nav-subitem" id="nav-taller-branches" onclick="navTaller('branches','Taller — Sucursales')"><span class="icon">🏢</span> Sucursales</div>
     <div class="nav-subitem" id="nav-taller-equipo" onclick="navTaller('equipo','Taller — Equipos')"><span class="icon">📱</span> Equipos</div>
     <div class="nav-subitem" id="nav-taller-usuarios" onclick="navTaller('usuarios','Taller — Usuarios')"><span class="icon">👤</span> Usuarios</div>
@@ -7333,12 +7333,13 @@ function renderTaller() {
   document.getElementById('page-content').innerHTML = `
 <div id="tp-wrap">
   <div class="tp-header">
-    <button id="branch-back-btn" onclick="tp_exitBranch()" style="display:none;align-items:center;gap:5px;background:none;border:none;font-family:inherit;font-size:12px;color:var(--blue);cursor:pointer;padding:3px 8px;border-radius:5px">
+    <button id="branch-back-btn" onclick="tp_exitBranch()" style="display:none;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);font-family:inherit;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;padding:5px 12px;border-radius:8px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="15 18 9 12 15 6"/></svg>
       Sucursales
     </button>
-    <div id="branch-context-badge" style="display:none;align-items:center;gap:5px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:20px;padding:2px 10px;font-size:11.5px;font-weight:600;color:#4b5563">
-      <span id="branch-badge-name"></span>
+    <div id="branch-context-badge" style="display:none;align-items:center;gap:6px;padding:0 2px">
+      <span style="color:var(--text3);font-size:13px">/</span>
+      <span id="branch-badge-name" style="font-size:13px;font-weight:600;color:var(--text)"></span>
     </div>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
       <div class="header-search-wrap">
@@ -7649,26 +7650,23 @@ function renderTaller() {
   <!-- PAGE: BRANCHES -->
   <div id="page-branches" class="page-content">
     <div class="content">
-      <div class="table-toolbar" style="margin-bottom:12px">
-        <span class="toolbar-title">Sucursales</span>
-        <div class="ml-auto">
+      <div class="table-toolbar" style="margin-bottom:4px">
+        <div>
+          <span class="toolbar-title">Órdenes</span>
+          <span style="font-size:12px;color:var(--text3);margin-left:8px">Selecciona una sucursal</span>
+        </div>
+        <div class="ml-auto" style="display:flex;gap:8px;align-items:center">
+          <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;color:var(--text3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar sucursal..." id="branch-search-inp" oninput="tp_renderBranchScreen()" style="border:none;background:none;outline:none;font-family:inherit;font-size:12px;color:var(--text);width:130px">
+          </div>
           <button class="btn btn-primary btn-sm" onclick="tp_openAddBranch()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Nueva sucursal
           </button>
         </div>
       </div>
-      <div class="branch-card" style="max-width:700px">
-        <div class="branch-card-header">
-          <span class="branch-card-title">Mis sucursales</span>
-          <div class="branch-search-box">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" placeholder="Buscar sucursal..." id="branch-search-inp" oninput="tp_renderBranchScreen()">
-          </div>
-        </div>
-        <div class="branch-col-header"><div class="branch-col-label">Nombre de la sucursal</div></div>
-        <div id="branch-list"></div>
-      </div>
+      <div id="branch-list"></div>
     </div>
   </div>
 
@@ -8215,7 +8213,7 @@ function renderTaller() {
 </div>`;
   tp_loadState();
   tp_addListeners();
-  tp_showPage('orders', null);
+  tp_showPage('branches', null);
   tp_updateNotifBadge();
 }
 
@@ -8295,25 +8293,53 @@ function tp_nextNum(){const bo=tp_currentBranchId?tp_orders.filter(o=>o.branchId
 // ─── BRANCHES ───
 function tp_renderBranchScreen(){
   const q=(document.getElementById('branch-search-inp')?.value||'').toLowerCase();
-  const list=tp_branches.filter(b=>!q||(b.nombre||'').toLowerCase().includes(q));
+  const list=tp_branches.filter(b=>!q||(b.nombre||b.name||'').toLowerCase().includes(q));
   const container=document.getElementById('branch-list');
   if(!container)return;
   if(!tp_branches.length){
-    container.innerHTML=`<div class="branch-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><div class="branch-empty-title">No hay sucursales aún</div><div style="font-size:12.5px;margin-bottom:14px">Crea tu primera sucursal para comenzar</div><button class="btn btn-primary btn-sm" onclick="tp_openAddBranch()">+ Nueva sucursal</button></div>`;
+    container.innerHTML=`<div style="text-align:center;padding:48px 24px">
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--bg2,#f1f5f9);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:24px">🏪</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">No hay sucursales aún</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:18px">Crea tu primera sucursal para comenzar</div>
+      <button class="btn btn-primary btn-sm" onclick="tp_openAddBranch()">+ Nueva sucursal</button>
+    </div>`;
     return;
   }
-  if(!list.length){container.innerHTML='<div class="branch-empty"><div style="font-size:13px">Sin resultados para "'+q+'"</div></div>';return;}
-  container.innerHTML=list.map(b=>{
-    const bo=tp_orders.filter(o=>o.branchId===b.id);
-    const open=bo.filter(o=>o.status!=='Entregado').length;
-    const meta=bo.length===0?'Sin órdenes':`${bo.length} orden${bo.length!==1?'es':''} · ${open} abierta${open!==1?'s':''}`;
-    return `<div class="branch-row">
-      <div class="branch-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-      <div class="branch-row-info"><div class="branch-row-name">${b.nombre||b.name||'Sin nombre'}</div><div class="branch-row-meta">${meta}</div></div>
-      <button class="branch-row-gear" onclick="event.stopPropagation();tp_openEditBranch('${b.id}')" title="Configurar sucursal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
-      <button class="branch-enter-btn" onclick="tp_enterBranch('${b.id}')">Taller <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
-    </div>`;
-  }).join('');
+  if(!list.length){
+    container.innerHTML=`<div style="text-align:center;padding:32px;font-size:13px;color:var(--text2)">Sin resultados para "${q}"</div>`;
+    return;
+  }
+  container.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:20px">
+    ${list.map(b=>{
+      const bo=tp_orders.filter(o=>o.branchId===b.id);
+      const abiertas=bo.filter(o=>!['Entregado'].includes(o.status)).length;
+      const listas=bo.filter(o=>o.status==='Listo').length;
+      const reparacion=bo.filter(o=>o.status==='Reparación').length;
+      const nombre=b.nombre||b.name||'Sin nombre';
+      const dir=b.direccion||'';
+      const statsHtml=[
+        abiertas?`<span style="font-size:11px;font-weight:500;background:#eff6ff;color:#1d4ed8;padding:3px 9px;border-radius:20px">${abiertas} abierta${abiertas!==1?'s':''}</span>`:'',
+        listas?`<span style="font-size:11px;font-weight:500;background:#f0fdf4;color:#15803d;padding:3px 9px;border-radius:20px">${listas} lista${listas!==1?'s':''}</span>`:'',
+        reparacion?`<span style="font-size:11px;font-weight:500;background:#fef9c3;color:#854d0e;padding:3px 9px;border-radius:20px">${reparacion} reparación</span>`:'',
+        !bo.length?`<span style="font-size:11px;color:var(--text2)">Sin órdenes</span>`:'',
+      ].filter(Boolean).join('');
+      return `<div onclick="tp_enterBranch('${b.id}')" style="background:var(--card-bg,#fff);border:1.5px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+          <div style="width:38px;height:38px;border-radius:10px;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0">🏪</div>
+          <button onclick="event.stopPropagation();tp_openEditBranch('${b.id}')" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)" title="Editar sucursal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button>
+        </div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:${dir?'3px':'12px'}">${nombre}</div>
+        ${dir?`<div style="font-size:12px;color:var(--text2);margin-bottom:12px">${dir}</div>`:''}
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${statsHtml}</div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;color:var(--accent);font-size:12px;font-weight:500;gap:4px">
+          Ver órdenes
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 function tp_enterBranch(id){
   tp_currentBranchId=id;
