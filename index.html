@@ -1325,8 +1325,9 @@ function _renderPOS(){
         </div>
         <div style="display:flex;align-items:center;gap:8px;padding-top:8px;padding-bottom:9px;border-top:1px solid var(--gray-100)">
           <span style="color:var(--gray-400);font-size:14px;flex-shrink:0">🔧</span>
-          <input id="pos-order-search" type="text" placeholder="Buscar orden de trabajo (OT)…" autocomplete="off"
+          <input id="pos-order-search" type="text" placeholder="N° orden, cliente o RUT…" autocomplete="off"
             oninput="posBuscarOrden(this.value)"
+            onfocus="posBuscarOrden(this.value)"
             onblur="setTimeout(()=>{const d=document.getElementById('pos-order-drop');if(d)d.style.display='none'},280)"
             style="flex:1;border:none;outline:none;font-size:13px;background:transparent;color:var(--gray-800)">
           <div id="pos-order-drop" class="prod-dropdown"></div>
@@ -1491,14 +1492,39 @@ function posBuscarProd(q){
 function posBuscarOrden(q){
   const drop=document.getElementById('pos-order-drop'); if(!drop) return;
   const orders=(tp_orders||[]).filter(o=>o.status!=='Entregado');
-  const matches=q.trim()?orders.filter(o=>`${o.num||''} ${o.nombre||''} ${o.modelo||''}`.toLowerCase().includes(q.toLowerCase())).slice(0,8):orders.slice(0,8);
-  if(!matches.length){ drop.style.display='none'; return; }
-  drop.innerHTML=matches.map(o=>`<div class="prod-drop-item" data-orderid="${o.id}" onmousedown="posAddOrden(this.dataset.orderid)">
-    <span class="prod-name">#${o.num||'—'} · ${escAttr(o.nombre||'')} ${escAttr(o.modelo||'')}</span>
-    <span style="font-size:11px;color:var(--gray-400)">${o.status||''}</span>
-  </div>`).join('');
+  const ql=q.trim().toLowerCase();
+  const matches=ql
+    ?orders.filter(o=>`${o.num||''} ${o.nombre||''} ${o.rut||''} ${o.modelo||''}`.toLowerCase().includes(ql)).slice(0,10)
+    :orders.slice(0,10);
+  const statusColor={Chequeo:'#f59e0b',Reparación:'#3b82f6',Listo:'#10b981'};
+  if(!matches.length){
+    drop.innerHTML=`<div style="padding:12px 14px;font-size:12px;color:var(--gray-400);text-align:center">${orders.length?'Sin resultados para esa búsqueda':'No hay órdenes abiertas'}</div>`;
+    const inp=document.getElementById('pos-order-search');
+    if(inp){ const r=inp.getBoundingClientRect(); drop.style.top=(r.bottom+4)+'px'; drop.style.left=r.left+'px'; drop.style.minWidth='340px'; }
+    drop.style.display='block';
+    return;
+  }
+  drop.innerHTML=`
+    <div style="padding:7px 12px;font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--gray-100)">
+      ${ql?`${matches.length} resultado(s)`:'Órdenes abiertas'} · haz clic para agregar al POS
+    </div>`+
+  matches.map(o=>{
+    const col=statusColor[o.status]||'#6b7280';
+    return `<div class="prod-drop-item" data-orderid="${o.id}" onmousedown="posAddOrden(this.dataset.orderid)"
+      style="display:flex;align-items:center;gap:10px;padding:9px 12px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <span style="font-size:12px;font-weight:700;color:var(--primary)">#${o.num||'—'}</span>
+          <span style="font-size:11px;font-weight:600;background:${col}20;color:${col};padding:1px 6px;border-radius:20px">${o.status||''}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--gray-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escAttr(o.nombre||'Sin nombre')}</div>
+        <div style="font-size:11px;color:var(--gray-400)">${escAttr(o.modelo||'')}${o.rut?' · '+escAttr(o.rut):''}</div>
+      </div>
+      <span style="font-size:18px;flex-shrink:0">➕</span>
+    </div>`;
+  }).join('');
   const inp=document.getElementById('pos-order-search');
-  if(inp){ const r=inp.getBoundingClientRect(); drop.style.top=(r.bottom+4)+'px'; drop.style.left=r.left+'px'; drop.style.minWidth='300px'; }
+  if(inp){ const r=inp.getBoundingClientRect(); drop.style.top=(r.bottom+4)+'px'; drop.style.left=r.left+'px'; drop.style.minWidth='340px'; }
   drop.style.display='block';
 }
 
