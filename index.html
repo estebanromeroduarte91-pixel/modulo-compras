@@ -1331,6 +1331,9 @@ function calcularEstadoOC(oc){
 // ─────────────────────────────────────────────
 let _vtaFiltro='todas';
 let _vtaTab='pos';
+let _vtaPeriodo='mes'; // hoy | mes | año | todo | rango
+let _vtaDesde='';     // YYYY-MM-DD
+let _vtaHasta='';     // YYYY-MM-DD
 let _posItems=[];
 let _posCliente='';
 let _posDocumento='boleta';
@@ -2000,56 +2003,179 @@ function _calcUtilidadVentas(lista){
   },0);
 }
 
+function _vtaFiltrarPorFecha(lista){
+  const hoy=today(); // YYYY-MM-DD
+  if(_vtaPeriodo==='hoy')  return lista.filter(v=>v.fecha&&v.fecha.startsWith(hoy));
+  if(_vtaPeriodo==='mes')  return lista.filter(v=>v.fecha&&v.fecha.startsWith(hoy.slice(0,7)));
+  if(_vtaPeriodo==='año')  return lista.filter(v=>v.fecha&&v.fecha.startsWith(hoy.slice(0,4)));
+  if(_vtaPeriodo==='rango'){
+    return lista.filter(v=>{
+      if(!v.fecha) return false;
+      const d=v.fecha.slice(0,10);
+      return (!_vtaDesde||d>=_vtaDesde) && (!_vtaHasta||d<=_vtaHasta);
+    });
+  }
+  return lista; // todo
+}
+
+function _vtaPeriodoLabel(){
+  if(_vtaPeriodo==='hoy')  return 'Hoy';
+  if(_vtaPeriodo==='mes')  return 'Este mes';
+  if(_vtaPeriodo==='año')  return 'Este año';
+  if(_vtaPeriodo==='todo') return 'Todo el tiempo';
+  if(_vtaPeriodo==='rango'&&_vtaDesde&&_vtaHasta) return `${_vtaDesde} → ${_vtaHasta}`;
+  return 'Rango personalizado';
+}
+
+function vtaSetPeriodo(p){ _vtaPeriodo=p; _renderHistorial(); }
+function vtaAplicarRango(){
+  _vtaDesde=document.getElementById('vta-desde')?.value||'';
+  _vtaHasta=document.getElementById('vta-hasta')?.value||'';
+  _vtaPeriodo='rango';
+  _renderHistorial();
+}
+
 function _renderHistorial(){
-  const ventas=getVentas();
-  const mesActual=today().slice(0,7);
-  const counts={};
-  ['todas','pendiente','pagada','anulada'].forEach(e=>{ counts[e]=e==='todas'?ventas.length:ventas.filter(v=>v.estado===e).length; });
-  const activas=ventas.filter(v=>v.estado!=='anulada');
-  const mes=activas.filter(v=>v.fecha&&v.fecha.startsWith(mesActual));
-  const totalMes=mes.reduce((s,v)=>s+(+v.total_iva||0),0);
-  const netoMes=mes.reduce((s,v)=>s+(+v.total||0),0);
-  const utilMes=_calcUtilidadVentas(mes);
-  const totalHistorico=activas.reduce((s,v)=>s+(+v.total_iva||0),0);
-  const utilHistorico=_calcUtilidadVentas(activas);
+  const todasVentas=getVentas();
   const utilColor=(u)=>u>=0?'#10b981':'#ef4444';
+
+  // Ventas activas filtradas por período
+  const activas=todasVentas.filter(v=>v.estado!=='anulada');
+  const periodo=_vtaFiltrarPorFecha(activas);
+
+  // Métricas del período seleccionado
+  const totalPer=periodo.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const netoPer=periodo.reduce((s,v)=>s+(+v.total||0),0);
+  const utilPer=_calcUtilidadVentas(periodo);
+
+  // Totales históricos
+  const totalHist=activas.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const utilHist=_calcUtilidadVentas(activas);
+
+  // Desglose por método de pago (período)
+  const metodoInfo={efectivo:{icon:'💵',label:'Efectivo'},transfer:{icon:'🏦',label:'Transferencia'},transferencia:{icon:'🏦',label:'Transferencia'},tarjeta:{icon:'💳',label:'Tarjeta'},debito:{icon:'💳',label:'Débito'},credito:{icon:'💳',label:'Crédito'}};
+  const metodosMap={};
+  periodo.forEach(v=>{
+    const k=v.metodo_pago||'otro';
+    if(!metodosMap[k]) metodosMap[k]={total:0,count:0};
+    metodosMap[k].total+=(+v.total_iva||0);
+    metodosMap[k].count++;
+  });
+  const metodosSorted=Object.entries(metodosMap).sort((a,b)=>b[1].total-a[1].total);
+
+  // Counts para tabs (aplica filtro de fecha también)
+  const counts={};
+  ['todas','pendiente','pagada','anulada'].forEach(e=>{
+    const base=e==='todas'?todasVentas:todasVentas.filter(v=>v.estado===e);
+    counts[e]=_vtaFiltrarPorFecha(base).length;
+  });
+
+  const periodoLabel=_vtaPeriodoLabel();
+  const periodos=[['hoy','Hoy'],['mes','Este mes'],['año','Este año'],['todo','Todo'],['rango','Rango']];
+
   document.getElementById('page-content').innerHTML=`
-  <!-- Fila 1: Mes actual -->
+
+  <!-- Filtro de período -->
+  <div class="card" style="padding:11px 16px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <!-- Segmentado izquierda -->
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400);flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div style="display:flex;border:1.5px solid var(--gray-200);border-radius:9px;overflow:hidden">
+          ${[['hoy','Hoy'],['mes','Mes'],['año','Año'],['todo','Todo']].map(([k,l],i)=>`
+            <button onclick="vtaSetPeriodo('${k}')"
+              style="padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer;border:none;${i>0?'border-left:1.5px solid var(--gray-200);':''}background:${_vtaPeriodo===k?'#111827':'#fff'};color:${_vtaPeriodo===k?'#fff':'var(--gray-600)'};transition:all .15s">
+              ${l}
+            </button>`).join('')}
+        </div>
+      </div>
+      <!-- Rango fechas derecha (siempre visible) -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400)"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="date" id="vta-desde" value="${_vtaDesde}"
+            style="border:none;outline:none;font-size:12px;color:var(--gray-700);background:transparent;width:120px">
+        </div>
+        <span style="font-size:12px;color:var(--gray-400)">—</span>
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400)"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="date" id="vta-hasta" value="${_vtaHasta}"
+            style="border:none;outline:none;font-size:12px;color:var(--gray-700);background:transparent;width:120px">
+        </div>
+        <button onclick="vtaAplicarRango()"
+          style="padding:6px 14px;background:#111827;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">
+          Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fila 1: Métricas del período -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px">
     <div class="card" style="padding:16px 20px;border-top:3px solid #10b981">
-      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">VENTAS DEL MES <span style="font-weight:400">(c/IVA)</span></div>
-      <div style="font-size:24px;font-weight:800;color:#10b981">${fmt$(totalMes)}</div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">${mes.length} venta${mes.length!==1?'s':''}</div>
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:2px">VENTAS <span style="font-weight:400">(c/IVA)</span></div>
+      <div style="font-size:10px;color:var(--primary);margin-bottom:6px;font-weight:600">${periodoLabel}</div>
+      <div style="font-size:24px;font-weight:800;color:#10b981">${fmt$(totalPer)}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">${periodo.length} venta${periodo.length!==1?'s':''}</div>
     </div>
     <div class="card" style="padding:16px 20px;border-top:3px solid #0ea5e9">
-      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">VENTAS NETAS DEL MES <span style="font-weight:400">(sin IVA)</span></div>
-      <div style="font-size:24px;font-weight:800;color:#0ea5e9">${fmt$(netoMes)}</div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">IVA: ${fmt$(totalMes-netoMes)}</div>
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:2px">NETO <span style="font-weight:400">(sin IVA)</span></div>
+      <div style="font-size:10px;color:var(--primary);margin-bottom:6px;font-weight:600">${periodoLabel}</div>
+      <div style="font-size:24px;font-weight:800;color:#0ea5e9">${fmt$(netoPer)}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">IVA: ${fmt$(totalPer-netoPer)}</div>
     </div>
     <div class="card" style="padding:16px 20px;border-top:3px solid #8b5cf6">
-      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">UTILIDAD NETA DEL MES</div>
-      <div style="font-size:24px;font-weight:800;color:${utilColor(utilMes)}">${fmt$(utilMes)}</div>
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:2px">UTILIDAD NETA</div>
+      <div style="font-size:10px;color:var(--primary);margin-bottom:6px;font-weight:600">${periodoLabel}</div>
+      <div style="font-size:24px;font-weight:800;color:${utilColor(utilPer)}">${fmt$(utilPer)}</div>
       <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Neto − costo de productos</div>
     </div>
   </div>
-  <!-- Fila 2: Histórico total -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+
+  <!-- Fila 2: Métodos de pago + Histórico -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+    <!-- Métodos de pago -->
     <div class="card" style="padding:16px 20px">
-      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">TOTAL VENTAS HISTÓRICAS</div>
-      <div style="font-size:24px;font-weight:800;color:var(--gray-800)">${activas.length}</div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Todas las ventas registradas</div>
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:12px">MÉTODOS DE PAGO — ${periodoLabel}</div>
+      ${metodosSorted.length===0
+        ? `<div style="font-size:13px;color:var(--gray-400);text-align:center;padding:12px 0">Sin ventas en este período</div>`
+        : metodosSorted.map(([k,{total,count}])=>{
+            const pct=totalPer>0?Math.round(total/totalPer*100):0;
+            const info=metodoInfo[k]||{icon:'💰',label:k};
+            return `<div style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span style="font-size:13px;font-weight:600;color:var(--gray-700)">${info.icon} ${info.label}</span>
+                <span style="font-size:13px;font-weight:700;color:var(--gray-800)">${fmt$(total)}</span>
+              </div>
+              <div style="height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${pct}%;background:var(--primary);border-radius:3px;transition:width .3s"></div>
+              </div>
+              <div style="font-size:11px;color:var(--gray-400);margin-top:3px">${count} venta${count!==1?'s':''} · ${pct}%</div>
+            </div>`;
+          }).join('')
+      }
     </div>
-    <div class="card" style="padding:16px 20px">
-      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">ACUMULADO HISTÓRICO <span style="font-weight:400">(c/IVA)</span></div>
-      <div style="font-size:24px;font-weight:800;color:var(--primary)">${fmt$(totalHistorico)}</div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Suma de todas las ventas</div>
-    </div>
-    <div class="card" style="padding:16px 20px">
-      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px;margin-bottom:6px">UTILIDAD HISTÓRICA TOTAL</div>
-      <div style="font-size:24px;font-weight:800;color:${utilColor(utilHistorico)}">${fmt$(utilHistorico)}</div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Neto acumulado − costo total</div>
+
+    <!-- Histórico -->
+    <div class="card" style="padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:10px;color:var(--gray-400);font-weight:700;letter-spacing:.5px">RESUMEN HISTÓRICO</div>
+      <div>
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:3px">Total ventas registradas</div>
+        <div style="font-size:22px;font-weight:800;color:var(--gray-800)">${activas.length}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:3px">Acumulado histórico (c/IVA)</div>
+        <div style="font-size:22px;font-weight:800;color:var(--primary)">${fmt$(totalHist)}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:3px">Utilidad histórica total</div>
+        <div style="font-size:22px;font-weight:800;color:${utilColor(utilHist)}">${fmt$(utilHist)}</div>
+      </div>
     </div>
   </div>
+
+  <!-- Tabla de ventas -->
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--gray-100);flex-wrap:wrap;gap:10px">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -2062,7 +2188,7 @@ function _renderHistorial(){
         style="padding:7px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;width:220px">
     </div>
     <div id="vta-table">
-      ${renderVentasTable(_vtaFiltro==='todas'?ventas:ventas.filter(v=>v.estado===_vtaFiltro))}
+      ${renderVentasTable(_vtaFiltrarPorFecha(_vtaFiltro==='todas'?todasVentas:todasVentas.filter(v=>v.estado===_vtaFiltro)))}
     </div>
   </div>`;
 }
@@ -2091,7 +2217,8 @@ function renderVentasTable(ventas){
 function filtrarVentas(q){
   q=q.toLowerCase();
   const base=_vtaFiltro==='todas'?getVentas():getVentas().filter(v=>v.estado===_vtaFiltro);
-  const res=q?base.filter(v=>(v.numero||'').toLowerCase().includes(q)||(v.cliente||'').toLowerCase().includes(q)):base;
+  const porFecha=_vtaFiltrarPorFecha(base);
+  const res=q?porFecha.filter(v=>(v.numero||'').toLowerCase().includes(q)||(v.cliente||'').toLowerCase().includes(q)):porFecha;
   document.getElementById('vta-table').innerHTML=renderVentasTable(res);
 }
 
