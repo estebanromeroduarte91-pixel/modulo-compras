@@ -953,6 +953,8 @@ async function _iniciarApp(user){
   document.getElementById('topbar-empresa').textContent = empresaNombre;
   document.getElementById('sidebar-user-info').innerHTML = `<span style="font-weight:600">${_currentUserNombre}</span><br><span style="font-size:10px;opacity:.65">${_ROLES_LABEL[_currentRole]||_currentRole}</span>`;
   _applyRoleAccess();
+  // Cargar estado del taller para que POS tenga acceso a órdenes desde el arranque
+  try { tp_loadState(); } catch(e){}
   _currentRole === 'tecnico' ? navTaller('orders','Taller — Órdenes') : nav('dashboard');
 }
 
@@ -1517,6 +1519,10 @@ function posBuscarProd(q){
 
 function posBuscarOrden(q){
   const drop=document.getElementById('pos-order-drop'); if(!drop) return;
+  // Fallback: si tp_orders no está cargado aún, leerlo directo desde DB
+  if(!tp_orders||!tp_orders.length){
+    try{ tp_orders=JSON.parse(DB.get('tp_orders')||'[]'); }catch(e){ tp_orders=[]; }
+  }
   const orders=(tp_orders||[]).filter(o=>o.status!=='Entregado');
   const ql=q.trim().toLowerCase();
   const matches=ql
