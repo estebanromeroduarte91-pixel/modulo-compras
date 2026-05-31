@@ -1008,6 +1008,9 @@ function _tradError(msg){
 // UTILS
 // ─────────────────────────────────────────────
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7) }
+// Escapa caracteres especiales para usar en atributos HTML (value=, data-*, etc.)
+// Previene errores con nombres que tienen comillas simples, dobles u otros caracteres especiales
+function escAttr(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function fmt$( n ){ return '$'+Number(n||0).toLocaleString('es-CL') }
 function fmtDate(d){ if(!d)return'—'; const dt=new Date(d); return dt.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'}) }
 function today(){ return new Date().toISOString().slice(0,10) }
@@ -1771,8 +1774,9 @@ function buscarClienteVta(q){
     :clientes.slice(0,8);
   if(!matches.length){ drop.style.display='none'; return; }
   drop.innerHTML=matches.map(c=>`<div class="prod-drop-item"
-    onmousedown="selClienteVta('${c.nombre} ${c.apellido}')"
-    ontouchstart="selClienteVta('${c.nombre} ${c.apellido}')">
+    data-nombre="${escAttr((c.nombre+' '+c.apellido).trim())}"
+    onmousedown="selClienteVta(this.dataset.nombre)"
+    ontouchstart="selClienteVta(this.dataset.nombre)">
     <span class="prod-name">${c.nombre} ${c.apellido}</span>
     <span style="font-size:11px;color:var(--gray-400)">${c.rut||c.email||''}</span>
   </div>`).join('');
@@ -2964,7 +2968,7 @@ function modalNuevoKit(editId){
   const renderCompRows=()=>comps.map((c,i)=>`
     <tr id="kcomp-row-${i}">
       <td style="padding:5px 8px">
-        <input type="text" id="kcomp-nom-${i}" value="${c.nombre||''}" placeholder="Ej: Pantalla OLED, Cámara trasera…"
+        <input type="text" id="kcomp-nom-${i}" value="${escAttr(c.nombre||'')}" placeholder="Ej: Pantalla OLED, Cámara trasera…"
           style="width:100%" oninput="autoCapNombre(this)">
       </td>
       <td style="padding:5px 4px">
@@ -2986,7 +2990,7 @@ function modalNuevoKit(editId){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group" style="margin:0">
           <label>Nombre del equipo <span style="color:var(--danger)">*</span></label>
-          <input id="kit-nombre" type="text" value="${k.nombre||''}" placeholder="Ej: iPhone 13, MacBook Pro 14"
+          <input id="kit-nombre" type="text" value="${escAttr(k.nombre||'')}" placeholder="Ej: iPhone 13, MacBook Pro 14"
             oninput="autoCapNombre(this);filtrarEnlaceKits(this.value);posicionarEnlaceDrop()"
             onfocus="filtrarEnlaceKits(this.value);posicionarEnlaceDrop()"
             onblur="setTimeout(()=>{const r=document.getElementById('kit-enlace-results');if(r)r.style.display='none';},300)">
@@ -3113,7 +3117,7 @@ function aplicarEnlaceKit(enlace){
   window._kCompCount=0;
   prods.forEach(p=>{
     const i=window._kCompCount++;
-    const nombre=(p.nombre||'').replace(/"/g,'&quot;');
+    const nombre=escAttr(p.nombre||'');
     tbody.insertAdjacentHTML('beforeend',`<tr id="kcomp-row-${i}">
       <td style="padding:5px 8px"><input type="text" id="kcomp-nom-${i}" value="${nombre}" placeholder="Nombre del componente..." style="width:100%" oninput="autoCapNombre(this)"></td>
       <td style="padding:5px 4px"><input type="number" id="kcomp-qty-${i}" value="1" min="1" style="width:60px;text-align:center"></td>
@@ -5359,7 +5363,7 @@ function renderCategorias(){
           <p style="font-size:12px;color:var(--gray-500);margin:0 0 12px;min-height:16px">${subcatPreview||'Sin subcategorías'}</p>
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span style="font-size:11.5px;background:var(--gray-100);color:var(--gray-500);padding:2px 8px;border-radius:20px">${c.subcats.length} subcat${c.subcats.length!==1?'s':''}</span>
-            <button onclick="pfGoToCat('${c.nombre.replace(/'/g,"&#39;")}')" style="font-size:11.5px;color:var(--primary);font-weight:500;background:none;border:none;cursor:pointer;padding:0">Ver productos →</button>
+            <button data-cat="${escAttr(c.nombre)}" onclick="pfGoToCat(this.dataset.cat)" style="font-size:11.5px;color:var(--primary);font-weight:500;background:none;border:none;cursor:pointer;padding:0">Ver productos →</button>
           </div>
         </div>`;
       }).join('')}
@@ -9494,7 +9498,7 @@ function tp_renderClients(){
     const sh=open>0?`<span style="background:var(--amber-bg);color:var(--amber);font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:10px">${open} abierta${open!==1?'s':''}</span>`:`<span style="background:var(--surface2);color:var(--text3);font-size:10.5px;padding:2px 7px;border-radius:10px">${c.orders.length} total</span>`;
     const initials=c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const editData=JSON.stringify({nombre:c.nombre,tel:c.tel||'',rut:c.rut||'',email:c.email||'',orders:[]}).replace(/"/g,'&quot;');
-    return `<tr style="cursor:pointer" onclick="tp_openClientSearch('${c.nombre.replace(/'/g,"\\'")}')">
+    return `<tr style="cursor:pointer" data-nombre="${escAttr(c.nombre)}" onclick="tp_openClientSearch(this.dataset.nombre)">
       <td><div style="display:flex;align-items:center;gap:9px"><div style="width:32px;height:32px;border-radius:50%;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex-shrink:0">${initials||'?'}</div><span style="font-weight:500">${c.nombre}</span></div></td>
       <td style="font-size:12px;color:var(--text2)">${c.rut||'—'}</td>
       <td style="font-size:12.5px">${c.tel||'—'}</td>
@@ -9502,7 +9506,7 @@ function tp_renderClients(){
       <td>${sh}</td>
       <td style="font-size:12px;color:var(--text3)">${c.lastFecha?tp_fmtDate(c.lastFecha):'—'}</td>
       <td style="display:flex;gap:5px;align-items:center">
-        <button class="btn btn-default btn-sm" onclick="event.stopPropagation();tp_openClientSearch('${c.nombre.replace(/'/g,"\\'")}')">Ver órdenes</button>
+        <button class="btn btn-default btn-sm" data-nombre="${escAttr(c.nombre)}" onclick="event.stopPropagation();tp_openClientSearch(this.dataset.nombre)">Ver órdenes</button>
         <button class="icon-btn" onclick="event.stopPropagation();tp_openEditClient(${editData})" style="color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       </td>
     </tr>`;
@@ -9831,7 +9835,7 @@ async function renderSysUsuarios(){
             <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;${p.activo?'background:#f0fdf4;color:#166534':'background:#fef2f2;color:#991b1b'}">${p.activo?'Activo':'Inactivo'}</span>
             ${p.id !== _currentUserId ? `
               <button onclick="sysToggleActivo('${p.id}',${!p.activo})" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">${p.activo?'Desactivar':'Activar'}</button>
-              <button onclick="sysEditRole('${p.id}','${p.role}','${p.nombre}')" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">Cambiar rol</button>
+              <button data-uid="${p.id}" data-role="${p.role}" data-nombre="${escAttr(p.nombre)}" onclick="sysEditRole(this.dataset.uid,this.dataset.role,this.dataset.nombre)" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit">Cambiar rol</button>
             ` : `<span style="font-size:11px;color:var(--text3);padding:0 4px">(tú)</span>`}
           </div>
         </div>`).join('');
