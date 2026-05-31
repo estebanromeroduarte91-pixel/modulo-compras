@@ -1258,13 +1258,34 @@ function renderDashboard(){
   const recentVentas=ventas.filter(v=>v.estado!=='anulada').slice(-5).reverse();
   const recentGastos=gastos.slice(-5).reverse();
 
+  // Ventas del mes por sucursal
+  const bodegas=getBodegas();
+  const ventasMesArr=ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesActual));
+  const branchSales=bodegas.map(b=>{
+    const bv=ventasMesArr.filter(v=>v.branchId===b.id);
+    return {nombre:b.nombre||b.name||'Sin nombre',total:bv.reduce((s,v)=>s+(+v.total_iva||0),0),count:bv.length};
+  });
+  const sinSucursal=ventasMesArr.filter(v=>!v.branchId);
+  if(sinSucursal.length) branchSales.push({nombre:'Sin sucursal',total:sinSucursal.reduce((s,v)=>s+(+v.total_iva||0),0),count:sinSucursal.length,faded:true});
+
   document.getElementById('page-content').innerHTML=`
 <div class="kpi-grid">
-    <div class="kpi-card green"><div class="kpi-label">Ventas del mes</div><div class="kpi-value">${fmt$(ventasMes)}</div><div class="kpi-sub">${ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesActual)).length} ventas</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Ventas del mes</div><div class="kpi-value">${fmt$(ventasMes)}</div><div class="kpi-sub">${ventasMesArr.length} ventas</div></div>
     <div class="kpi-card"><div class="kpi-label">Gastos del mes</div><div class="kpi-value">${fmt$(gastosMes)}</div><div class="kpi-sub">${gastos.filter(g=>g.fecha&&g.fecha.startsWith(mesActual)).length} registros</div></div>
     <div class="kpi-card orange"><div class="kpi-label">Compras del mes</div><div class="kpi-value">${fmt$(ocsMes)}</div><div class="kpi-sub">${ocs.filter(o=>o.fecha&&o.fecha.startsWith(mesActual)).length} órdenes</div></div>
     <div class="kpi-card"><div class="kpi-label">OCs Activas</div><div class="kpi-value">${ocActivas}</div><div class="kpi-sub">${provs.length} proveedores · ${prods.length} productos</div></div>
   </div>
+  ${bodegas.length?`<div class="card" style="margin-bottom:20px">
+    <div class="card-header"><h3>🏪 Ventas del mes por sucursal</h3></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0;border-top:1px solid var(--gray-100)">
+      ${branchSales.map((b,i)=>`
+        <div style="padding:16px 20px;${i>0?'border-left:1px solid var(--gray-100)':''}${b.faded?'opacity:.55':''}">
+          <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${b.nombre}</div>
+          <div style="font-size:22px;font-weight:700;color:var(--gray-800)">${fmt$(b.total)}</div>
+          <div style="font-size:12px;color:var(--gray-400);margin-top:2px">${b.count} venta${b.count!==1?'s':''}</div>
+        </div>`).join('')}
+    </div>
+  </div>`:''}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div class="card">
       <div class="card-header"><h3>Últimas Ventas</h3><button class="btn btn-sm btn-outline" onclick="nav('ventas')">Ver todas</button></div>
@@ -1343,6 +1364,7 @@ let _posDocumento='boleta';
 let _posMetodo='efectivo';
 let _posNumBuf='';
 let _posLinkedOrderId=null;
+let _posBranchId='';
 let _posClienteInfo={rut:'',tel:'',email:''};
 
 function renderVentas(){
@@ -1816,6 +1838,10 @@ function posLimpiar(){
 function posCobrar(){
   if(!_posItems.length){ toast('Agrega al menos un producto','error'); return; }
   const total=_posTotalConIVA();
+  const bodegas=getBodegas();
+  const branchOpts=bodegas.length
+    ? bodegas.map(b=>`<option value="${b.id}"${_posBranchId===b.id?' selected':''}>${b.nombre||b.name}</option>`).join('')
+    : '<option value="">Sin sucursales</option>';
   showModal(`
   <div class="modal-bg" onclick="if(event.target===this)closeModal()">
   <div class="modal" style="max-width:360px">
@@ -1826,6 +1852,12 @@ function posCobrar(){
         <div style="font-size:32px;font-weight:800;color:var(--primary)">${fmt$(total)}</div>
         <div style="font-size:12px;color:var(--gray-400)">${_posItems.length} producto(s) · ${_posDocumento}</div>
       </div>
+      ${bodegas.length?`<div>
+        <div style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px">Sucursal</div>
+        <select id="cob-branch" onchange="_posBranchId=this.value" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;color:var(--gray-700)">
+          <option value="">Sin sucursal</option>${branchOpts}
+        </select>
+      </div>`:''}
       <div>
         <div style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px">Método de pago</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -1876,12 +1908,14 @@ function posSaveVenta(){
     if(idx>=0){ tp_orders[idx].status='Entregado'; DB.set('tp_orders',JSON.stringify(tp_orders)); }
     _posLinkedOrderId=null;
   }
+  const selBranch=getBodegas().find(b=>b.id===_posBranchId);
   const venta={id:uid(),numero:'VTA-'+String(DB.nextVenta()).padStart(5,'0'),estado:'pagada',
     fecha:today(),cliente:_posCliente||'Cliente genérico',metodo_pago:_posMetodo,
+    branchId:_posBranchId||'',branchNombre:selBranch?(selBranch.nombre||selBranch.name||''):'',
     items,total,total_iva,fecha_creacion:today()};
   const ventas=getVentas(); ventas.push(venta); setVentas(ventas);
   crearAsientoVenta(venta);
-  _posItems=[]; _posCliente=''; _posNumBuf=''; _posDocumento='boleta'; _posClienteInfo={rut:'',tel:'',email:''};
+  _posItems=[]; _posCliente=''; _posNumBuf=''; _posDocumento='boleta'; _posClienteInfo={rut:'',tel:'',email:''}; _posBranchId='';
   closeModal(); toast(`Venta ${venta.numero} registrada ✓`,'success'); renderVentas();
 }
 
