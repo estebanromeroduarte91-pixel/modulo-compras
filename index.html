@@ -729,7 +729,11 @@ select{cursor:pointer}
     <p>Módulo de Abastecimiento</p>
   </div>
   <div class="nav-item active" id="nav-dashboard" onclick="nav('dashboard')"><span class="icon">📊</span> Dashboard</div>
-  <div class="nav-item" id="nav-ventas" onclick="nav('ventas')"><span class="icon">🛒</span> Ventas</div>
+  <div class="nav-item-parent" id="nav-ventas-parent" onclick="toggleVentas()"><span class="icon">🛒</span> Ventas<span class="arrow">▶</span></div>
+  <div class="nav-submenu" id="submenu-ventas">
+    <div class="nav-subitem" id="nav-ventas" onclick="navVentas('pos')"><span class="icon">🛒</span> POS / Historial</div>
+    <div class="nav-subitem" id="nav-ventas-config" onclick="navVentas('config')"><span class="icon">⚙️</span> Configuración</div>
+  </div>
   <div class="nav-item-parent" id="nav-taller-parent" onclick="toggleTaller()"><span class="icon">🔧</span> Taller<span class="arrow">▶</span></div>
   <div class="nav-submenu" id="submenu-taller">
     <div class="nav-subitem" id="nav-taller-orders" onclick="navTaller('orders','Taller — Órdenes')"><span class="icon">📋</span> Órdenes</div>
@@ -963,13 +967,13 @@ function _applyRoleAccess(){
   const _hide = (...ids) => ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
 
   if(_currentRole === 'tecnico'){
-    _hide('nav-dashboard','nav-ventas','nav-clientes','nav-proveedores',
+    _hide('nav-dashboard','nav-ventas-parent','submenu-ventas','nav-clientes','nav-proveedores',
           'nav-inventario-parent','nav-kits','nav-bodegas','nav-estadisticas',
           'nav-contabilidad','nav-taller-branches','nav-taller-settings',
           'nav-taller-usuarios','nav-sys-usuarios');
   }
   if(_currentRole === 'vendedor'){
-    _hide('nav-ventas','nav-proveedores','nav-inventario-parent','nav-kits',
+    _hide('nav-proveedores','nav-inventario-parent','nav-kits',
           'nav-bodegas','nav-estadisticas','nav-contabilidad',
           'nav-taller-branches','nav-taller-usuarios','nav-taller-settings',
           'nav-taller-equipo','nav-sys-usuarios');
@@ -1043,6 +1047,13 @@ const getOCLog = ()=> DB.get('oc_log')||[];
 // Log is append-only — never expose a setter that allows deletion
 const getClientes = ()=> DB.get('clientes')||[];
 const setClientes = v=> DB.set('clientes',v);
+const METODOS_PAGO_DEFAULT=[
+  {id:'efectivo',icon:'💵',label:'Efectivo',desc:'Billetes y monedas'},
+  {id:'tarjeta',icon:'💳',label:'Tarjeta',desc:'Débito / Crédito'},
+  {id:'transfer',icon:'🏦',label:'Transferencia',desc:'Banco / Wallet'},
+];
+const getMetodosPago=()=>DB.get('metodos_pago')||METODOS_PAGO_DEFAULT;
+const setMetodosPago=v=>DB.set('metodos_pago',v);
 const getKits = ()=> DB.get('kits')||[];
 const setKits = v=> DB.set('kits',v);
 const getTraslados = ()=>{ try{ return JSON.parse(DB.get('traslados')||'[]'); }catch(e){ return []; } };
@@ -1119,7 +1130,8 @@ const setCatCuentaMap=v=>DB.set('cat_cuenta',v);
 // ─────────────────────────────────────────────
 let currentPage = 'dashboard';
 const pageTitles = {
-  dashboard:'Dashboard',oc:'Compras',gastos:'Gastos',contabilidad:'Contabilidad',
+  dashboard:'Dashboard',ventas:'Ventas','ventas-config':'Ventas — Configuración',
+  oc:'Compras',gastos:'Gastos',contabilidad:'Contabilidad',
   proveedores:'Proveedores',productos:'Productos',categorias:'Categorías',bodegas:'Bodegas',estadisticas:'Estadísticas',
   traslados:'Traslados',taller:'Taller — Órdenes de Servicio','sys-usuarios':'Accesos'
 };
@@ -1142,6 +1154,30 @@ function navTaller(subpage, title){
   document.getElementById('topbar-actions').innerHTML='';
   if(!alreadyTaller){closeModal();renderTaller();}
   tp_showPage(subpage, null);
+}
+function toggleVentas(){
+  const parent=document.getElementById('nav-ventas-parent');
+  const submenu=document.getElementById('submenu-ventas');
+  if(!parent||!submenu) return;
+  const isOpen=submenu.classList.contains('open');
+  submenu.classList.toggle('open',!isOpen);
+  parent.classList.toggle('open',!isOpen);
+  // Si se abre y no hay página activa de ventas, navegar al POS
+  if(!isOpen) navVentas('pos');
+}
+function navVentas(sub){
+  currentPage=sub==='config'?'ventas-config':'ventas';
+  document.querySelectorAll('.nav-item,.nav-subitem,.nav-item-parent').forEach(n=>n.classList.remove('active'));
+  document.getElementById('submenu-ventas')?.classList.add('open');
+  document.getElementById('nav-ventas-parent')?.classList.add('open');
+  const activeId=sub==='config'?'nav-ventas-config':'nav-ventas';
+  document.getElementById(activeId)?.classList.add('active');
+  const tb=document.getElementById('topbar'); if(tb) tb.style.display='';
+  document.getElementById('page-title').textContent=sub==='config'?'Ventas — Configuración':'Ventas';
+  document.getElementById('topbar-actions').innerHTML='';
+  closeModal();
+  if(sub==='config') renderVentasConfig();
+  else renderVentas();
 }
 function toggleInventario(){
   const parent=document.getElementById('nav-inventario-parent');
@@ -1184,6 +1220,11 @@ function nav(page){
       if(cp) cp.classList.add('active');
     }
   }
+  // Abrir submenú ventas si corresponde
+  if(page==='ventas'||page==='ventas-config'){
+    document.getElementById('submenu-ventas')?.classList.add('open');
+    document.getElementById('nav-ventas-parent')?.classList.add('open');
+  }
   document.getElementById('page-title').textContent=pageTitles[page]||page;
   document.getElementById('topbar-actions').innerHTML='';
   closeModal();
@@ -1195,7 +1236,7 @@ function nav(page){
   }
   // Restaurar topbar al salir de taller
   const tb=document.getElementById('topbar');if(tb)tb.style.display='';
-  ({dashboard:renderDashboard,ventas:renderVentas,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
+  ({dashboard:renderDashboard,ventas:renderVentas,'ventas-config':renderVentasConfig,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
     productos:renderProductos,categorias:renderCategorias,kits:renderKits,traslados:renderTraslados,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad,
     'sys-usuarios':renderSysUsuarios
   }[page]||renderDashboard)();
@@ -1311,6 +1352,9 @@ function renderVentas(){
 function setVtaTab(tab){ _vtaTab=tab; renderVentas(); }
 
 function _renderPOS(){
+  // Asegurar que el método seleccionado sea válido
+  const _mps=getMetodosPago();
+  if(!_mps.find(m=>m.id===_posMetodo)) _posMetodo=_mps[0]?.id||'efectivo';
   const total=_posTotalConIVA();
   document.getElementById('page-content').innerHTML=`
   <div style="display:grid;grid-template-columns:1fr 330px;gap:0;background:#fff;border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;height:calc(100vh - 136px)">
@@ -1388,14 +1432,14 @@ function _renderPOS(){
         <div>
           <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Método de pago</div>
           <div style="display:flex;flex-direction:column;gap:5px">
-            ${[{k:'efectivo',icon:'💵',label:'Efectivo',desc:'Billetes y monedas'},{k:'tarjeta',icon:'💳',label:'Tarjeta',desc:'Débito / Crédito'},{k:'transfer',icon:'🏦',label:'Transferencia',desc:'Banco / Wallet'}].map(({k,icon,label,desc})=>{
+            ${getMetodosPago().map(({id:k,icon,label,desc})=>{
               const active=k===_posMetodo;
               return `<button data-metodo="${k}" onclick="_posMetodo='${k}';posRenderResumen()"
                 style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:${active?'2px solid var(--primary)':'1.5px solid var(--gray-200)'};background:${active?'var(--primary-light,#eff6ff)':'#fff'};text-align:left;cursor:pointer;width:100%;box-sizing:border-box;transition:border .1s">
                 <span style="font-size:17px;flex-shrink:0">${icon}</span>
                 <div style="flex:1;min-width:0">
-                  <div style="font-size:12px;font-weight:700;color:${active?'var(--primary)':'var(--gray-700)'};line-height:1.3">${label}</div>
-                  <div style="font-size:10px;color:var(--gray-400);line-height:1.2">${desc}</div>
+                  <div style="font-size:12px;font-weight:700;color:${active?'var(--primary)':'var(--gray-700)'};line-height:1.3">${escAttr(label)}</div>
+                  <div style="font-size:10px;color:var(--gray-400);line-height:1.2">${escAttr(desc||'')}</div>
                 </div>
                 ${active?`<span style="color:var(--primary);font-size:14px;font-weight:800">✓</span>`:''}
               </button>`;
@@ -1496,7 +1540,7 @@ function posRenderCart(){ const c=document.getElementById('pos-cart'); if(c) c.i
 function posRenderResumen(){
   const t=document.getElementById('pos-totales'); if(t) t.innerHTML=_renderPOSTotales();
   const b=document.getElementById('pos-btn-cobrar'); if(b) b.textContent='Cobrar '+fmt$(_posTotalConIVA());
-  ['efectivo','tarjeta','transfer'].forEach(k=>{
+  getMetodosPago().forEach(({id:k})=>{
     const btn=document.querySelector(`[data-metodo="${k}"]`);
     if(!btn) return;
     const active=k===_posMetodo;
@@ -1772,11 +1816,11 @@ function posCobrar(){
       </div>
       <div>
         <div style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px">Método de pago</div>
-        <div style="display:flex;gap:8px">
-          ${[['efectivo','💵 Efectivo'],['tarjeta','💳 Tarjeta'],['transfer','🏦 Trans.']].map(([k,l])=>`
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${getMetodosPago().map(({id:k,icon,label})=>`
             <button id="cob-${k}" onclick="posCobrarMetodo('${k}')"
-              style="flex:1;padding:10px 4px;font-size:12px;border-radius:8px;border:2px solid ${_posMetodo===k?'var(--primary)':'var(--gray-200)'};background:${_posMetodo===k?'var(--primary-light,#eff6ff)':'#fff'};color:${_posMetodo===k?'var(--primary)':'var(--gray-600)'};font-weight:600;cursor:pointer">
-              ${l}</button>`).join('')}
+              style="flex:1;min-width:80px;padding:10px 6px;font-size:12px;border-radius:8px;border:2px solid ${_posMetodo===k?'var(--primary)':'var(--gray-200)'};background:${_posMetodo===k?'var(--primary-light,#eff6ff)':'#fff'};color:${_posMetodo===k?'var(--primary)':'var(--gray-600)'};font-weight:600;cursor:pointer">
+              ${icon} ${escAttr(label)}</button>`).join('')}
         </div>
       </div>
     </div>
@@ -1789,7 +1833,7 @@ function posCobrar(){
 
 function posCobrarMetodo(m){
   _posMetodo=m;
-  ['efectivo','tarjeta','transfer'].forEach(k=>{
+  getMetodosPago().forEach(({id:k})=>{
     const btn=document.getElementById('cob-'+k); if(!btn) return;
     const active=k===m;
     btn.style.borderColor=active?'var(--primary)':'var(--gray-200)';
@@ -1828,6 +1872,121 @@ function posSaveVenta(){
   _posItems=[]; _posCliente=''; _posNumBuf=''; _posDocumento='boleta'; _posClienteInfo={rut:'',tel:'',email:''};
   closeModal(); toast(`Venta ${venta.numero} registrada ✓`,'success'); renderVentas();
 }
+
+// ─── VENTAS CONFIG ─────────────────────────────
+function renderVentasConfig(){
+  const metodos=getMetodosPago();
+  document.getElementById('topbar-actions').innerHTML='';
+  document.getElementById('page-content').innerHTML=`
+  <div style="max-width:680px">
+    <div class="card">
+      <div style="padding:20px 24px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <h3 style="font-size:16px;font-weight:700;color:var(--gray-800);margin:0">💳 Métodos de pago</h3>
+          <p style="font-size:13px;color:var(--gray-400);margin:4px 0 0">Configura los métodos disponibles en el POS. Arrastrá para reordenar.</p>
+        </div>
+        <button class="btn btn-primary" onclick="modalNuevoMetodoPago()">+ Agregar</button>
+      </div>
+      <div id="metodos-list" style="padding:16px 24px;display:flex;flex-direction:column;gap:10px">
+        ${metodos.map((m,i)=>`
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--gray-200);border-radius:10px;background:#fff">
+          <span style="font-size:24px;flex-shrink:0">${m.icon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700;color:var(--gray-800)">${escAttr(m.label)}</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-top:1px">${escAttr(m.desc||'')}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px">
+            <button onclick="moverMetodoPago(${i},-1)" title="Subir" ${i===0?'disabled':''} style="width:28px;height:28px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:var(--gray-500);opacity:${i===0?'.3':'1'}">↑</button>
+            <button onclick="moverMetodoPago(${i},1)" title="Bajar" ${i===metodos.length-1?'disabled':''} style="width:28px;height:28px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:var(--gray-500);opacity:${i===metodos.length-1?'.3':'1'}">↓</button>
+            <button onclick="modalNuevoMetodoPago('${m.id}')" title="Editar" style="width:28px;height:28px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:13px">✏️</button>
+            <button onclick="eliminarMetodoPago('${m.id}')" title="Eliminar" ${metodos.length<=1?'disabled':''} style="width:28px;height:28px;border:1px solid #fecaca;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#ef4444;opacity:${metodos.length<=1?'.3':'1'}">✕</button>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div style="padding:12px 24px;border-top:1px solid var(--gray-100);background:var(--gray-50);border-radius:0 0 var(--radius) var(--radius)">
+        <p style="font-size:12px;color:var(--gray-400);margin:0">Los cambios se aplican automáticamente en el POS. El primer método de la lista es el predeterminado.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+function modalNuevoMetodoPago(editId){
+  const metodos=getMetodosPago();
+  const m=editId?metodos.find(x=>x.id===editId):{};
+  const isEdit=!!editId;
+  const icons=['💵','💳','🏦','📱','🪙','💰','🎫','💸','🔑','📦','💹','🏧'];
+  const cur=m.icon||'💵';
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h3>${isEdit?'✏️ Editar':'➕ Nuevo'} método de pago</h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group" style="margin:0">
+        <label style="margin-bottom:6px;display:block">Ícono</label>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${icons.map(ico=>`<button type="button" onclick="document.getElementById('mp-icon').value='${ico}';document.querySelectorAll('.mp-ico-btn').forEach(b=>{b.style.background=b.dataset.ico===this.dataset.ico?'#dbeafe':'#fff';b.style.border='1px solid '+(b.dataset.ico===this.dataset.ico?'var(--primary)':'var(--gray-200)')});this.style.background='#dbeafe';this.style.border='1px solid var(--primary)'" data-ico="${ico}" class="mp-ico-btn"
+            style="font-size:20px;width:38px;height:38px;border-radius:8px;cursor:pointer;background:${cur===ico?'#dbeafe':'#fff'};border:1px solid ${cur===ico?'var(--primary)':'var(--gray-200)'};">${ico}</button>`).join('')}
+        </div>
+        <input type="hidden" id="mp-icon" value="${cur}">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Nombre <span style="color:var(--danger)">*</span></label>
+        <input id="mp-label" type="text" placeholder="Ej: Efectivo" value="${escAttr(m.label||'')}" autocomplete="off">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Descripción</label>
+        <input id="mp-desc" type="text" placeholder="Ej: Billetes y monedas" value="${escAttr(m.desc||'')}" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarMetodoPago('${editId||''}')">✅ ${isEdit?'Guardar cambios':'Agregar'}</button>
+    </div>
+  </div></div>`);
+  setTimeout(()=>document.getElementById('mp-label')?.focus(),80);
+}
+
+function guardarMetodoPago(editId){
+  const icon=document.getElementById('mp-icon')?.value||'💵';
+  const label=(document.getElementById('mp-label')?.value||'').trim();
+  const desc=(document.getElementById('mp-desc')?.value||'').trim();
+  if(!label){ toast('El nombre es obligatorio','error'); return; }
+  const metodos=getMetodosPago();
+  if(editId){
+    const idx=metodos.findIndex(m=>m.id===editId);
+    if(idx>=0) metodos[idx]={...metodos[idx],icon,label,desc};
+  } else {
+    metodos.push({id:uid(),icon,label,desc});
+  }
+  setMetodosPago(metodos);
+  closeModal();
+  toast(`Método "${label}" ${editId?'actualizado':'creado'} ✓`,'success');
+  renderVentasConfig();
+}
+
+function eliminarMetodoPago(id){
+  const metodos=getMetodosPago();
+  if(metodos.length<=1){ toast('Debe haber al menos un método','error'); return; }
+  const m=metodos.find(x=>x.id===id);
+  if(!m||!confirm(`¿Eliminar "${m.label}"?`)) return;
+  setMetodosPago(metodos.filter(x=>x.id!==id));
+  if(_posMetodo===id) _posMetodo=getMetodosPago()[0]?.id||'efectivo';
+  toast(`"${m.label}" eliminado`,'success');
+  renderVentasConfig();
+}
+
+function moverMetodoPago(idx,dir){
+  const metodos=getMetodosPago();
+  const ni=idx+dir;
+  if(ni<0||ni>=metodos.length) return;
+  [metodos[idx],metodos[ni]]=[metodos[ni],metodos[idx]];
+  setMetodosPago(metodos);
+  renderVentasConfig();
+}
+// ────────────────────────────────────────────────
 
 function _renderHistorial(){
   const ventas=getVentas();
