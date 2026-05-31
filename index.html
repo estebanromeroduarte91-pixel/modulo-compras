@@ -1294,6 +1294,7 @@ let _posDocumento='boleta';
 let _posMetodo='efectivo';
 let _posNumBuf='';
 let _posLinkedOrderId=null;
+let _posClienteInfo={rut:'',tel:'',email:''};
 
 function renderVentas(){
   document.getElementById('topbar-actions').innerHTML=`
@@ -1310,7 +1311,7 @@ function setVtaTab(tab){ _vtaTab=tab; renderVentas(); }
 function _renderPOS(){
   const total=_posTotalConIVA();
   document.getElementById('page-content').innerHTML=`
-  <div style="display:grid;grid-template-columns:1fr 254px;gap:0;background:#fff;border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;height:calc(100vh - 136px)">
+  <div style="display:grid;grid-template-columns:1fr 330px;gap:0;background:#fff;border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;height:calc(100vh - 136px)">
     <!-- IZQUIERDA: búsquedas + carrito -->
     <div style="display:flex;flex-direction:column;border-right:1px solid var(--gray-100)">
       <!-- Búsquedas -->
@@ -1339,58 +1340,83 @@ function _renderPOS(){
       <div id="pos-cart" style="flex:1;overflow-y:auto">${_renderPOSCart()}</div>
     </div>
     <!-- DERECHA: resumen -->
-    <div style="display:flex;flex-direction:column;background:#fff">
-      <div style="flex:1;padding:14px;display:flex;flex-direction:column;gap:11px;overflow-y:auto">
+    <div style="display:flex;flex-direction:column;background:#fafafa;border-left:1px solid var(--gray-100)">
+      <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:13px;overflow-y:auto">
         <!-- Cliente -->
         <div>
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Cliente</div>
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Cliente</div>
           <div style="position:relative">
             <input id="pos-cliente" type="text" placeholder="Cliente genérico" value="${escAttr(_posCliente)}" autocomplete="off"
               oninput="_posCliente=this.value;posBuscarClientePos(this.value)"
+              onfocus="posShowClienteInfo()"
               onblur="setTimeout(()=>{const d=document.getElementById('pos-cli-drop');if(d)d.style.display='none'},280)"
-              style="width:100%;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box">
+              style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13px;box-sizing:border-box;background:#fff">
             <div id="pos-cli-drop" class="prod-dropdown" style="min-width:100%"></div>
+          </div>
+          <!-- Panel info cliente (expandible) -->
+          <div id="pos-cli-info" style="display:${_posCliente?'block':'none'};margin-top:7px;background:#fff;border:1.5px solid var(--gray-200);border-radius:9px;padding:10px 12px">
+            <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;font-weight:600">Datos del cliente</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:11px;color:var(--gray-400);width:34px;flex-shrink:0">RUT</span>
+                <input id="pos-cli-rut" type="text" placeholder="11.111.111-1" value="${escAttr(_posClienteInfo.rut||'')}"
+                  oninput="_posClienteInfo.rut=this.value"
+                  style="flex:1;padding:4px 9px;border:1px solid var(--gray-200);border-radius:7px;font-size:12px;background:var(--gray-50)">
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:11px;color:var(--gray-400);width:34px;flex-shrink:0">Tel</span>
+                <input id="pos-cli-tel" type="text" placeholder="+56 9 ..." value="${escAttr(_posClienteInfo.tel||'')}"
+                  oninput="_posClienteInfo.tel=this.value"
+                  style="flex:1;padding:4px 9px;border:1px solid var(--gray-200);border-radius:7px;font-size:12px;background:var(--gray-50)">
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:11px;color:var(--gray-400);width:34px;flex-shrink:0">Email</span>
+                <input id="pos-cli-email" type="text" placeholder="correo@..." value="${escAttr(_posClienteInfo.email||'')}"
+                  oninput="_posClienteInfo.email=this.value"
+                  style="flex:1;padding:4px 9px;border:1px solid var(--gray-200);border-radius:7px;font-size:12px;background:var(--gray-50)">
+              </div>
+            </div>
           </div>
         </div>
         <!-- Método de pago -->
         <div>
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Método de pago</div>
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Método de pago</div>
           <div style="display:flex;flex-direction:column;gap:5px">
             ${[{k:'efectivo',icon:'💵',label:'Efectivo',desc:'Billetes y monedas'},{k:'tarjeta',icon:'💳',label:'Tarjeta',desc:'Débito / Crédito'},{k:'transfer',icon:'🏦',label:'Transferencia',desc:'Banco / Wallet'}].map(({k,icon,label,desc})=>{
               const active=k===_posMetodo;
               return `<button data-metodo="${k}" onclick="_posMetodo='${k}';posRenderResumen()"
-                style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;border:${active?'2px solid var(--primary)':'1.5px solid var(--gray-200)'};background:${active?'var(--primary-light,#eff6ff)':'#fff'};text-align:left;cursor:pointer;width:100%;box-sizing:border-box">
-                <span style="font-size:16px;flex-shrink:0">${icon}</span>
+                style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:${active?'2px solid var(--primary)':'1.5px solid var(--gray-200)'};background:${active?'var(--primary-light,#eff6ff)':'#fff'};text-align:left;cursor:pointer;width:100%;box-sizing:border-box;transition:border .1s">
+                <span style="font-size:17px;flex-shrink:0">${icon}</span>
                 <div style="flex:1;min-width:0">
                   <div style="font-size:12px;font-weight:700;color:${active?'var(--primary)':'var(--gray-700)'};line-height:1.3">${label}</div>
                   <div style="font-size:10px;color:var(--gray-400);line-height:1.2">${desc}</div>
                 </div>
-                ${active?`<span style="color:var(--primary);font-size:13px;font-weight:800">✓</span>`:''}
+                ${active?`<span style="color:var(--primary);font-size:14px;font-weight:800">✓</span>`:''}
               </button>`;
             }).join('')}
           </div>
         </div>
         <!-- Documento -->
         <div>
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Documento</div>
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Documento</div>
           <select id="pos-doc" onchange="_posDocumento=this.value"
-            style="width:100%;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;color:var(--gray-700)">
+            style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13px;color:var(--gray-700);background:#fff">
             <option value="boleta" ${_posDocumento==='boleta'?'selected':''}>Boleta electrónica</option>
             <option value="factura" ${_posDocumento==='factura'?'selected':''}>Factura</option>
             <option value="ticket" ${_posDocumento==='ticket'?'selected':''}>Sin documento</option>
           </select>
         </div>
-        <div style="height:1px;background:var(--gray-100)"></div>
+        <div style="height:1px;background:var(--gray-200)"></div>
         <!-- Totales -->
         <div id="pos-totales">${_renderPOSTotales()}</div>
       </div>
-      <div style="padding:12px 14px;border-top:1px solid var(--gray-100)">
+      <div style="padding:14px 16px;border-top:1px solid var(--gray-200);background:#fff">
         <button onclick="posCobrar()" id="pos-btn-cobrar"
-          style="width:100%;padding:13px;background:#111827;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.2px">
+          style="width:100%;padding:14px;background:#111827;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.2px">
           Cobrar ${fmt$(total)}
         </button>
         <button onclick="posLimpiar()"
-          style="width:100%;margin-top:7px;padding:7px;background:transparent;color:var(--gray-400);border:none;font-size:12px;cursor:pointer">
+          style="width:100%;margin-top:8px;padding:8px;background:transparent;color:var(--gray-400);border:none;font-size:12px;cursor:pointer">
           Limpiar carrito
         </button>
       </div>
@@ -1531,7 +1557,11 @@ function posBuscarOrden(q){
 function posAddOrden(orderId){
   const order=(tp_orders||[]).find(o=>o.id===orderId); if(!order) return;
   _posLinkedOrderId=orderId;
-  if(order.nombre){ _posCliente=order.nombre; const inp=document.getElementById('pos-cliente'); if(inp) inp.value=order.nombre; }
+  if(order.nombre){
+    _posCliente=order.nombre;
+    _posClienteInfo={rut:order.rut||'',tel:order.tel||'',email:order.email||''};
+    const inp=document.getElementById('pos-cliente'); if(inp) inp.value=order.nombre;
+  }
   (order.repuestos||[]).forEach(r=>{
     if(!r.name) return;
     const piva=+(r.precio||0);
@@ -1575,10 +1605,24 @@ function posSetDescuento(id, val){
   const c=document.getElementById('pos-cart'); if(c) c.innerHTML=_renderPOSCart();
 }
 
+function posShowClienteInfo(){
+  const panel=document.getElementById('pos-cli-info'); if(!panel) return;
+  panel.style.display='block';
+}
+
 function selPosCliente(nombre){
   _posCliente=nombre;
   const inp=document.getElementById('pos-cliente'); if(inp) inp.value=nombre;
   const drop=document.getElementById('pos-cli-drop'); if(drop) drop.style.display='none';
+  // Buscar info del cliente en la base de datos
+  const cli=getClientes().find(c=>`${c.nombre} ${c.apellido||''}`.trim()===nombre||(c.nombre||'')===(nombre.split(' ')[0]));
+  if(cli){
+    _posClienteInfo={rut:cli.rut||'',tel:cli.tel||'',email:cli.email||''};
+    const rutEl=document.getElementById('pos-cli-rut'); if(rutEl) rutEl.value=cli.rut||'';
+    const telEl=document.getElementById('pos-cli-tel'); if(telEl) telEl.value=cli.tel||'';
+    const emlEl=document.getElementById('pos-cli-email'); if(emlEl) emlEl.value=cli.email||'';
+  }
+  posShowClienteInfo();
 }
 
 function posBuscarClientePos(q){
@@ -1635,7 +1679,7 @@ function posNumpadKey(k){
 
 function posLimpiar(){
   if(_posItems.length&&!confirm('¿Limpiar el carrito?')) return;
-  _posItems=[]; _posCliente=''; _posNumBuf=''; _posLinkedOrderId=null;
+  _posItems=[]; _posCliente=''; _posNumBuf=''; _posLinkedOrderId=null; _posClienteInfo={rut:'',tel:'',email:''};
   renderVentas();
 }
 
@@ -1707,7 +1751,7 @@ function posSaveVenta(){
     items,total,total_iva,fecha_creacion:today()};
   const ventas=getVentas(); ventas.push(venta); setVentas(ventas);
   crearAsientoVenta(venta);
-  _posItems=[]; _posCliente=''; _posNumBuf=''; _posDocumento='boleta';
+  _posItems=[]; _posCliente=''; _posNumBuf=''; _posDocumento='boleta'; _posClienteInfo={rut:'',tel:'',email:''};
   closeModal(); toast(`Venta ${venta.numero} registrada ✓`,'success'); renderVentas();
 }
 
