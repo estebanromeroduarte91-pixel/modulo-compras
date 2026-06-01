@@ -1529,9 +1529,70 @@ function _renderDashboardGlobal(){
     </div>
   </div>
 
-  ${bodegas.length?`<div style="margin-bottom:10px;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Sucursales</div>
+  ${bodegas.length?`
+  <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Ventas por mes</div>
+        <div style="font-size:12px;color:var(--text2)">Últimos 6 meses · por sucursal</div>
+      </div>
+      <div style="display:flex;gap:14px;align-items:center" id="dash-chart-legend"></div>
+    </div>
+    <canvas id="dash-ventas-chart" height="90"></canvas>
+  </div>
+  <div style="margin-bottom:10px;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Sucursales</div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">${branchCards}</div>`
   :'<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px">No hay sucursales creadas. Ve a <b>Configuración → Sucursales</b>.</div>'}`;
+
+  // Renderizar gráfico si hay sucursales
+  if(bodegas.length){
+    setTimeout(()=>{
+      const canvas=document.getElementById('dash-ventas-chart');
+      if(!canvas) return;
+      // Calcular últimos 6 meses
+      const mesesLabels=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      const ultimos6=[];
+      for(let i=5;i>=0;i--){
+        const dd=new Date(); dd.setDate(1); dd.setMonth(dd.getMonth()-i);
+        ultimos6.push({key:dd.toISOString().slice(0,7), label:mesesLabels[dd.getMonth()]});
+      }
+      const colores=['#2563eb','#0f172a','#64748b','#94a3b8','#cbd5e1','#e2e8f0'];
+      const datasets=bodegas.map((b,i)=>{
+        const nombre=b.nombre||b.name||'Sucursal';
+        const data=ultimos6.map(m=>
+          ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(m.key)&&v.branchId===b.id)
+            .reduce((s,v)=>s+(+v.total_iva||0),0)
+        );
+        return {label:nombre, data, backgroundColor:colores[i]||colores[0], borderRadius:4, borderSkipped:false};
+      });
+      // Leyenda
+      const legend=document.getElementById('dash-chart-legend');
+      if(legend) legend.innerHTML=bodegas.map((b,i)=>`<span style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;background:${colores[i]||colores[0]};display:inline-block;border-radius:2px"></span>${b.nombre||b.name}</span>`).join('');
+      // Chart.js — cargar si no está disponible
+      function _buildChart(){
+        if(window.Chart){
+          if(canvas._chartInst) canvas._chartInst.destroy();
+          canvas._chartInst=new Chart(canvas,{
+            type:'bar',
+            data:{labels:ultimos6.map(m=>m.label), datasets},
+            options:{
+              responsive:true, maintainAspectRatio:true,
+              plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const b=ctx.dataset.label;const v=ctx.raw;return b+': $'+Math.round(v/1000).toLocaleString('es-CL')+'K';}}}},
+              scales:{
+                x:{grid:{display:false},border:{display:false},ticks:{color:'#9ca3af',font:{size:11}}},
+                y:{grid:{color:'rgba(0,0,0,.05)'},border:{display:false},ticks:{color:'#9ca3af',font:{size:11},callback:v=>v===0?'$0':'$'+Math.round(v/1000000*10)/10+'M'}}
+              }
+            }
+          });
+        } else {
+          const s=document.createElement('script');
+          s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+          s.onload=_buildChart; document.head.appendChild(s);
+        }
+      }
+      _buildChart();
+    },50);
+  }
 }
 
 function badgeEstado(e){
