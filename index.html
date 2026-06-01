@@ -8480,10 +8480,11 @@ function tp_saveState() {
   } catch(e){}
 }
 // ─── UTILS ───
-function tp_fmtDate(d){if(!d)return'—';return new Date(d+'T12:00:00').toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function tp_parseDate(d){if(!d)return null;const s=String(d).slice(0,10);return new Date(s+'T12:00:00');}
+function tp_fmtDate(d){if(!d)return'—';const dt=tp_parseDate(d);if(!dt||isNaN(dt))return'—';return dt.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});}
 function tp_fmtMoney(v){return v&&v!=='0'?'$'+Number(v).toLocaleString('es-CL'):'$0';}
 function tp_badge(s){return `<span class="badge ${TP_BADGE[s]||'badge-chequeo'}">${s}</span>`;}
-function tp_getOrderAge(o){if(!o.fecha)return 0;const d=new Date(o.fecha+'T12:00:00');return Math.max(0,Math.floor((new Date()-d)/(1000*60*60*24)));}
+function tp_getOrderAge(o){if(!o.fecha)return 0;const d=tp_parseDate(o.fecha);if(!d||isNaN(d))return 0;return Math.max(0,Math.floor((new Date()-d)/(1000*60*60*24)));}
 function tp_nextNum(){const bo=tp_currentBranchId?tp_orders.filter(o=>o.branchId===tp_currentBranchId):tp_orders;if(!bo.length)return'0001';const max=Math.max(...bo.map(o=>parseInt(o.num)||0));return String(max+1).padStart(4,'0');}
 
 // ─── BRANCHES ───
