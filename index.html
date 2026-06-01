@@ -1404,51 +1404,134 @@ function _renderDashboardLocal(){
 }
 
 function _renderDashboardGlobal(){
-  const ventas=getVentas(); const mesActual=today().slice(0,7);
+  const ventas=getVentas();
+  const mesActual=today().slice(0,7);
+  // Mes anterior
+  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1);
+  const mesAnterior=d.toISOString().slice(0,7);
+
   const ventasMes=ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesActual));
+  const ventasMesAnt=ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesAnterior));
   const totalMes=ventasMes.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const totalMesAnt=ventasMesAnt.reduce((s,v)=>s+(+v.total_iva||0),0);
+
   const bodegas=getBodegas();
   try{ if(typeof tp_loadState==='function') tp_loadState(); }catch(e){}
   const allOrders=(() => { try{ return JSON.parse(DB.get('tp_orders')||'[]'); }catch(e){ return []; } })();
+
   const otAbiertas=allOrders.filter(o=>!['Entregado'].includes(o.status)).length;
+  const otAbiertasAnt=allOrders.filter(o=>!['Entregado'].includes(o.status)&&o.fecha&&o.fecha.startsWith(mesAnterior)).length;
+
+  // Ticket promedio (OTs entregadas este mes)
+  const otEntregadasMes=allOrders.filter(o=>o.status==='Entregado'&&o.fecha&&o.fecha.startsWith(mesActual)&&o.total>0);
+  const otEntregadasAnt=allOrders.filter(o=>o.status==='Entregado'&&o.fecha&&o.fecha.startsWith(mesAnterior)&&o.total>0);
+  const ticketProm=otEntregadasMes.length?Math.round(otEntregadasMes.reduce((s,o)=>s+(+o.total||0),0)/otEntregadasMes.length):0;
+  const ticketPromAnt=otEntregadasAnt.length?Math.round(otEntregadasAnt.reduce((s,o)=>s+(+o.total||0),0)/otEntregadasAnt.length):0;
+
+  // Tiempo promedio de reparación (OTs entregadas este mes con fecha)
+  const tiempos=otEntregadasMes.map(o=>{
+    if(!o.fecha||!o.fechaCierre) return null;
+    const ini=new Date(o.fecha.slice(0,10)+'T12:00:00');
+    const fin=new Date(o.fechaCierre.slice(0,10)+'T12:00:00');
+    const d=Math.round((fin-ini)/(1000*60*60*24));
+    return isNaN(d)||d<0?null:d;
+  }).filter(x=>x!==null);
+  const tiemposAnt=otEntregadasAnt.map(o=>{
+    if(!o.fecha||!o.fechaCierre) return null;
+    const ini=new Date(o.fecha.slice(0,10)+'T12:00:00');
+    const fin=new Date(o.fechaCierre.slice(0,10)+'T12:00:00');
+    const d=Math.round((fin-ini)/(1000*60*60*24));
+    return isNaN(d)||d<0?null:d;
+  }).filter(x=>x!==null);
+  const tiempoProm=tiempos.length?(tiempos.reduce((s,x)=>s+x,0)/tiempos.length).toFixed(1):'—';
+  const tiempoPromAnt=tiemposAnt.length?(tiemposAnt.reduce((s,x)=>s+x,0)/tiemposAnt.length).toFixed(1):null;
+
+  // Helper delta badge
+  function _delta(curr,prev,fmt,invertido=false){
+    if(!prev||prev===0) return '';
+    const diff=curr-prev;
+    const pct=Math.round(Math.abs(diff/prev)*100);
+    if(pct===0) return `<span style="font-size:11px;color:var(--text2)">Sin cambio</span>`;
+    const positivo=invertido?(diff<0):(diff>0);
+    const color=positivo?'#16a34a':'#dc2626';
+    const arrow=positivo?'↑':'↓';
+    const label=fmt?fmt(Math.abs(diff)):pct+'%';
+    return `<span style="font-size:11px;color:${color};font-weight:500">${arrow} ${label} vs mes anterior</span>`;
+  }
+
+  const deltaMes=totalMesAnt>0?_delta(totalMes,totalMesAnt,v=>{const p=Math.round(Math.abs((totalMes-totalMesAnt)/totalMesAnt)*100);return p+'%'}):'';
+  const deltaOT=_delta(otAbiertas,otAbiertasAnt,null);
+  const deltaTicket=ticketPromAnt>0?_delta(ticketProm,ticketPromAnt,null):'';
+  const deltaTiempo=(tiempoPromAnt&&tiempoPromAnt!=='—')?_delta(parseFloat(tiempoProm),parseFloat(tiempoPromAnt),v=>v+' días',true):'';
+
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const mesLabel=meses[d.getMonth()];
 
   const branchCards=bodegas.map(b=>{
     const bv=ventasMes.filter(v=>v.branchId===b.id);
     const bOT=allOrders.filter(o=>o.branchId===b.id&&!['Entregado'].includes(o.status));
+    const bvAnt=ventasMesAnt.filter(v=>v.branchId===b.id);
+    const bTotalMes=bv.reduce((s,v)=>s+(+v.total_iva||0),0);
+    const bTotalAnt=bvAnt.reduce((s,v)=>s+(+v.total_iva||0),0);
+    const bDelta=bTotalAnt>0?_delta(bTotalMes,bTotalAnt,null):'';
     const nombre=b.nombre||b.name||'Sin nombre';
     return `<div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:600;color:var(--text)">🏪 ${nombre}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${nombre}</div>
         <button onclick="_superAdminEnterBranch('${b.id}')" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit">Operar →</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
-        <div><div style="font-size:16px;font-weight:600;color:var(--text)">${fmt$(bv.reduce((s,v)=>s+(+v.total_iva||0),0))}</div><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Ventas mes</div></div>
-        <div><div style="font-size:16px;font-weight:600;color:var(--text)">${bOT.length}</div><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">OTs abiertas</div></div>
-        <div><div style="font-size:16px;font-weight:600;color:var(--text)">${bv.length}</div><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Ventas</div></div>
+        <div style="background:var(--gray-50,#f9fafb);border-radius:8px;padding:8px 4px">
+          <div style="font-size:14px;font-weight:600;color:var(--text)">${fmt$(bTotalMes)}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">Ventas mes</div>
+          ${bDelta?`<div style="margin-top:3px">${bDelta}</div>`:''}
+        </div>
+        <div style="background:var(--gray-50,#f9fafb);border-radius:8px;padding:8px 4px">
+          <div style="font-size:14px;font-weight:600;color:var(--text)">${bOT.length}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">OTs abiertas</div>
+        </div>
+        <div style="background:var(--gray-50,#f9fafb);border-radius:8px;padding:8px 4px">
+          <div style="font-size:14px;font-weight:600;color:var(--text)">${bv.length}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">Transacciones</div>
+        </div>
       </div>
     </div>`;
   }).join('');
 
   document.getElementById('page-content').innerHTML=`
-  <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
-    <span style="font-size:20px">👑</span>
-    <div><div style="font-size:16px;font-weight:700;color:var(--text)">Vista global — todas las sucursales</div>
-    <div style="font-size:12px;color:var(--text2)">Selecciona una sucursal para operar en ella</div></div>
+  <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-size:16px;font-weight:700;color:var(--text)">Vista global</div>
+      <div style="font-size:12px;color:var(--text2)">Todas las sucursales · ${new Date().toLocaleDateString('es-CL',{month:'long',year:'numeric'})}</div>
+    </div>
   </div>
-  <div class="kpi-grid" style="margin-bottom:20px">
-    <div class="kpi-card green"><div class="kpi-label">Ventas del mes</div><div class="kpi-value">${fmt$(totalMes)}</div><div class="kpi-sub">${ventasMes.length} ventas · todas las sucursales</div></div>
-    <div class="kpi-card"><div class="kpi-label">OTs abiertas</div><div class="kpi-value">${otAbiertas}</div><div class="kpi-sub">Todas las sucursales</div></div>
-    <div class="kpi-card"><div class="kpi-label">Sucursales</div><div class="kpi-value">${bodegas.length}</div><div class="kpi-sub">Activas</div></div>
-    <div class="kpi-card"><div class="kpi-label">Usuarios</div><div class="kpi-value" id="dash-global-users">—</div><div class="kpi-sub">Registrados</div></div>
-  </div>
-  ${bodegas.length?`<div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Sucursales</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">${branchCards}</div>`
-  :'<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px">No hay sucursales creadas aún. Ve a <b>Configuración → Sucursales</b> para crear la primera.</div>'}`;
 
-  // Contar usuarios async
-  _sb.from('user_profiles').select('id',{count:'exact'}).eq('empresa_id',_empresaId).then(({count})=>{
-    const el=document.getElementById('dash-global-users'); if(el) el.textContent=count||0;
-  });
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ventas del mes</div>
+      <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">${fmt$(totalMes)}</div>
+      ${deltaMes||`<span style="font-size:11px;color:var(--text2)">${ventasMes.length} transacciones</span>`}
+    </div>
+    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">OTs abiertas</div>
+      <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">${otAbiertas}</div>
+      <span style="font-size:11px;color:var(--text2)">Todas las sucursales</span>
+    </div>
+    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ticket promedio OT</div>
+      <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">${ticketProm>0?fmt$(ticketProm):'—'}</div>
+      ${deltaTicket||`<span style="font-size:11px;color:var(--text2)">${otEntregadasMes.length} OTs cerradas</span>`}
+    </div>
+    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tiempo promedio</div>
+      <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">${tiempoProm!=='—'?tiempoProm+' días':'—'}</div>
+      ${deltaTiempo||`<span style="font-size:11px;color:var(--text2)">Por reparación cerrada</span>`}
+    </div>
+  </div>
+
+  ${bodegas.length?`<div style="margin-bottom:10px;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Sucursales</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">${branchCards}</div>`
+  :'<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px">No hay sucursales creadas. Ve a <b>Configuración → Sucursales</b>.</div>'}`;
 }
 
 function badgeEstado(e){
