@@ -6589,6 +6589,7 @@ function modalNuevaBodega(bEdit){
     <div class="modal-body">
       <div class="form-group"><label>Nombre *</label><input id="b-nombre" value="${bEdit?bEdit.nombre||'':''}" placeholder="Bodega Principal"></div>
       <div class="form-group"><label>Dirección</label><input id="b-dir" value="${bEdit?bEdit.direccion||'':''}" placeholder="Dirección física"></div>
+      <div class="form-group"><label>Teléfono / WhatsApp</label><input id="b-tel" value="${bEdit?bEdit.tel||'':''}" placeholder="+56912345678" type="tel"></div>
       <div class="form-group"><label>Responsable</label><input id="b-resp" value="${bEdit?bEdit.responsable||'':''}" placeholder="Nombre responsable"></div>
       <div class="form-group"><label>Notas</label><textarea id="b-notas" rows="2">${bEdit?bEdit.notas||'':''}</textarea></div>
     </div>
@@ -6608,6 +6609,7 @@ function saveBodega(editId){
   const nombre=document.getElementById('b-nombre').value.trim();
   if(!nombre){ toast('El nombre es obligatorio','error'); return; }
   const bodega={nombre,direccion:document.getElementById('b-dir').value.trim(),
+    tel:document.getElementById('b-tel').value.trim(),
     responsable:document.getElementById('b-resp').value.trim(),
     notas:document.getElementById('b-notas').value.trim()};
   const bodegas=getBodegas();
