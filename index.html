@@ -6561,12 +6561,12 @@ function renderBodegas(){
 
 function renderBodegasTable(bodegas){
   if(!bodegas.length) return `<div class="empty-state"><div class="empty-icon">🏭</div><h3>Sin bodegas</h3><p>Agrega las bodegas o puntos de almacenamiento</p></div>`;
-  return `<table><thead><tr><th>Nombre</th><th>Dirección</th><th>Responsable</th><th>Notas</th><th>Acciones</th></tr></thead>
+  return `<table><thead><tr><th>Nombre</th><th>Dirección</th><th>Responsable</th><th>Teléfono</th><th>Acciones</th></tr></thead>
   <tbody>${bodegas.map(b=>`<tr>
     <td><strong>${b.nombre}</strong></td>
     <td>${b.direccion||'—'}</td>
     <td>${b.responsable||'—'}</td>
-    <td>${b.notas||'—'}</td>
+    <td>${b.tel?`<a href="https://wa.me/${b.tel.replace(/\D/g,'')}" target="_blank" style="color:#25d366;font-weight:500;text-decoration:none">📞 ${b.tel}</a>`:'—'}</td>
     <td><div style="display:flex;gap:4px">
       <button class="btn-icon btn-sm" onclick="modalEditarBodega('${b.id}')">✏️</button>
       <button class="import-row-del" onclick="eliminarBodega('${b.id}')">🗑</button>
