@@ -751,18 +751,22 @@ select{cursor:pointer}
     <div class="nav-subitem" id="nav-taller-usuarios" onclick="navTaller('usuarios','Taller — Usuarios')"><span class="icon">👤</span> Usuarios</div>
     <div class="nav-subitem" id="nav-taller-settings" onclick="navTaller('settings','Taller — Configuración')"><span class="icon">⚙️</span> Configuración</div>
   </div>
-  <div class="nav-item" id="nav-clientes" onclick="nav('clientes')"><span class="icon">👥</span> Clientes</div>
-  <div class="nav-item" id="nav-proveedores" onclick="nav('proveedores')"><span class="icon">🏢</span> Proveedores</div>
+  <div class="nav-item-parent" id="nav-contactos-parent" onclick="toggleContactos()"><span class="icon">👥</span> Contactos<span class="arrow">▶</span></div>
+  <div class="nav-submenu" id="submenu-contactos">
+    <div class="nav-subitem" id="nav-clientes" onclick="nav('clientes')"><span class="icon">👤</span> Clientes</div>
+    <div class="nav-subitem" id="nav-proveedores" onclick="nav('proveedores')"><span class="icon">🏢</span> Proveedores</div>
+  </div>
   <div class="nav-item-parent" id="nav-inventario-parent" onclick="toggleInventario()"><span class="icon">📦</span> Inventario<span class="arrow">▶</span></div>
   <div class="nav-submenu" id="submenu-inventario">
     <div class="nav-subitem" id="nav-productos" onclick="nav('productos')"><span class="icon">🗂️</span> Productos</div>
     <div class="nav-subitem" id="nav-categorias" onclick="nav('categorias')"><span class="icon">🏷️</span> Categorías</div>
+    <div class="nav-subitem" id="nav-kits" onclick="nav('kits')"><span class="icon">🔧</span> Kits / Equipos</div>
+    <div class="nav-subitem" id="nav-bodegas" onclick="nav('bodegas')"><span class="icon">🏭</span> Bodegas / Sucursales</div>
   </div>
-  <div class="nav-item" id="nav-kits" onclick="nav('kits')"><span class="icon">🔧</span> Kits / Equipos</div>
-  <div class="nav-item" id="nav-bodegas" onclick="nav('bodegas')"><span class="icon">🏭</span> Bodegas / Sucursales</div>
   <div class="nav-item" id="nav-estadisticas" onclick="nav('estadisticas')"><span class="icon">📈</span> Estadísticas</div>
   <div class="nav-item" id="nav-sys-usuarios" onclick="nav('sys-usuarios')"><span class="icon">🔐</span> Accesos</div>
   <div class="nav-item" id="nav-cargos" onclick="nav('cargos')"><span class="icon">🪪</span> Cargos</div>
+  <div class="nav-item" id="nav-config-global" onclick="nav('config-global')"><span class="icon">⚙️</span> Configuración</div>
   <div style="border-top:1px solid rgba(255,255,255,.1);margin:8px 16px"></div>
   <div class="nav-item-parent" id="nav-contabilidad" onclick="toggleContabilidad()"><span class="icon">📒</span> Contabilidad<span class="arrow">▶</span></div>
   <div class="nav-submenu" id="submenu-contabilidad">
@@ -1056,8 +1060,8 @@ function _applyRoleAccess(){
   if(!p.dashboard)   _hide('nav-dashboard');
   if(!p.ventas)      _hide('nav-ventas-parent','submenu-ventas');
   if(!p.taller)      _hide('nav-taller-parent','submenu-taller');
-  if(!p.clientes)    _hide('nav-clientes');
-  if(!p.inventario)  _hide('nav-inventario-parent','submenu-inventario','nav-kits');
+  if(!p.clientes)    _hide('nav-clientes','nav-contactos-parent','submenu-contactos');
+  if(!p.inventario)  _hide('nav-inventario-parent','submenu-inventario','nav-kits','nav-bodegas');
   if(!p.compras)     _hide('nav-contabilidad','submenu-contabilidad');
   if(!p.estadisticas)_hide('nav-estadisticas');
 
@@ -1272,6 +1276,14 @@ function toggleInventario(){
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
 }
+function toggleContactos(){
+  const parent=document.getElementById('nav-contactos-parent');
+  const submenu=document.getElementById('submenu-contactos');
+  if(!parent||!submenu) return;
+  const isOpen=submenu.classList.contains('open');
+  submenu.classList.toggle('open',!isOpen);
+  parent.classList.toggle('open',!isOpen);
+}
 function toggleContabilidad(){
   const parent=document.getElementById('nav-contabilidad');
   const submenu=document.getElementById('submenu-contabilidad');
@@ -1325,8 +1337,81 @@ function nav(page){
   const tb=document.getElementById('topbar');if(tb)tb.style.display='';
   ({dashboard:renderDashboard,ventas:renderVentas,'ventas-config':renderVentasConfig,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
     productos:renderProductos,categorias:renderCategorias,kits:renderKits,traslados:renderTraslados,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad,
-    'sys-usuarios':renderSysUsuarios,cargos:renderCargos
+    'sys-usuarios':renderSysUsuarios,cargos:renderCargos,'config-global':renderConfigGlobal
   }[page]||renderDashboard)();
+}
+
+// ─────────────────────────────────────────────
+// CONFIGURACIÓN GLOBAL
+// ─────────────────────────────────────────────
+function renderConfigGlobal(){
+  const cfg=DB.get('tp_smtp_config')||{};
+  document.getElementById('page-content').innerHTML=`
+  <div style="max-width:680px">
+    <div style="margin-bottom:24px">
+      <div style="font-size:18px;font-weight:700;color:var(--text)">Configuración global</div>
+      <div style="font-size:13px;color:var(--text2)">Ajustes del sistema compartidos por todas las sucursales</div>
+    </div>
+
+    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Correo saliente (SMTP)</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.5">Configuración para envío de emails automáticos — confirmaciones de OT, reportes de inspección y aprobaciones de presupuesto. Para Gmail usa <strong>smtp.gmail.com</strong>, puerto <strong>587</strong>, cifrado <strong>TLS</strong> y una <strong>Contraseña de aplicación</strong>.</div>
+      <div style="display:grid;grid-template-columns:1fr 120px 150px;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Servidor SMTP</label>
+          <input class="form-input" id="smtp-host" value="${cfg.host||''}" placeholder="smtp.gmail.com">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Puerto</label>
+          <input class="form-input" id="smtp-port" type="number" value="${cfg.port||587}" placeholder="587">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Cifrado</label>
+          <select class="form-input" id="smtp-security">
+            <option value="TLS" ${cfg.security==='TLS'?'selected':''}>TLS (587)</option>
+            <option value="SSL" ${cfg.security==='SSL'?'selected':''}>SSL (465)</option>
+            <option value="NONE" ${cfg.security==='NONE'?'selected':''}>Sin cifrado</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Usuario (email)</label>
+          <input class="form-input" id="smtp-user" type="email" value="${cfg.user||''}" placeholder="tucorreo@gmail.com">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Contraseña / App Password</label>
+          <input class="form-input" id="smtp-password" type="password" value="${cfg.password||''}" placeholder="••••••••••••••••">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
+        <div>
+          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Email remitente</label>
+          <input class="form-input" id="smtp-from" type="email" value="${cfg.from||''}" placeholder="tucorreo@gmail.com">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Nombre remitente</label>
+          <input class="form-input" id="smtp-from-name" value="${cfg.fromName||''}" placeholder="Mi Taller">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="tp_saveSmtp()">Guardar SMTP</button>
+        <input class="form-input" id="smtp-test-email" type="email" placeholder="email de prueba" style="width:200px">
+        <button class="btn btn-default" onclick="tp_testSmtp()">Probar envío</button>
+      </div>
+      <div id="smtp-status" style="display:none;margin-top:14px;font-size:12.5px;padding:10px 14px;border-radius:8px"></div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text3);line-height:1.6">
+        Para Gmail: activa verificación en 2 pasos y genera una Contraseña de aplicación en <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--accent)">myaccount.google.com/apppasswords</a>.
+      </div>
+    </div>
+  </div>`;
+  // Pre-rellenar valores actuales
+  const s=DB.get('tp_smtp_config')||{};
+  ['host','port','user','password','from','smtp-from-name'].forEach(k=>{
+    const el=document.getElementById('smtp-'+k.replace('smtp-',''));
+    if(el&&s[k.replace('smtp-','')]) el.value=s[k.replace('smtp-','')] ;
+  });
+  if(s.security){ const sel=document.getElementById('smtp-security'); if(sel) sel.value=s.security; }
 }
 
 // ─────────────────────────────────────────────
@@ -7734,7 +7819,7 @@ function renderTaller() {
       </div>
       <div class="orders-table-wrap">
         <table class="orders-table">
-          <thead><tr><th></th><th>N°</th><th>Cliente</th><th>Modelo</th><th>Estado</th><th>Fecha / Días</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th></th><th>N°</th><th>Cliente</th><th>Modelo</th><th id="th-sucursal" style="display:none">Sucursal</th><th>Estado</th><th>Fecha / Días</th><th>Precio</th><th></th></tr></thead>
           <tbody id="orders-tbody"></tbody>
         </table>
       </div>
@@ -7842,9 +7927,6 @@ function renderTaller() {
         </button>
         <button id="stab-checklist" class="tp-subnav-btn active" onclick="tp_settingsTab('checklist')" style="border-bottom:2px solid var(--accent);color:var(--accent);font-weight:600">
           ✅ Checklist
-        </button>
-        <button id="stab-smtp" class="tp-subnav-btn" onclick="tp_settingsTab('smtp')" style="border-bottom:2px solid transparent">
-          ✉️ SMTP / Email
         </button>
         <button id="stab-mensajes" class="tp-subnav-btn" onclick="tp_settingsTab('mensajes')" style="border-bottom:2px solid transparent">
           💬 Mensajes automáticos
@@ -8821,7 +8903,12 @@ function tp_renderOrders(){
   const list=tp_getFiltered();
   const el_tc=document.getElementById('table-count');if(el_tc)el_tc.textContent=list.length+' registro'+(list.length!==1?'s':'');
   const tbody=document.getElementById('orders-tbody');if(!tbody)return;
-  if(!list.length){tbody.innerHTML='<tr class="empty-row"><td colspan="8">No hay órdenes para mostrar. Crea la primera con "+ Crear".</td></tr>';return;}
+  // Mostrar columna Sucursal solo cuando admin está en vista global (sin branch context)
+  const showSucursal=(_currentRole==='admin'&&!_currentBranchContext);
+  const thSuc=document.getElementById('th-sucursal');
+  if(thSuc) thSuc.style.display=showSucursal?'':'none';
+  const bodegas=getBodegas();
+  if(!list.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="${showSucursal?9:8}">No hay órdenes para mostrar. Crea la primera con "+ Crear".</td></tr>`;return;}
   const _derivadoIds=new Set(getTraslados().filter(t=>t.estado!=='retornado'&&t.order_id).map(t=>t.order_id));
   tbody.innerHTML=list.map(o=>{
     const age=tp_getOrderAge(o);
@@ -8830,11 +8917,13 @@ function tp_renderOrders(){
     const ageLabel=o.status==='Entregado'?'Entregado':(age===0?'Hoy':age===1?'1 día':age+' días');
     const isDerived=_derivadoIds.has(o.id);
     const derivedTsl=isDerived?getTraslados().find(t=>t.order_id===o.id&&t.estado!=='retornado'):null;
+    const sucursalNombre=showSucursal?(bodegas.find(b=>b.id===o.branchId)?.nombre||bodegas.find(b=>b.id===o.branchId)?.name||'—'):'';
     return `<tr class="${rowClass}" onclick="tp_openDetail('${o.id}')">
       <td><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></td>
       <td class="num-cell">${o.num}</td>
       <td class="client-cell"><div class="client-name">${o.nombre}</div><div class="client-contact">${o.tel||o.email||'—'}</div></td>
       <td class="model-cell"><div class="model-name">${o.modelo}</div><div class="model-sub">${o.color||'—'} ${o.serie?'· '+o.serie:''}</div></td>
+      ${showSucursal?`<td style="font-size:12px;color:var(--text2);white-space:nowrap">${sucursalNombre}</td>`:''}
       <td>${tp_badge(o.status)}${isDerived?`<span style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 7px;font-size:10.5px;font-weight:600;margin-left:4px">🔄 ${derivedTsl?.tecnico||'Derivado'}</span>`:''}</td>
       <td><div style="font-size:12px;color:var(--text2)">${o.fecha?tp_fmtDate(o.fecha):'—'}</div><span class="age-chip ${ageClass}">${ageLabel}</span></td>
       <td class="price-cell">${tp_fmtMoney(o.costo||o.presup)}</td>
