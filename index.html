@@ -5329,7 +5329,7 @@ function confirmarImportarVentas(){
       id: uid(),
       nombre: it.producto,
       cantidad: it.cantidad,
-      precio_venta: it.precio_unitario,
+      precio_venta: Math.round(it.precio_unitario / 1.19),
       precio_con_iva: it.precio_unitario,
     }));
     ventas.push({
@@ -5345,7 +5345,7 @@ function confirmarImportarVentas(){
       branchId,
       branchNombre,
       items,
-      total: r.total_iva,
+      total: Math.round(r.total_iva / 1.19),
       total_iva: r.total_iva,
       documento: r.documento||'boleta',
     });
