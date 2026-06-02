@@ -3127,7 +3127,7 @@ function _renderHistorial(){
         style="padding:7px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;width:220px">
     </div>
     <div id="vta-table">
-      ${renderVentasTable(_vtaFiltrarPorFecha((_vtaFiltro==='todas'?todasFiltSuc:todasFiltSuc.filter(v=>v.estado===_vtaFiltro)),isGlobal&&!_vtaSucursal)}
+      ${renderVentasTable(_vtaFiltrarPorFecha(_vtaFiltro==='todas'?todasFiltSuc:todasFiltSuc.filter(v=>v.estado===_vtaFiltro)),isGlobal&&!_vtaSucursal)}
     </div>
   </div>`;
 }
