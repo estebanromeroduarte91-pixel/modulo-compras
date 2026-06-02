@@ -742,6 +742,7 @@ select{cursor:pointer}
   <div class="nav-submenu" id="submenu-ventas">
     <div class="nav-subitem" id="nav-ventas" onclick="navVentas('resumen')"><span class="icon">📊</span> Resumen</div>
     <div class="nav-subitem" id="nav-ventas-pos" onclick="navVentas('pos')"><span class="icon">🛒</span> POS</div>
+    <div class="nav-subitem" id="nav-caja" onclick="nav('caja')"><span class="icon">🏧</span> Caja</div>
     <div class="nav-subitem" id="nav-ventas-config" onclick="navVentas('config')"><span class="icon">⚙️</span> Configuración</div>
   </div>
   <div class="nav-item-parent" id="nav-taller-parent" onclick="toggleTaller()"><span class="icon">🔧</span> Taller<span class="arrow">▶</span></div>
@@ -1150,6 +1151,29 @@ const getTecnicosExt = ()=>{ try{ return JSON.parse(DB.get('tecnicos_ext')||'[]'
 const setTecnicosExt = v=> DB.set('tecnicos_ext', JSON.stringify(v));
 const getVentas = ()=> DB.get('ventas')||[];
 const setVentas = v=> DB.set('ventas',v);
+const getCajaSesiones = ()=> DB.get('caja_sesiones')||[];
+const setCajaSesiones = v=> DB.set('caja_sesiones',v);
+function getCajaSesionHoy(branchId){
+  const hoy=today();
+  return getCajaSesiones().find(s=>s.fecha===hoy&&s.branchId===(branchId||tp_currentBranchId||''))||null;
+}
+function getCajaTotalesHoy(branchId){
+  const bid=branchId||tp_currentBranchId||'';
+  const hoy=today();
+  const ventasHoy=getVentas().filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.slice(0,10)===hoy&&(bid?v.branchId===bid:true));
+  const metodos={efectivo:0,debito:0,credito:0,transferencia:0,otro:0};
+  ventasHoy.forEach(v=>{
+    const m=(v.metodo_pago||v.metodoPago||'otro').toLowerCase().replace('é','e').replace('é','e');
+    if(m.includes('efect')) metodos.efectivo+=(+v.total_iva||0);
+    else if(m.includes('debit')||m.includes('deb')) metodos.debito+=(+v.total_iva||0);
+    else if(m.includes('credit')||m.includes('cred')) metodos.credito+=(+v.total_iva||0);
+    else if(m.includes('transf')||m.includes('transfer')) metodos.transferencia+=(+v.total_iva||0);
+    else metodos.otro+=(+v.total_iva||0);
+  });
+  metodos._total=Object.values(metodos).reduce((a,b)=>a+b,0);
+  metodos._count=ventasHoy.length;
+  return metodos;
+}
 const getVentaLog = ()=> DB.get('venta_log')||[];
 const getGastos = ()=> DB.get('gastos')||[];
 const setGastos = v=> DB.set('gastos',v);
@@ -1355,8 +1379,227 @@ function nav(page){
   const tb=document.getElementById('topbar');if(tb)tb.style.display='';
   ({dashboard:renderDashboard,ventas:renderVentas,'ventas-config':renderVentasConfig,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
     productos:renderProductos,categorias:renderCategorias,kits:renderKits,traslados:renderTraslados,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad,
-    'sys-usuarios':renderSysUsuarios,cargos:renderCargos,'config-global':renderConfigGlobal
+    'sys-usuarios':renderSysUsuarios,cargos:renderCargos,'config-global':renderConfigGlobal,caja:renderCaja
   }[page]||renderDashboard)();
+}
+
+// ─────────────────────────────────────────────
+// CAJA
+// ─────────────────────────────────────────────
+function renderCaja(){
+  const branchId=_currentBranchContext||tp_currentBranchId||'';
+  const bodegas=getBodegas();
+  const branch=bodegas.find(b=>b.id===branchId);
+  const branchNombre=branch?(branch.nombre||branch.name):'Esta sucursal';
+  const sesion=getCajaSesionHoy(branchId);
+  const totales=getCajaTotalesHoy(branchId);
+  const fmt=v=>'$'+Math.round(v).toLocaleString('es-CL');
+  const isOpen=sesion&&sesion.estado==='abierta';
+
+  // Vista: caja cerrada (sin sesión de hoy)
+  if(!sesion||sesion.estado==='cerrada'){
+    const historial=getCajaSesiones().filter(s=>s.branchId===branchId&&s.estado==='cerrada').sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,5);
+    document.getElementById('page-content').innerHTML=`
+    <div style="max-width:560px">
+      <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--text)">Caja — ${branchNombre}</div>
+          <div style="font-size:13px;color:var(--text2)">${new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+        </div>
+        <span style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">Cerrada</span>
+      </div>
+      <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:20px">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px">Abrir caja del día</div>
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Fondo inicial en efectivo</label>
+          <div style="position:relative">
+            <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px">$</span>
+            <input class="form-input" id="caja-fondo" type="number" placeholder="50000" style="padding-left:26px" value="0">
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Monto en efectivo disponible para dar vuelto</div>
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Responsable</label>
+          <input class="form-input" id="caja-resp" value="${_currentUserNombre||''}">
+        </div>
+        <button class="btn btn-primary" onclick="_cajaAbrir('${branchId}')" style="width:100%;justify-content:center">Abrir caja</button>
+      </div>
+      ${historial.length?`
+      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Historial reciente</div>
+      <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        ${historial.map(s=>{
+          const dif=s.cierre?.diferencia||0;
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-size:13px;font-weight:500;color:var(--text)">${new Date(s.fecha+'T12:00:00').toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'})}</div>
+              <div style="font-size:11px;color:var(--text3)">${s.apertura?.responsable||'—'} · ${s.cierre?.conteo?s.cierre.conteo+' ventas':''}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:13px;font-weight:600;color:var(--text)">${fmt(s.cierre?.totalVentas||0)}</div>
+              <div style="font-size:11px;color:${dif<0?'#dc2626':dif>0?'#16a34a':'var(--text3)'}">${dif===0?'Cuadrado':dif>0?'Sobrante '+fmt(dif):'Faltante '+fmt(Math.abs(dif))}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`:''}
+    </div>`;
+    return;
+  }
+
+  // Vista: caja abierta
+  const metodoRows=[
+    {key:'efectivo',label:'Efectivo',color:'#0f172a'},
+    {key:'debito',label:'Débito',color:'#2563eb'},
+    {key:'credito',label:'Crédito',color:'#7c3aed'},
+    {key:'transferencia',label:'Transferencia',color:'#0891b2'},
+    {key:'otro',label:'Otro',color:'#94a3b8'},
+  ].filter(m=>totales[m.key]>0||m.key==='efectivo');
+
+  document.getElementById('page-content').innerHTML=`
+  <div style="max-width:560px">
+    <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--text)">Caja — ${branchNombre}</div>
+        <div style="font-size:13px;color:var(--text2)">Abierta ${sesion.apertura?.hora||''} · ${sesion.apertura?.responsable||''}</div>
+      </div>
+      <span style="background:#dcfce7;color:#166534;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">Abierta</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--text)">${fmt(totales._total)}</div>
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Total ventas hoy</div>
+      </div>
+      <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--text)">${totales._count}</div>
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Transacciones</div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px">Por método de pago</div>
+      ${metodoRows.map(m=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-100,#f1f5f9)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:8px;height:8px;border-radius:50%;background:${m.color}"></div>
+            <span style="font-size:13px;color:var(--text)">${m.label}</span>
+          </div>
+          <span style="font-size:14px;font-weight:600;color:var(--text)">${fmt(totales[m.key])}</span>
+        </div>`).join('')}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px">
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">Fondo inicial</span>
+        <span style="font-size:13px;color:var(--text2)">+ ${fmt(sesion.apertura?.montoInicial||0)}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0 0">
+        <span style="font-size:12px;font-weight:600;color:var(--text)">Efectivo en caja (esperado)</span>
+        <span style="font-size:14px;font-weight:700;color:var(--text)">${fmt((totales.efectivo||0)+(+sesion.apertura?.montoInicial||0))}</span>
+      </div>
+    </div>
+
+    <button onclick="_cajaCerrarModal('${branchId}')" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface,#fff);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+      Cerrar y cuadrar caja →
+    </button>
+  </div>`;
+}
+
+function _cajaAbrir(branchId){
+  const fondo=parseFloat(document.getElementById('caja-fondo')?.value||0)||0;
+  const resp=(document.getElementById('caja-resp')?.value||'').trim()||_currentUserNombre||'—';
+  const ahora=new Date();
+  const hora=ahora.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  const sesiones=getCajaSesiones();
+  sesiones.push({id:'cs-'+Date.now(),branchId,fecha:today(),estado:'abierta',apertura:{hora,responsable:resp,montoInicial:fondo},cierre:null});
+  setCajaSesiones(sesiones);
+  toast('Caja abierta','success');
+  renderCaja();
+}
+
+function _cajaCerrarModal(branchId){
+  const totales=getCajaTotalesHoy(branchId);
+  const sesion=getCajaSesionHoy(branchId);
+  if(!sesion) return;
+  const fmt=v=>'$'+Math.round(v).toLocaleString('es-CL');
+  const esperadoEfect=(totales.efectivo||0)+(+sesion.apertura?.montoInicial||0);
+
+  showModal(`<div onclick="closeModal()" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000">
+    <div onclick="event.stopPropagation()" style="background:var(--surface,#fff);border-radius:16px;width:480px;max-width:96vw;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Cuadratura de cierre</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Ingresa lo que contaste físicamente en caja</div>
+
+      <div style="background:var(--gray-50,#f9fafb);border-radius:10px;padding:14px 16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:12px;color:var(--text2)">Sistema espera (efectivo + fondo)</span>
+          <span style="font-size:12px;font-weight:600;color:var(--text)">${fmt(esperadoEfect)}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <label style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap">Efectivo contado</label>
+          <div style="position:relative;width:140px">
+            <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:12px">$</span>
+            <input class="form-input" id="caja-conteo-efect" type="number" placeholder="0" style="padding-left:22px;text-align:right" oninput="_cajaCalcDif()">
+          </div>
+        </div>
+        <div style="text-align:right;margin-top:5px;min-height:16px;font-size:12px;font-weight:600" id="caja-dif-efect"></div>
+      </div>
+
+      ${totales.debito>0?`<div style="background:var(--gray-50,#f9fafb);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text)">Débito (automático)</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${fmt(totales.debito)}</span>
+      </div>`:''}
+      ${totales.credito>0?`<div style="background:var(--gray-50,#f9fafb);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text)">Crédito (automático)</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${fmt(totales.credito)}</span>
+      </div>`:''}
+      ${totales.transferencia>0?`<div style="background:var(--gray-50,#f9fafb);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text)">Transferencia (automático)</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${fmt(totales.transferencia)}</span>
+      </div>`:''}
+
+      <div style="background:var(--gray-50,#f9fafb);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;font-weight:600;color:var(--text)">Total ventas del día</span>
+        <span style="font-size:15px;font-weight:700;color:var(--text)">${fmt(totales._total)}</span>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Observaciones</label>
+        <textarea class="form-input" id="caja-obs" rows="2" placeholder="Ej: faltante de $5.000 en efectivo, se revisará mañana..." style="resize:none"></textarea>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeModal()" style="padding:9px 18px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);font-size:14px;cursor:pointer;font-family:inherit">Cancelar</button>
+        <button onclick="_cajaCerrar('${branchId}',${esperadoEfect},${totales._total},${totales._count})" style="padding:9px 20px;border:none;border-radius:8px;background:#0f172a;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Confirmar cierre</button>
+      </div>
+    </div>
+  </div>`);
+  setTimeout(()=>document.getElementById('caja-conteo-efect')?.focus(),100);
+  window._cajaEsperadoEfect=esperadoEfect;
+}
+
+function _cajaCalcDif(){
+  const esperado=window._cajaEsperadoEfect||0;
+  const contado=parseFloat(document.getElementById('caja-conteo-efect')?.value||0)||0;
+  const dif=contado-esperado;
+  const el=document.getElementById('caja-dif-efect');
+  if(!el) return;
+  if(!contado){el.textContent='';return;}
+  if(dif===0) el.innerHTML='<span style="color:var(--text3)">Cuadrado exacto</span>';
+  else if(dif>0) el.innerHTML=`<span style="color:#16a34a">▲ Sobrante $${Math.round(dif).toLocaleString('es-CL')}</span>`;
+  else el.innerHTML=`<span style="color:#dc2626">▼ Faltante $${Math.round(Math.abs(dif)).toLocaleString('es-CL')}</span>`;
+}
+
+function _cajaCerrar(branchId, esperadoEfect, totalVentas, countVentas){
+  const contado=parseFloat(document.getElementById('caja-conteo-efect')?.value||0)||0;
+  const obs=(document.getElementById('caja-obs')?.value||'').trim();
+  const ahora=new Date();
+  const hora=ahora.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  const dif=contado-esperadoEfect;
+  const sesiones=getCajaSesiones();
+  const idx=sesiones.findIndex(s=>s.branchId===branchId&&s.fecha===today()&&s.estado==='abierta');
+  if(idx<0){toast('No se encontró la sesión activa','error');return;}
+  sesiones[idx].estado='cerrada';
+  sesiones[idx].cierre={hora,conteoEfectivo:contado,diferencia:dif,observaciones:obs,totalVentas,conteo:countVentas};
+  setCajaSesiones(sesiones);
+  closeModal();
+  toast('Caja cerrada y cuadrada','success');
+  renderCaja();
 }
 
 // ─────────────────────────────────────────────
