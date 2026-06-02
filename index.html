@@ -2540,9 +2540,24 @@ function posCobrar(){
   if(!_posItems.length){ toast('Agrega al menos un producto','error'); return; }
   const total=_posTotalConIVA();
   const bodegas=getBodegas();
-  const branchOpts=bodegas.length
-    ? bodegas.map(b=>`<option value="${b.id}"${_posBranchId===b.id?' selected':''}>${b.nombre||b.name}</option>`).join('')
-    : '<option value="">Sin sucursales</option>';
+
+  // Detectar caja abierta hoy para autoasignar sucursal/bodega
+  const sesionAbierta=getCajaSesiones().find(s=>s.fecha===today()&&s.estado==='abierta');
+  const cajaAbierta=sesionAbierta?getCajas().find(c=>c.id===sesionAbierta.cajaId):null;
+  const branchIdForzado=cajaAbierta?.sucursalId||_currentBranchContext||tp_currentBranchId||'';
+  const bodegaIdForzado=cajaAbierta?.bodegaId||'';
+  if(branchIdForzado) _posBranchId=branchIdForzado;
+
+  const branchForzadoNombre=(()=>{
+    if(!cajaAbierta) return '';
+    const b=bodegas.find(x=>x.id===cajaAbierta.sucursalId);
+    return b?(b.nombre||b.name):'';
+  })();
+
+  // Mostrar dropdown solo si NO hay caja abierta y hay más de una sucursal
+  const mostrarDropdown=!cajaAbierta&&bodegas.length>0;
+  const branchOpts=bodegas.map(b=>`<option value="${b.id}"${_posBranchId===b.id?' selected':''}>${b.nombre||b.name}</option>`).join('');
+
   showModal(`
   <div class="modal-bg" onclick="if(event.target===this)closeModal()">
   <div class="modal" style="max-width:360px">
@@ -2553,7 +2568,15 @@ function posCobrar(){
         <div style="font-size:32px;font-weight:800;color:var(--primary)">${fmt$(total)}</div>
         <div style="font-size:12px;color:var(--gray-400)">${_posItems.length} producto(s) · ${_posDocumento}</div>
       </div>
-      ${bodegas.length?`<div>
+      ${cajaAbierta?`
+      <div style="display:flex;align-items:center;gap:8px;background:var(--gray-50,#f8fafc);border:1px solid var(--border);border-radius:8px;padding:9px 12px">
+        <i class="ti ti-device-desktop-analytics" style="font-size:16px;color:var(--text2)"></i>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${escAttr(cajaAbierta.nombre)}</div>
+          <div style="font-size:11px;color:var(--text2)">${escAttr(branchForzadoNombre)}</div>
+        </div>
+      </div>`:''}
+      ${mostrarDropdown?`<div>
         <div style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px">Sucursal</div>
         <select id="cob-branch" onchange="_posBranchId=this.value" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;color:var(--gray-700)">
           <option value="">Sin sucursal</option>${branchOpts}
@@ -2610,9 +2633,14 @@ function posSaveVenta(){
     _posLinkedOrderId=null;
   }
   const selBranch=getBodegas().find(b=>b.id===_posBranchId);
+  // Recuperar cajaId y bodegaId de la sesión abierta si existe
+  const _sesAb=getCajaSesiones().find(s=>s.fecha===today()&&s.estado==='abierta');
+  const _cajaAb=_sesAb?getCajas().find(c=>c.id===_sesAb.cajaId):null;
+  const _bodegaId=_cajaAb?.bodegaId||'';
   const venta={id:uid(),numero:'VTA-'+String(DB.nextVenta()).padStart(5,'0'),estado:'pagada',
     fecha:today(),cliente:_posCliente||'Cliente genérico',metodo_pago:_posMetodo,
     branchId:_posBranchId||'',branchNombre:selBranch?(selBranch.nombre||selBranch.name||''):'',
+    bodega_id:_bodegaId,cajaId:_sesAb?.cajaId||'',
     items,total,total_iva,fecha_creacion:today()};
   const ventas=getVentas(); ventas.push(venta); setVentas(ventas);
   crearAsientoVenta(venta);
