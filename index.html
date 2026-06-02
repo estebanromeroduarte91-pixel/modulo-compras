@@ -2050,7 +2050,8 @@ function calcularEstadoOC(oc){
 // ─────────────────────────────────────────────
 let _vtaFiltro='todas';
 let _vtaTab='historial';
-let _vtaPeriodo='mes'; // hoy | mes | año | todo | rango
+let _vtaPeriodo='todo'; // hoy | mes | año | todo | rango
+let _vtaSucursal=''; // '' = todas
 let _vtaDesde='';     // YYYY-MM-DD
 let _vtaHasta='';     // YYYY-MM-DD
 let _posItems=[];
@@ -2947,9 +2948,15 @@ function vtaAplicarRango(){
 function _renderHistorial(){
   const todasVentas=getVentas();
   const utilColor=(u)=>u>=0?'#10b981':'#ef4444';
+  const bodegas=getBodegas();
+  const isGlobal=!_currentBranchContext&&!tp_currentBranchId;
+
+  // Filtro de sucursal (solo en vista global)
+  const filtrarSuc=v=>!isGlobal||!_vtaSucursal||(v.branchId===_vtaSucursal);
+  const todasFiltSuc=todasVentas.filter(filtrarSuc);
 
   // Ventas activas filtradas por período
-  const activas=todasVentas.filter(v=>v.estado!=='anulada');
+  const activas=todasFiltSuc.filter(v=>v.estado!=='anulada');
   const periodo=_vtaFiltrarPorFecha(activas);
 
   // Métricas del período seleccionado
@@ -2957,7 +2964,7 @@ function _renderHistorial(){
   const netoPer=periodo.reduce((s,v)=>s+(+v.total||0),0);
   const utilPer=_calcUtilidadVentas(periodo);
 
-  // Totales históricos
+  // Totales históricos (respeta filtro sucursal)
   const totalHist=activas.reduce((s,v)=>s+(+v.total_iva||0),0);
   const utilHist=_calcUtilidadVentas(activas);
 
@@ -2972,17 +2979,38 @@ function _renderHistorial(){
   });
   const metodosSorted=Object.entries(metodosMap).sort((a,b)=>b[1].total-a[1].total);
 
-  // Counts para tabs (aplica filtro de fecha también)
+  // Counts para tabs (aplica filtro de fecha + sucursal)
   const counts={};
   ['todas','pendiente','pagada','anulada'].forEach(e=>{
-    const base=e==='todas'?todasVentas:todasVentas.filter(v=>v.estado===e);
+    const base=e==='todas'?todasFiltSuc:todasFiltSuc.filter(v=>v.estado===e);
     counts[e]=_vtaFiltrarPorFecha(base).length;
   });
+
+  // Tabs de sucursal (solo vista global)
+  const sucTotales=bodegas.map(b=>({
+    id:b.id, nombre:b.nombre||b.name||'',
+    total: todasVentas.filter(v=>v.estado!=='anulada'&&v.branchId===b.id).reduce((s,v)=>s+(+v.total_iva||0),0)
+  }));
+  const sucTabsHtml=isGlobal&&bodegas.length?`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button onclick="_vtaSucursal='';_renderHistorial()"
+        style="padding:7px 16px;border-radius:20px;border:1.5px solid ${!_vtaSucursal?'var(--primary)':'var(--gray-200)'};background:${!_vtaSucursal?'var(--primary)':'#fff'};color:${!_vtaSucursal?'#fff':'var(--gray-600)'};font-size:13px;font-weight:600;cursor:pointer">
+        Todas las sucursales
+      </button>
+      ${sucTotales.map(b=>`
+        <button onclick="_vtaSucursal='${b.id}';_renderHistorial()"
+          style="padding:7px 16px;border-radius:20px;border:1.5px solid ${_vtaSucursal===b.id?'var(--primary)':'var(--gray-200)'};background:${_vtaSucursal===b.id?'var(--primary)':'#fff'};color:${_vtaSucursal===b.id?'#fff':'var(--gray-600)'};font-size:13px;font-weight:600;cursor:pointer">
+          ${escAttr(b.nombre)} · ${fmt$(b.total)}
+        </button>`).join('')}
+    </div>`:'';
+
 
   const periodoLabel=_vtaPeriodoLabel();
   const periodos=[['hoy','Hoy'],['mes','Este mes'],['año','Este año'],['todo','Todo'],['rango','Rango']];
 
   document.getElementById('page-content').innerHTML=`
+
+  ${sucTabsHtml}
 
   <!-- Filtro de período -->
   <div class="card" style="padding:11px 16px;margin-bottom:14px">
@@ -3099,19 +3127,20 @@ function _renderHistorial(){
         style="padding:7px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;width:220px">
     </div>
     <div id="vta-table">
-      ${renderVentasTable(_vtaFiltrarPorFecha(_vtaFiltro==='todas'?todasVentas:todasVentas.filter(v=>v.estado===_vtaFiltro)))}
+      ${renderVentasTable(_vtaFiltrarPorFecha((_vtaFiltro==='todas'?todasFiltSuc:todasFiltSuc.filter(v=>v.estado===_vtaFiltro)),isGlobal&&!_vtaSucursal)}
     </div>
   </div>`;
 }
 
-function renderVentasTable(ventas){
+function renderVentasTable(ventas, showSuc=false){
   if(!ventas.length) return '<div class="empty-state"><div class="empty-icon">🛒</div><h3>Sin ventas</h3><p>Usa el POS para registrar tu primera venta</p></div>';
   const estadoBadge={pendiente:'<span class="badge badge-blue">Pendiente</span>',pagada:'<span class="badge badge-green">Pagada</span>',anulada:'<span class="badge badge-red">Anulada</span>'};
-  return `<table><thead><tr><th>Folio</th><th>Fecha</th><th>Cliente</th><th>Ítems</th><th>Total</th><th>Pago</th><th>Estado</th><th>Acciones</th></tr></thead>
+  return `<table><thead><tr><th>Folio</th><th>Fecha</th><th>Cliente</th>${showSuc?'<th>Sucursal</th>':''}<th>Ítems</th><th>Total</th><th>Pago</th><th>Estado</th><th>Acciones</th></tr></thead>
   <tbody>${ventas.slice().reverse().map(v=>`<tr style="cursor:pointer" onclick="verVenta('${v.id}')">
     <td><strong style="color:var(--primary)">${v.numero}</strong></td>
     <td>${fmtDate(v.fecha)}</td>
     <td>${v.cliente||'—'}</td>
+    ${showSuc?`<td><span style="font-size:11px;padding:2px 8px;background:var(--gray-100);border-radius:10px;color:var(--gray-600)">${v.branchNombre||'—'}</span></td>`:''}
     <td style="text-align:center">${(v.items||[]).length}</td>
     <td><strong>${fmt$(v.total_iva||0)}</strong><div style="font-size:11px;color:var(--gray-400)">Neto: ${fmt$(v.total||0)}</div></td>
     <td><span style="font-size:12px;color:var(--gray-500)">${{efectivo:'💵 Efectivo',transfer:'🏦 Trans.',tarjeta:'💳 Tarjeta',transferencia:'🏦 Trans.'}[v.metodo_pago]||v.metodo_pago||'—'}</span></td>
@@ -3127,10 +3156,12 @@ function renderVentasTable(ventas){
 
 function filtrarVentas(q){
   q=q.toLowerCase();
-  const base=_vtaFiltro==='todas'?getVentas():getVentas().filter(v=>v.estado===_vtaFiltro);
+  const isGlobal=!_currentBranchContext&&!tp_currentBranchId;
+  const all=getVentas().filter(v=>!isGlobal||!_vtaSucursal||(v.branchId===_vtaSucursal));
+  const base=_vtaFiltro==='todas'?all:all.filter(v=>v.estado===_vtaFiltro);
   const porFecha=_vtaFiltrarPorFecha(base);
   const res=q?porFecha.filter(v=>(v.numero||'').toLowerCase().includes(q)||(v.cliente||'').toLowerCase().includes(q)):porFecha;
-  document.getElementById('vta-table').innerHTML=renderVentasTable(res);
+  document.getElementById('vta-table').innerHTML=renderVentasTable(res, isGlobal&&!_vtaSucursal);
 }
 
 // ── Modal nueva venta (legacy) ──────────────────────────
