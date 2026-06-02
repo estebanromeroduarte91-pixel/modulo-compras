@@ -1223,11 +1223,26 @@ const pageTitles = {
   proveedores:'Proveedores',productos:'Productos',categorias:'Categorías',bodegas:'Bodegas',estadisticas:'Estadísticas',
   traslados:'Traslados',taller:'Taller — Órdenes de Servicio','sys-usuarios':'Accesos'
 };
+const _SUBMENUS=[
+  {parent:'nav-ventas-parent',    submenu:'submenu-ventas'},
+  {parent:'nav-taller-parent',    submenu:'submenu-taller'},
+  {parent:'nav-contactos-parent', submenu:'submenu-contactos'},
+  {parent:'nav-inventario-parent',submenu:'submenu-inventario'},
+  {parent:'nav-contabilidad',     submenu:'submenu-contabilidad'},
+];
+function _closeOtherSubmenus(exceptSubmenuId){
+  _SUBMENUS.forEach(({parent,submenu})=>{
+    if(submenu===exceptSubmenuId) return;
+    document.getElementById(submenu)?.classList.remove('open');
+    document.getElementById(parent)?.classList.remove('open');
+  });
+}
 function toggleTaller(){
   const parent=document.getElementById('nav-taller-parent');
   const submenu=document.getElementById('submenu-taller');
   if(!parent||!submenu) return;
   const isOpen=submenu.classList.contains('open');
+  _closeOtherSubmenus('submenu-taller');
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
 }
@@ -1248,9 +1263,9 @@ function toggleVentas(){
   const submenu=document.getElementById('submenu-ventas');
   if(!parent||!submenu) return;
   const isOpen=submenu.classList.contains('open');
+  _closeOtherSubmenus('submenu-ventas');
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
-  // Si se abre y no hay página activa de ventas, navegar al Resumen
   if(!isOpen) navVentas('resumen');
 }
 function navVentas(sub){
@@ -1273,6 +1288,7 @@ function toggleInventario(){
   const submenu=document.getElementById('submenu-inventario');
   if(!parent||!submenu) return;
   const isOpen=submenu.classList.contains('open');
+  _closeOtherSubmenus('submenu-inventario');
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
 }
@@ -1281,6 +1297,7 @@ function toggleContactos(){
   const submenu=document.getElementById('submenu-contactos');
   if(!parent||!submenu) return;
   const isOpen=submenu.classList.contains('open');
+  _closeOtherSubmenus('submenu-contactos');
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
 }
@@ -1289,6 +1306,7 @@ function toggleContabilidad(){
   const submenu=document.getElementById('submenu-contabilidad');
   if(!parent||!submenu) return;
   const isOpen=submenu.classList.contains('open');
+  _closeOtherSubmenus('submenu-contabilidad');
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
 }
