@@ -1151,16 +1151,26 @@ const getTecnicosExt = ()=>{ try{ return JSON.parse(DB.get('tecnicos_ext')||'[]'
 const setTecnicosExt = v=> DB.set('tecnicos_ext', JSON.stringify(v));
 const getVentas = ()=> DB.get('ventas')||[];
 const setVentas = v=> DB.set('ventas',v);
+const getCajas = ()=> DB.get('cajas_perifericas')||[];
+const setCajas = v=> DB.set('cajas_perifericas',v);
 const getCajaSesiones = ()=> DB.get('caja_sesiones')||[];
 const setCajaSesiones = v=> DB.set('caja_sesiones',v);
-function getCajaSesionHoy(branchId){
+function getCajaSesionHoy(branchId, cajaId){
   const hoy=today();
-  return getCajaSesiones().find(s=>s.fecha===hoy&&s.branchId===(branchId||tp_currentBranchId||''))||null;
+  const bid=branchId||tp_currentBranchId||'';
+  return getCajaSesiones().find(s=>s.fecha===hoy&&s.branchId===bid&&(!cajaId||s.cajaId===cajaId))||null;
 }
-function getCajaTotalesHoy(branchId){
+function getCajaTotalesHoy(branchId, cajaId){
   const bid=branchId||tp_currentBranchId||'';
   const hoy=today();
-  const ventasHoy=getVentas().filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.slice(0,10)===hoy&&(bid?v.branchId===bid:true));
+  // Si hay cajaId con bodegaId, filtrar por bodega; si no, filtrar por branch
+  const caja=cajaId?getCajas().find(c=>c.id===cajaId):null;
+  const ventasHoy=getVentas().filter(v=>{
+    if(v.estado==='anulada') return false;
+    if(!v.fecha||v.fecha.slice(0,10)!==hoy) return false;
+    if(caja&&caja.bodegaId) return v.bodega_id===caja.bodegaId||v.bodegaId===caja.bodegaId;
+    return bid?v.branchId===bid:true;
+  });
   const metodos={efectivo:0,debito:0,credito:0,transferencia:0,otro:0};
   ventasHoy.forEach(v=>{
     const m=(v.metodo_pago||v.metodoPago||'otro').toLowerCase().replace('é','e').replace('é','e');
@@ -1386,30 +1396,69 @@ function nav(page){
 // ─────────────────────────────────────────────
 // CAJA
 // ─────────────────────────────────────────────
+let _cajaSelId=null; // caja periférica actualmente seleccionada en la vista
+
 function renderCaja(){
   const branchId=_currentBranchContext||tp_currentBranchId||'';
   const bodegas=getBodegas();
   const branch=bodegas.find(b=>b.id===branchId);
   const branchNombre=branch?(branch.nombre||branch.name):'Esta sucursal';
-  const sesion=getCajaSesionHoy(branchId);
-  const totales=getCajaTotalesHoy(branchId);
   const fmt=v=>'$'+Math.round(v).toLocaleString('es-CL');
-  const isOpen=sesion&&sesion.estado==='abierta';
 
-  // Vista: caja cerrada (sin sesión de hoy)
+  // Cajas configuradas para esta sucursal
+  const cajasBranch=getCajas().filter(c=>c.sucursalId===branchId&&c.activa!==false);
+
+  // Si no hay cajas configuradas, mostrar aviso
+  if(!cajasBranch.length){
+    document.getElementById('page-content').innerHTML=`
+    <div style="max-width:540px">
+      <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:14px;padding:36px;text-align:center">
+        <div style="font-size:40px;margin-bottom:14px">🏧</div>
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Sin cajas configuradas</div>
+        <p style="font-size:13px;color:var(--text2);margin:0 0 20px">Esta sucursal no tiene cajas periféricas activas. Crea al menos una desde <strong>Ventas → Configuración</strong>.</p>
+        <button class="btn btn-primary" onclick="navVentas('config')">Ir a Configuración →</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // Si hay sólo una caja activa, usarla directamente
+  if(!_cajaSelId||!cajasBranch.find(c=>c.id===_cajaSelId)) _cajaSelId=cajasBranch[0].id;
+  const cajaActual=cajasBranch.find(c=>c.id===_cajaSelId)||cajasBranch[0];
+
+  const sesion=getCajaSesionHoy(branchId, cajaActual.id);
+  const totales=getCajaTotalesHoy(branchId, cajaActual.id);
+  const bodegaNombre=(()=>{const b=bodegas.find(x=>x.id===cajaActual.bodegaId);return b?(b.nombre||b.name):'—';})();
+
+  // Selector de caja (si hay más de una)
+  const selectorHtml=cajasBranch.length>1?`
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+      ${cajasBranch.map(c=>`
+        <button onclick="_cajaSeleccionar('${c.id}')" style="padding:6px 16px;border-radius:20px;border:1.5px solid ${c.id===cajaActual.id?'var(--primary)':'var(--border)'};background:${c.id===cajaActual.id?'var(--primary)':'var(--surface,#fff)'};color:${c.id===cajaActual.id?'#fff':'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">${escAttr(c.nombre)}</button>
+      `).join('')}
+    </div>`:'';
+
+  const infoBar=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+      <span style="font-size:13px;color:var(--text2)">Bodega vinculada: <strong style="color:var(--text)">${escAttr(bodegaNombre)}</strong></span>
+    </div>`;
+
+  // Vista: caja cerrada
   if(!sesion||sesion.estado==='cerrada'){
-    const historial=getCajaSesiones().filter(s=>s.branchId===branchId&&s.estado==='cerrada').sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,5);
+    const historial=getCajaSesiones().filter(s=>s.branchId===branchId&&s.cajaId===cajaActual.id&&s.estado==='cerrada').sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,5);
     document.getElementById('page-content').innerHTML=`
     <div style="max-width:560px">
-      <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between">
+      <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">
         <div>
-          <div style="font-size:18px;font-weight:700;color:var(--text)">Caja — ${branchNombre}</div>
+          <div style="font-size:18px;font-weight:700;color:var(--text)">Caja — ${escAttr(branchNombre)}</div>
           <div style="font-size:13px;color:var(--text2)">${new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
         </div>
         <span style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">Cerrada</span>
       </div>
+      ${selectorHtml}
+      ${infoBar}
       <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:20px">
-        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px">Abrir caja del día</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px">Abrir — ${escAttr(cajaActual.nombre)}</div>
         <div style="margin-bottom:14px">
           <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Fondo inicial en efectivo</label>
           <div style="position:relative">
@@ -1420,9 +1469,9 @@ function renderCaja(){
         </div>
         <div style="margin-bottom:18px">
           <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Responsable</label>
-          <input class="form-input" id="caja-resp" value="${_currentUserNombre||''}">
+          <input class="form-input" id="caja-resp" value="${escAttr(_currentUserNombre||'')}">
         </div>
-        <button class="btn btn-primary" onclick="_cajaAbrir('${branchId}')" style="width:100%;justify-content:center">Abrir caja</button>
+        <button class="btn btn-primary" onclick="_cajaAbrir('${branchId}','${cajaActual.id}')" style="width:100%;justify-content:center">Abrir caja</button>
       </div>
       ${historial.length?`
       <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Historial reciente</div>
@@ -1432,7 +1481,7 @@ function renderCaja(){
           return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)">
             <div>
               <div style="font-size:13px;font-weight:500;color:var(--text)">${new Date(s.fecha+'T12:00:00').toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'})}</div>
-              <div style="font-size:11px;color:var(--text3)">${s.apertura?.responsable||'—'} · ${s.cierre?.conteo?s.cierre.conteo+' ventas':''}</div>
+              <div style="font-size:11px;color:var(--text3)">${s.apertura?.responsable||'—'}${s.cierre?.conteo?' · '+s.cierre.conteo+' ventas':''}</div>
             </div>
             <div style="text-align:right">
               <div style="font-size:13px;font-weight:600;color:var(--text)">${fmt(s.cierre?.totalVentas||0)}</div>
@@ -1456,13 +1505,15 @@ function renderCaja(){
 
   document.getElementById('page-content').innerHTML=`
   <div style="max-width:560px">
-    <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between">
+    <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">
       <div>
-        <div style="font-size:18px;font-weight:700;color:var(--text)">Caja — ${branchNombre}</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text)">Caja — ${escAttr(branchNombre)}</div>
         <div style="font-size:13px;color:var(--text2)">Abierta ${sesion.apertura?.hora||''} · ${sesion.apertura?.responsable||''}</div>
       </div>
       <span style="background:#dcfce7;color:#166534;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">Abierta</span>
     </div>
+    ${selectorHtml}
+    ${infoBar}
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
       <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:center">
@@ -1495,27 +1546,32 @@ function renderCaja(){
       </div>
     </div>
 
-    <button onclick="_cajaCerrarModal('${branchId}')" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface,#fff);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+    <button onclick="_cajaCerrarModal('${branchId}','${cajaActual.id}')" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface,#fff);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
       Cerrar y cuadrar caja →
     </button>
   </div>`;
 }
 
-function _cajaAbrir(branchId){
+function _cajaSeleccionar(cajaId){
+  _cajaSelId=cajaId;
+  renderCaja();
+}
+
+function _cajaAbrir(branchId, cajaId){
   const fondo=parseFloat(document.getElementById('caja-fondo')?.value||0)||0;
   const resp=(document.getElementById('caja-resp')?.value||'').trim()||_currentUserNombre||'—';
   const ahora=new Date();
   const hora=ahora.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
   const sesiones=getCajaSesiones();
-  sesiones.push({id:'cs-'+Date.now(),branchId,fecha:today(),estado:'abierta',apertura:{hora,responsable:resp,montoInicial:fondo},cierre:null});
+  sesiones.push({id:'cs-'+Date.now(),branchId,cajaId:cajaId||'',fecha:today(),estado:'abierta',apertura:{hora,responsable:resp,montoInicial:fondo},cierre:null});
   setCajaSesiones(sesiones);
   toast('Caja abierta','success');
   renderCaja();
 }
 
-function _cajaCerrarModal(branchId){
-  const totales=getCajaTotalesHoy(branchId);
-  const sesion=getCajaSesionHoy(branchId);
+function _cajaCerrarModal(branchId, cajaId){
+  const totales=getCajaTotalesHoy(branchId, cajaId);
+  const sesion=getCajaSesionHoy(branchId, cajaId);
   if(!sesion) return;
   const fmt=v=>'$'+Math.round(v).toLocaleString('es-CL');
   const esperadoEfect=(totales.efectivo||0)+(+sesion.apertura?.montoInicial||0);
@@ -1565,7 +1621,7 @@ function _cajaCerrarModal(branchId){
 
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button onclick="closeModal()" style="padding:9px 18px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);font-size:14px;cursor:pointer;font-family:inherit">Cancelar</button>
-        <button onclick="_cajaCerrar('${branchId}',${esperadoEfect},${totales._total},${totales._count})" style="padding:9px 20px;border:none;border-radius:8px;background:#0f172a;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Confirmar cierre</button>
+        <button onclick="_cajaCerrar('${branchId}','${cajaId||''}',${esperadoEfect},${totales._total},${totales._count})" style="padding:9px 20px;border:none;border-radius:8px;background:#0f172a;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Confirmar cierre</button>
       </div>
     </div>
   </div>`);
@@ -1585,14 +1641,14 @@ function _cajaCalcDif(){
   else el.innerHTML=`<span style="color:#dc2626">▼ Faltante $${Math.round(Math.abs(dif)).toLocaleString('es-CL')}</span>`;
 }
 
-function _cajaCerrar(branchId, esperadoEfect, totalVentas, countVentas){
+function _cajaCerrar(branchId, cajaId, esperadoEfect, totalVentas, countVentas){
   const contado=parseFloat(document.getElementById('caja-conteo-efect')?.value||0)||0;
   const obs=(document.getElementById('caja-obs')?.value||'').trim();
   const ahora=new Date();
   const hora=ahora.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
   const dif=contado-esperadoEfect;
   const sesiones=getCajaSesiones();
-  const idx=sesiones.findIndex(s=>s.branchId===branchId&&s.fecha===today()&&s.estado==='abierta');
+  const idx=sesiones.findIndex(s=>s.branchId===branchId&&(!cajaId||s.cajaId===cajaId)&&s.fecha===today()&&s.estado==='abierta');
   if(idx<0){toast('No se encontró la sesión activa','error');return;}
   sesiones[idx].estado='cerrada';
   sesiones[idx].cierre={hora,conteoEfectivo:contado,diferencia:dif,observaciones:obs,totalVentas,conteo:countVentas};
@@ -2548,9 +2604,45 @@ function posSaveVenta(){
 // ─── VENTAS CONFIG ─────────────────────────────
 function renderVentasConfig(){
   const metodos=getMetodosPago();
+  const bodegas=getBodegas();
+  const cajas=getCajas();
   document.getElementById('topbar-actions').innerHTML='';
   document.getElementById('page-content').innerHTML=`
-  <div style="max-width:680px">
+  <div style="max-width:680px;display:flex;flex-direction:column;gap:20px">
+
+    <!-- GESTIÓN DE CAJAS -->
+    <div class="card">
+      <div style="padding:20px 24px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <h3 style="font-size:16px;font-weight:700;color:var(--gray-800);margin:0">🏧 Cajas periféricas</h3>
+          <p style="font-size:13px;color:var(--gray-400);margin:4px 0 0">Cada caja pertenece a una sucursal y descuenta stock de su bodega vinculada.</p>
+        </div>
+        <button class="btn btn-primary" onclick="modalNuevaCaja()">+ Nueva caja</button>
+      </div>
+      <div id="cajas-list" style="padding:${cajas.length?'16px':'0'} 24px;display:flex;flex-direction:column;gap:10px">
+        ${cajas.length?cajas.map(c=>{
+          const suc=bodegas.find(b=>b.id===c.sucursalId);
+          const bod=bodegas.find(b=>b.id===c.bodegaId);
+          return `
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid ${c.activa===false?'var(--gray-200)':'var(--gray-200)'};border-radius:10px;background:${c.activa===false?'#fafafa':'#fff'};opacity:${c.activa===false?'.6':'1'}">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:700;color:var(--gray-800)">${escAttr(c.nombre)}</div>
+              <div style="font-size:12px;color:var(--gray-400);margin-top:2px">
+                Sucursal: ${suc?(suc.nombre||suc.name):'Sin asignar'} &nbsp;·&nbsp; Bodega: ${bod?(bod.nombre||bod.name):'Sin asignar'}
+              </div>
+            </div>
+            <span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${c.activa===false?'#f1f5f9':'#dcfce7'};color:${c.activa===false?'#64748b':'#166534'}">${c.activa===false?'Inactiva':'Activa'}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button onclick="modalNuevaCaja('${c.id}')" title="Editar" style="width:30px;height:30px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:13px">✏️</button>
+              <button onclick="toggleCajaActiva('${c.id}')" title="${c.activa===false?'Activar':'Desactivar'}" style="width:30px;height:30px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:12px;color:var(--gray-600)">${c.activa===false?'▶':'⏸'}</button>
+              <button onclick="eliminarCaja('${c.id}')" title="Eliminar" style="width:30px;height:30px;border:1px solid #fecaca;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#ef4444">✕</button>
+            </div>
+          </div>`;
+        }).join(''):`<div style="padding:28px 0;text-align:center;color:var(--gray-400);font-size:13px">Sin cajas configuradas. Crea la primera con el botón de arriba.</div>`}
+      </div>
+    </div>
+
+    <!-- MÉTODOS DE PAGO -->
     <div class="card">
       <div style="padding:20px 24px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">
         <div>
@@ -2579,7 +2671,90 @@ function renderVentasConfig(){
         <p style="font-size:12px;color:var(--gray-400);margin:0">Los cambios se aplican automáticamente en el POS. El primer método de la lista es el predeterminado.</p>
       </div>
     </div>
+
   </div>`;
+}
+
+// ─── CRUD CAJAS PERIFÉRICAS ───────────────────
+function modalNuevaCaja(editId){
+  const cajas=getCajas();
+  const c=editId?cajas.find(x=>x.id===editId):{};
+  const isEdit=!!editId;
+  const bodegas=getBodegas();
+  // Sucursales = bodegas (reutilizamos la misma tabla)
+  const sucursales=bodegas;
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>${isEdit?'✏️ Editar':'➕ Nueva'} caja periférica</h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group" style="margin:0">
+        <label>Nombre de la caja <span style="color:var(--danger)">*</span></label>
+        <input id="cj-nombre" type="text" class="form-input" placeholder="Ej: Caja 1 — La Dehesa" value="${escAttr(c.nombre||'')}" autocomplete="off">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Sucursal <span style="color:var(--danger)">*</span></label>
+        <select id="cj-sucursal" class="form-input" onchange="_cajaBodegaFiltrar()">
+          <option value="">— Seleccionar —</option>
+          ${sucursales.map(s=>`<option value="${s.id}" ${c.sucursalId===s.id?'selected':''}>${escAttr(s.nombre||s.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Bodega vinculada <span style="color:var(--danger)">*</span></label>
+        <select id="cj-bodega" class="form-input">
+          <option value="">— Seleccionar —</option>
+          ${bodegas.map(b=>`<option value="${b.id}" ${c.bodegaId===b.id?'selected':''}>${escAttr(b.nombre||b.name)}</option>`).join('')}
+        </select>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">Las ventas de esta caja descontarán stock de esta bodega.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCaja('${editId||''}')">✅ ${isEdit?'Guardar cambios':'Crear caja'}</button>
+    </div>
+  </div></div>`);
+  setTimeout(()=>document.getElementById('cj-nombre')?.focus(),80);
+}
+
+function guardarCaja(editId){
+  const nombre=(document.getElementById('cj-nombre')?.value||'').trim();
+  const sucursalId=document.getElementById('cj-sucursal')?.value||'';
+  const bodegaId=document.getElementById('cj-bodega')?.value||'';
+  if(!nombre){toast('El nombre es obligatorio','error');return;}
+  if(!sucursalId){toast('Selecciona una sucursal','error');return;}
+  if(!bodegaId){toast('Selecciona una bodega','error');return;}
+  const cajas=getCajas();
+  if(editId){
+    const idx=cajas.findIndex(c=>c.id===editId);
+    if(idx>=0) cajas[idx]={...cajas[idx],nombre,sucursalId,bodegaId};
+  } else {
+    cajas.push({id:uid(),nombre,sucursalId,bodegaId,activa:true});
+  }
+  setCajas(cajas);
+  closeModal();
+  toast(`Caja "${nombre}" ${editId?'actualizada':'creada'} ✓`,'success');
+  renderVentasConfig();
+}
+
+function toggleCajaActiva(id){
+  const cajas=getCajas();
+  const idx=cajas.findIndex(c=>c.id===id);
+  if(idx<0) return;
+  cajas[idx].activa=cajas[idx].activa===false?true:false;
+  setCajas(cajas);
+  renderVentasConfig();
+}
+
+function eliminarCaja(id){
+  const cajas=getCajas();
+  const c=cajas.find(x=>x.id===id);
+  if(!c||!confirm(`¿Eliminar la caja "${c.nombre}"? Esta acción no se puede deshacer.`)) return;
+  setCajas(cajas.filter(x=>x.id!==id));
+  toast('Caja eliminada','success');
+  renderVentasConfig();
 }
 
 function modalNuevoMetodoPago(editId){
