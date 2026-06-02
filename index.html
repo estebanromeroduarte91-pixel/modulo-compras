@@ -2613,9 +2613,12 @@ function renderVentasConfig(){
     <!-- GESTIÓN DE CAJAS -->
     <div class="card">
       <div style="padding:20px 24px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <h3 style="font-size:16px;font-weight:700;color:var(--gray-800);margin:0">🏧 Cajas periféricas</h3>
-          <p style="font-size:13px;color:var(--gray-400);margin:4px 0 0">Cada caja pertenece a una sucursal y descuenta stock de su bodega vinculada.</p>
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="ti ti-device-desktop-analytics" style="font-size:20px;color:var(--text2)"></i>
+          <div>
+            <h3 style="font-size:16px;font-weight:600;color:var(--text);margin:0">Cajas periféricas</h3>
+            <p style="font-size:13px;color:var(--text2);margin:2px 0 0">Cada caja pertenece a una sucursal y descuenta stock de su bodega vinculada.</p>
+          </div>
         </div>
         <button class="btn btn-primary" onclick="modalNuevaCaja()">+ Nueva caja</button>
       </div>
@@ -2624,51 +2627,64 @@ function renderVentasConfig(){
           const suc=bodegas.find(b=>b.id===c.sucursalId);
           const bod=bodegas.find(b=>b.id===c.bodegaId);
           return `
-          <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid ${c.activa===false?'var(--gray-200)':'var(--gray-200)'};border-radius:10px;background:${c.activa===false?'#fafafa':'#fff'};opacity:${c.activa===false?'.6':'1'}">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface,#fff);opacity:${c.activa===false?'.55':'1'}">
+            <div style="width:38px;height:38px;border-radius:8px;background:var(--gray-50,#f8fafc);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="ti ti-device-desktop-analytics" style="font-size:18px;color:var(--text2)"></i>
+            </div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:14px;font-weight:700;color:var(--gray-800)">${escAttr(c.nombre)}</div>
-              <div style="font-size:12px;color:var(--gray-400);margin-top:2px">
-                Sucursal: ${suc?(suc.nombre||suc.name):'Sin asignar'} &nbsp;·&nbsp; Bodega: ${bod?(bod.nombre||bod.name):'Sin asignar'}
+              <div style="font-size:14px;font-weight:600;color:var(--text)">${escAttr(c.nombre)}</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px">
+                ${suc?(suc.nombre||suc.name):'Sin sucursal'} &nbsp;·&nbsp; ${bod?(bod.nombre||bod.name):'Sin bodega'}
               </div>
             </div>
             <span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${c.activa===false?'#f1f5f9':'#dcfce7'};color:${c.activa===false?'#64748b':'#166534'}">${c.activa===false?'Inactiva':'Activa'}</span>
-            <div style="display:flex;align-items:center;gap:6px">
-              <button onclick="modalNuevaCaja('${c.id}')" title="Editar" style="width:30px;height:30px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:13px">✏️</button>
-              <button onclick="toggleCajaActiva('${c.id}')" title="${c.activa===false?'Activar':'Desactivar'}" style="width:30px;height:30px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:12px;color:var(--gray-600)">${c.activa===false?'▶':'⏸'}</button>
-              <button onclick="eliminarCaja('${c.id}')" title="Eliminar" style="width:30px;height:30px;border:1px solid #fecaca;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#ef4444">✕</button>
+            <div style="display:flex;align-items:center;gap:5px">
+              <button onclick="modalNuevaCaja('${c.id}')" title="Editar" style="width:30px;height:30px;border:1px solid var(--border);border-radius:6px;background:var(--surface,#fff);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)"><i class="ti ti-edit" style="font-size:14px"></i></button>
+              <button onclick="toggleCajaActiva('${c.id}')" title="${c.activa===false?'Activar':'Desactivar'}" style="width:30px;height:30px;border:1px solid var(--border);border-radius:6px;background:var(--surface,#fff);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)"><i class="ti ti-${c.activa===false?'player-play':'player-pause'}" style="font-size:14px"></i></button>
+              <button onclick="eliminarCaja('${c.id}')" title="Eliminar" style="width:30px;height:30px;border:1px solid #fecaca;border-radius:6px;background:var(--surface,#fff);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ef4444"><i class="ti ti-trash" style="font-size:14px"></i></button>
             </div>
           </div>`;
-        }).join(''):`<div style="padding:28px 0;text-align:center;color:var(--gray-400);font-size:13px">Sin cajas configuradas. Crea la primera con el botón de arriba.</div>`}
+        }).join(''):`<div style="padding:28px 0;text-align:center;color:var(--text2);font-size:13px">Sin cajas configuradas. Crea la primera con el botón de arriba.</div>`}
       </div>
     </div>
 
     <!-- MÉTODOS DE PAGO -->
     <div class="card">
       <div style="padding:20px 24px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <h3 style="font-size:16px;font-weight:700;color:var(--gray-800);margin:0">💳 Métodos de pago</h3>
-          <p style="font-size:13px;color:var(--gray-400);margin:4px 0 0">Configura los métodos disponibles en el POS. Arrastrá para reordenar.</p>
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="ti ti-credit-card" style="font-size:20px;color:var(--text2)"></i>
+          <div>
+            <h3 style="font-size:16px;font-weight:600;color:var(--text);margin:0">Métodos de pago</h3>
+            <p style="font-size:13px;color:var(--text2);margin:2px 0 0">Configura los métodos disponibles en el POS. Arrastrá para reordenar.</p>
+          </div>
         </div>
         <button class="btn btn-primary" onclick="modalNuevoMetodoPago()">+ Agregar</button>
       </div>
       <div id="metodos-list" style="padding:16px 24px;display:flex;flex-direction:column;gap:10px">
-        ${metodos.map((m,i)=>`
-        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--gray-200);border-radius:10px;background:#fff">
-          <span style="font-size:24px;flex-shrink:0">${m.icon}</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:14px;font-weight:700;color:var(--gray-800)">${escAttr(m.label)}</div>
-            <div style="font-size:12px;color:var(--gray-400);margin-top:1px">${escAttr(m.desc||'')}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px">
-            <button onclick="moverMetodoPago(${i},-1)" title="Subir" ${i===0?'disabled':''} style="width:28px;height:28px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:var(--gray-500);opacity:${i===0?'.3':'1'}">↑</button>
-            <button onclick="moverMetodoPago(${i},1)" title="Bajar" ${i===metodos.length-1?'disabled':''} style="width:28px;height:28px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:var(--gray-500);opacity:${i===metodos.length-1?'.3':'1'}">↓</button>
-            <button onclick="modalNuevoMetodoPago('${m.id}')" title="Editar" style="width:28px;height:28px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:13px">✏️</button>
-            <button onclick="eliminarMetodoPago('${m.id}')" title="Eliminar" ${metodos.length<=1?'disabled':''} style="width:28px;height:28px;border:1px solid #fecaca;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#ef4444;opacity:${metodos.length<=1?'.3':'1'}">✕</button>
-          </div>
-        </div>`).join('')}
+        ${metodos.map((m,i)=>{
+          const _mpIconMap={'efectivo':'ti-cash','debito':'ti-credit-card','credito':'ti-credit-card','getnet':'ti-building-bank','transferencia':'ti-building-community','wallet':'ti-wallet','otro':'ti-cash'};
+          const _mpKey=Object.keys(_mpIconMap).find(k=>(m.label||'').toLowerCase().includes(k))||'otro';
+          const _mpIcon=_mpIconMap[_mpKey];
+          return `
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface,#fff)">
+            <div style="width:40px;height:40px;border-radius:8px;background:var(--gray-50,#f8fafc);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="ti ${_mpIcon}" style="font-size:20px;color:var(--text2)"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:600;color:var(--text)">${escAttr(m.label)}</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:1px">${escAttr(m.desc||'')}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px">
+              <button onclick="moverMetodoPago(${i},-1)" title="Subir" ${i===0?'disabled':''} style="width:30px;height:30px;border:1px solid var(--border);border-radius:6px;background:var(--surface,#fff);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);opacity:${i===0?'.3':'1'}"><i class="ti ti-arrow-up" style="font-size:14px"></i></button>
+              <button onclick="moverMetodoPago(${i},1)" title="Bajar" ${i===metodos.length-1?'disabled':''} style="width:30px;height:30px;border:1px solid var(--border);border-radius:6px;background:var(--surface,#fff);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);opacity:${i===metodos.length-1?'.3':'1'}"><i class="ti ti-arrow-down" style="font-size:14px"></i></button>
+              <button onclick="modalNuevoMetodoPago('${m.id}')" title="Editar" style="width:30px;height:30px;border:1px solid var(--border);border-radius:6px;background:var(--surface,#fff);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)"><i class="ti ti-edit" style="font-size:14px"></i></button>
+              <button onclick="eliminarMetodoPago('${m.id}')" title="Eliminar" ${metodos.length<=1?'disabled':''} style="width:30px;height:30px;border:1px solid #fecaca;border-radius:6px;background:var(--surface,#fff);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ef4444;opacity:${metodos.length<=1?'.3':'1'}"><i class="ti ti-trash" style="font-size:14px"></i></button>
+            </div>
+          </div>`;
+        }).join('')}
       </div>
-      <div style="padding:12px 24px;border-top:1px solid var(--gray-100);background:var(--gray-50);border-radius:0 0 var(--radius) var(--radius)">
-        <p style="font-size:12px;color:var(--gray-400);margin:0">Los cambios se aplican automáticamente en el POS. El primer método de la lista es el predeterminado.</p>
+      <div style="padding:12px 24px;border-top:1px solid var(--gray-100);background:var(--gray-50,#f8fafc);border-radius:0 0 var(--radius) var(--radius)">
+        <p style="font-size:12px;color:var(--text2);margin:0">Los cambios se aplican automáticamente en el POS. El primer método de la lista es el predeterminado.</p>
       </div>
     </div>
 
@@ -2687,7 +2703,7 @@ function modalNuevaCaja(editId){
   <div class="modal-bg" onclick="if(event.target===this)closeModal()">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
-      <h3>${isEdit?'✏️ Editar':'➕ Nueva'} caja periférica</h3>
+      <h3>${isEdit?'Editar':'Nueva'} caja periférica</h3>
       <button class="close-btn" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
@@ -2713,7 +2729,7 @@ function modalNuevaCaja(editId){
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarCaja('${editId||''}')">✅ ${isEdit?'Guardar cambios':'Crear caja'}</button>
+      <button class="btn btn-primary" onclick="guardarCaja('${editId||''}')">${isEdit?'Guardar cambios':'Crear caja'}</button>
     </div>
   </div></div>`);
   setTimeout(()=>document.getElementById('cj-nombre')?.focus(),80);
