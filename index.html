@@ -1164,7 +1164,6 @@ function getCajaSesionHoy(branchId, cajaId){
 function getCajaTotalesHoy(branchId, cajaId){
   const bid=branchId||tp_currentBranchId||'';
   const hoy=today();
-  // Si hay cajaId con bodegaId, filtrar por bodega; si no, filtrar por branch
   const caja=cajaId?getCajas().find(c=>c.id===cajaId):null;
   const ventasHoy=getVentas().filter(v=>{
     if(v.estado==='anulada') return false;
@@ -1172,13 +1171,18 @@ function getCajaTotalesHoy(branchId, cajaId){
     if(caja&&caja.bodegaId) return v.bodega_id===caja.bodegaId||v.bodegaId===caja.bodegaId;
     return bid?v.branchId===bid:true;
   });
+  // Mapa de id → label para métodos configurados
+  const mpMap={};
+  getMetodosPago().forEach(mp=>{ mpMap[mp.id]=mp.label||''; });
   const metodos={efectivo:0,debito:0,credito:0,transferencia:0,otro:0};
   ventasHoy.forEach(v=>{
-    const m=(v.metodo_pago||v.metodoPago||'otro').toLowerCase().replace('é','e').replace('é','e');
-    if(m.includes('efect')) metodos.efectivo+=(+v.total_iva||0);
-    else if(m.includes('debit')||m.includes('deb')) metodos.debito+=(+v.total_iva||0);
-    else if(m.includes('credit')||m.includes('cred')) metodos.credito+=(+v.total_iva||0);
-    else if(m.includes('transf')||m.includes('transfer')) metodos.transferencia+=(+v.total_iva||0);
+    const raw=v.metodo_pago||v.metodoPago||'otro';
+    // Resolver label si el valor es un ID de método configurado
+    const label=(mpMap[raw]||raw).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    if(label.includes('efect')) metodos.efectivo+=(+v.total_iva||0);
+    else if(label.includes('debit')||label.includes('deb')) metodos.debito+=(+v.total_iva||0);
+    else if(label.includes('credit')||label.includes('cred')) metodos.credito+=(+v.total_iva||0);
+    else if(label.includes('transf')) metodos.transferencia+=(+v.total_iva||0);
     else metodos.otro+=(+v.total_iva||0);
   });
   metodos._total=Object.values(metodos).reduce((a,b)=>a+b,0);
@@ -2157,10 +2161,10 @@ function _renderPOS(){
                 style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:${active?'2px solid #3b82f6':'1.5px solid #e5e7eb'};background:${active?'#eff6ff':'#fff'};text-align:left;cursor:pointer;width:100%;box-sizing:border-box;transition:all .15s;color:${active?'#3b82f6':'#6b7280'}">
                 <span style="flex-shrink:0;display:flex;align-items:center">${svgIcon}</span>
                 <div style="flex:1;min-width:0">
-                  <div style="font-size:12px;font-weight:600;color:${active?'#1d4ed8':'#374151'};line-height:1.3">${escAttr(label)}</div>
+                  <div class="mp-label" style="font-size:12px;font-weight:600;color:${active?'#1d4ed8':'#374151'};line-height:1.3">${escAttr(label)}</div>
                   <div style="font-size:10px;color:#9ca3af;line-height:1.3;margin-top:1px">${escAttr(desc||'')}</div>
                 </div>
-                ${active?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+                <span class="mp-check" style="display:${active?'flex':'none'};align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
               </button>`;
             }).join('')}
           </div>
@@ -2265,12 +2269,18 @@ function posRenderCart(){ const c=document.getElementById('pos-cart'); if(c) c.i
 function posRenderResumen(){
   const t=document.getElementById('pos-totales'); if(t) t.innerHTML=_renderPOSTotales();
   const b=document.getElementById('pos-btn-cobrar'); if(b) b.textContent='Cobrar '+fmt$(_posTotalConIVA());
-  getMetodosPago().forEach(({id:k})=>{
+  getMetodosPago().forEach(({id:k,label,desc})=>{
     const btn=document.querySelector(`[data-metodo="${k}"]`);
     if(!btn) return;
     const active=k===_posMetodo;
-    btn.style.border=active?'2px solid var(--primary)':'1.5px solid var(--gray-200)';
-    btn.style.background=active?'var(--primary-light,#eff6ff)':'#fff';
+    btn.style.border=active?'2px solid var(--primary)':'1.5px solid var(--gray-200,#e5e7eb)';
+    btn.style.background=active?'var(--primary-light,#eff6ff)':'var(--surface,#fff)';
+    btn.style.color=active?'var(--primary)':'#6b7280';
+    // update label color and check icon
+    const labelEl=btn.querySelector('.mp-label');
+    if(labelEl) labelEl.style.color=active?'#1d4ed8':'#374151';
+    const checkEl=btn.querySelector('.mp-check');
+    if(checkEl) checkEl.style.display=active?'flex':'none';
   });
   _renderPOSOrderBadge();
 }
