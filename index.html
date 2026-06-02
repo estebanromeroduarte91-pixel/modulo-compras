@@ -5200,10 +5200,30 @@ function parseVtaExcel(rows){
   const totalLineas=parsedRows.length;
   const boletasMulti=_importVentaRows.filter(r=>r._isMulti).length;
 
+  // Detectar sucursales únicas en el Excel
+  const sucursalesExcel=[...new Set(parsedRows.map(r=>r.sucursalNombre).filter(Boolean))];
+  const bodegas2=getBodegas();
+
   const preview=document.getElementById('vta-import-preview');
   if(!preview) return;
-  preview.innerHTML=`
-    <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+
+  // Sección de mapeo de sucursales (si el Excel trae columna sucursal)
+  const mapeoHtml=sucursalesExcel.length?`
+    <div style="margin-top:16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-weight:600;color:#92400e;margin-bottom:10px;font-size:13px">📍 Asignar sucursales del Excel → ERP</div>
+      ${sucursalesExcel.map(suc=>`
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;font-size:13px">
+          <span style="min-width:160px;color:var(--gray-700);font-weight:500">"${escAttr(suc)}"</span>
+          <span style="color:var(--gray-400)">→</span>
+          <select id="suc-map-${btoa(suc).replace(/=/g,'')}" style="flex:1;padding:6px 10px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px">
+            <option value="">— Sin asignar —</option>
+            ${bodegas2.map(b=>`<option value="${b.id}" ${(b.nombre||b.name||'').toLowerCase().includes(suc.toLowerCase().split(' ')[0])?'selected':''}>${b.nombre||b.name}</option>`).join('')}
+          </select>
+        </div>`).join('')}
+    </div>`:'';
+
+  preview.innerHTML=mapeoHtml+`
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
       <div style="background:var(--gray-50);border-radius:8px;padding:10px 16px;font-size:13px;color:var(--gray-700)">
         <strong>${_importVentaRows.length}</strong> boletas a importar
       </div>
@@ -5215,7 +5235,7 @@ function parseVtaExcel(rows){
         Total: <strong>${fmt(totalImport)}</strong>
       </div>
     </div>
-    <div style="max-height:300px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px">
+    <div style="max-height:260px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead style="background:var(--gray-50);position:sticky;top:0">
           <tr>
@@ -5232,15 +5252,18 @@ function parseVtaExcel(rows){
             <td style="padding:7px 10px;color:var(--gray-700);white-space:nowrap">${r.fecha}</td>
             <td style="padding:7px 10px;color:var(--gray-700);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escAttr(r.cliente)}</td>
             <td style="padding:7px 10px;color:var(--gray-700)">
-              ${r._items.map(it=>`<div style="font-size:11px;color:var(--gray-600);${r._isMulti?'padding:1px 0':''}">${escAttr(it.producto)} <span style="color:var(--gray-400)">x${it.cantidad}</span></div>`).join('')}
+              ${r._items.map(it=>`<div style="font-size:11px;color:var(--gray-600)">${escAttr(it.producto)} <span style="color:var(--gray-400)">x${it.cantidad}</span></div>`).join('')}
             </td>
             <td style="padding:7px 10px;text-align:right;font-weight:600;color:var(--gray-800);white-space:nowrap">${fmt(r.total_iva)}</td>
-            <td style="padding:7px 10px;color:var(--gray-600);white-space:nowrap">${escAttr(r.branchNombre||'—')}</td>
+            <td style="padding:7px 10px;color:var(--gray-600);white-space:nowrap">${escAttr(r.sucursalNombre||'—')}</td>
           </tr>`).join('')}
           ${_importVentaRows.length>25?`<tr><td colspan="5" style="padding:8px;text-align:center;color:var(--gray-400);font-size:11px">… y ${_importVentaRows.length-25} boletas más</td></tr>`:''}
         </tbody>
       </table>
     </div>`;
+
+  // Guardar sucursales del Excel para leerlas al confirmar
+  window._importSucursalesExcel=sucursalesExcel;
 
   const footer=document.getElementById('vta-import-footer');
   if(footer) footer.innerHTML=`
@@ -5250,9 +5273,26 @@ function parseVtaExcel(rows){
 
 function confirmarImportarVentas(){
   if(!_importVentaRows.length) return;
+  const bodegas2=getBodegas();
+  // Leer mapeo de sucursales del formulario
+  const sucMap={};
+  (window._importSucursalesExcel||[]).forEach(suc=>{
+    const key=btoa(suc).replace(/=/g,'');
+    const sel=document.getElementById('suc-map-'+key);
+    if(sel&&sel.value){
+      const bod=bodegas2.find(b=>b.id===sel.value);
+      sucMap[suc]={ branchId: sel.value, branchNombre: bod?(bod.nombre||bod.name||suc):suc };
+    }
+  });
+
   const ventas=getVentas();
   let importadas=0;
   _importVentaRows.forEach(r=>{
+    // Usar mapeo explícito si existe, sino fallback al detectado en parseo
+    const mapped=sucMap[r.sucursalNombre]||null;
+    const branchId=mapped?.branchId||r.branchId||'';
+    const branchNombre=mapped?.branchNombre||r.branchNombre||r.sucursalNombre||'';
+
     const num='VTA-IMP-'+String(DB.nextVenta()).padStart(5,'0');
     const items=(r._items||[r]).map(it=>({
       id: uid(),
@@ -5271,8 +5311,8 @@ function confirmarImportarVentas(){
       cliente: r.cliente,
       rut_cliente: r.rut,
       metodo_pago: r.metodo_pago,
-      branchId: r.branchId||'',
-      branchNombre: r.branchNombre||'',
+      branchId,
+      branchNombre,
       items,
       total: r.total_iva,
       total_iva: r.total_iva,
