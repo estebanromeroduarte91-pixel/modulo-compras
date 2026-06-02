@@ -1400,43 +1400,51 @@ function nav(page){
 let _cajaSelId=null; // caja periférica actualmente seleccionada en la vista
 
 function renderCaja(){
-  const branchId=_currentBranchContext||tp_currentBranchId||'';
+  let branchId=_currentBranchContext||tp_currentBranchId||'';
   const bodegas=getBodegas();
-  const branch=bodegas.find(b=>b.id===branchId);
-  const branchNombre=branch?(branch.nombre||branch.name):'Esta sucursal';
   const fmt=v=>'$'+Math.round(v).toLocaleString('es-CL');
 
-  // Cajas configuradas para esta sucursal
-  const cajasBranch=getCajas().filter(c=>c.sucursalId===branchId&&c.activa!==false);
+  // Todas las cajas activas disponibles
+  const todasCajas=getCajas().filter(c=>c.activa!==false);
 
-  // Si no hay cajas configuradas, mostrar aviso
-  if(!cajasBranch.length){
+  // Si no hay branchId (vista global), usar la caja seleccionada o la primera disponible
+  // Permitir seleccionar cualquier caja de cualquier sucursal
+  const cajasBranch=branchId?todasCajas.filter(c=>c.sucursalId===branchId):todasCajas;
+
+  // Si no hay cajas configuradas en absoluto, mostrar aviso
+  if(!todasCajas.length){
     document.getElementById('page-content').innerHTML=`
     <div style="max-width:540px">
       <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:14px;padding:36px;text-align:center">
         <div style="font-size:40px;margin-bottom:14px">🏧</div>
         <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Sin cajas configuradas</div>
-        <p style="font-size:13px;color:var(--text2);margin:0 0 20px">Esta sucursal no tiene cajas periféricas activas. Crea al menos una desde <strong>Ventas → Configuración</strong>.</p>
+        <p style="font-size:13px;color:var(--text2);margin:0 0 20px">No hay cajas periféricas activas. Crea al menos una desde <strong>Ventas → Configuración</strong>.</p>
         <button class="btn btn-primary" onclick="navVentas('config')">Ir a Configuración →</button>
       </div>
     </div>`;
     return;
   }
 
-  // Si hay sólo una caja activa, usarla directamente
-  if(!_cajaSelId||!cajasBranch.find(c=>c.id===_cajaSelId)) _cajaSelId=cajasBranch[0].id;
-  const cajaActual=cajasBranch.find(c=>c.id===_cajaSelId)||cajasBranch[0];
+  // Si hay sólo una caja seleccionada o disponible, usarla
+  if(!_cajaSelId||!todasCajas.find(c=>c.id===_cajaSelId)) _cajaSelId=(cajasBranch[0]||todasCajas[0]).id;
+  const cajaActual=todasCajas.find(c=>c.id===_cajaSelId)||(cajasBranch[0]||todasCajas[0]);
 
-  const sesion=getCajaSesionHoy(branchId, cajaActual.id);
-  const totales=getCajaTotalesHoy(branchId, cajaActual.id);
+  // Usar el branchId de la caja seleccionada si estamos en vista global
+  const efectivoBranchId=cajaActual.sucursalId||branchId;
+  const branch=bodegas.find(b=>b.id===efectivoBranchId);
+  const branchNombre=branch?(branch.nombre||branch.name):'—';
+
+  const sesion=getCajaSesionHoy(efectivoBranchId, cajaActual.id);
+  const totales=getCajaTotalesHoy(efectivoBranchId, cajaActual.id);
   const bodegaNombre=(()=>{const b=bodegas.find(x=>x.id===cajaActual.bodegaId);return b?(b.nombre||b.name):'—';})();
 
-  // Selector de caja (si hay más de una)
-  const selectorHtml=cajasBranch.length>1?`
+  // Selector de caja (si hay más de una en total)
+  const selectorHtml=todasCajas.length>1?`
     <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
-      ${cajasBranch.map(c=>`
-        <button onclick="_cajaSeleccionar('${c.id}')" style="padding:6px 16px;border-radius:20px;border:1.5px solid ${c.id===cajaActual.id?'var(--primary)':'var(--border)'};background:${c.id===cajaActual.id?'var(--primary)':'var(--surface,#fff)'};color:${c.id===cajaActual.id?'#fff':'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">${escAttr(c.nombre)}</button>
-      `).join('')}
+      ${todasCajas.map(c=>{
+        const sucNombre=(()=>{const s=bodegas.find(b=>b.id===c.sucursalId);return s?(s.nombre||s.name):'';})();
+        return `<button onclick="_cajaSeleccionar('${c.id}')" style="padding:6px 16px;border-radius:20px;border:1.5px solid ${c.id===cajaActual.id?'var(--primary)':'var(--border)'};background:${c.id===cajaActual.id?'var(--primary)':'var(--surface,#fff)'};color:${c.id===cajaActual.id?'#fff':'var(--text)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">${escAttr(c.nombre)}${sucNombre&&!branchId?' <span style="font-weight:400;opacity:.7;font-size:11px">('+escAttr(sucNombre)+')</span>':''}</button>`;
+      }).join('')}
     </div>`:'';
 
   const infoBar=`
@@ -1446,7 +1454,7 @@ function renderCaja(){
 
   // Vista: caja cerrada
   if(!sesion||sesion.estado==='cerrada'){
-    const historial=getCajaSesiones().filter(s=>s.branchId===branchId&&s.cajaId===cajaActual.id&&s.estado==='cerrada').sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,5);
+    const historial=getCajaSesiones().filter(s=>s.branchId===efectivoBranchId&&s.cajaId===cajaActual.id&&s.estado==='cerrada').sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,5);
     document.getElementById('page-content').innerHTML=`
     <div style="max-width:560px">
       <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">
@@ -1472,7 +1480,7 @@ function renderCaja(){
           <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Responsable</label>
           <input class="form-input" id="caja-resp" value="${escAttr(_currentUserNombre||'')}">
         </div>
-        <button class="btn btn-primary" onclick="_cajaAbrir('${branchId}','${cajaActual.id}')" style="width:100%;justify-content:center">Abrir caja</button>
+        <button class="btn btn-primary" onclick="_cajaAbrir('${efectivoBranchId}','${cajaActual.id}')" style="width:100%;justify-content:center">Abrir caja</button>
       </div>
       ${historial.length?`
       <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Historial reciente</div>
@@ -1547,7 +1555,7 @@ function renderCaja(){
       </div>
     </div>
 
-    <button onclick="_cajaCerrarModal('${branchId}','${cajaActual.id}')" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface,#fff);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+    <button onclick="_cajaCerrarModal('${efectivoBranchId}','${cajaActual.id}')" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface,#fff);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
       Cerrar y cuadrar caja →
     </button>
   </div>`;
