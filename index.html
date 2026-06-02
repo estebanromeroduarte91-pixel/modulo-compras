@@ -3472,10 +3472,10 @@ function verVenta(id){
           <th style="padding:8px;text-align:right">Subtotal</th>
         </tr></thead>
         <tbody>${(v.items||[]).map(it=>`
-          <tr><td style="padding:8px">${it.producto_nombre}</td>
-          <td style="padding:8px;text-align:center">${it.cantidad}</td>
-          <td style="padding:8px;text-align:right">${fmt$(it.precio_neto||0)}</td>
-          <td style="padding:8px;text-align:right;font-weight:600">${fmt$(it.subtotal||0)}</td></tr>`).join('')}
+          <tr><td style="padding:8px">${it.producto_nombre||it.nombre||'—'}</td>
+          <td style="padding:8px;text-align:center">${it.cantidad||1}</td>
+          <td style="padding:8px;text-align:right">${fmt$(it.precio_neto||it.precio_venta||it.precio_con_iva||0)}</td>
+          <td style="padding:8px;text-align:right;font-weight:600">${fmt$(it.subtotal||(it.precio_venta||it.precio_con_iva||0)*(it.cantidad||1)||0)}</td></tr>`).join('')}
         </tbody>
       </table>
     </div>
