@@ -2069,6 +2069,7 @@ function renderVentas(){
     _renderPOS();
   } else {
     document.getElementById('topbar-actions').innerHTML=`
+      <button class="btn btn-secondary" onclick="modalImportarVentas()" style="display:flex;align-items:center;gap:6px"><i class="ti ti-file-spreadsheet" style="font-size:15px"></i> Importar historial</button>
       <button class="btn btn-primary" onclick="navVentas('pos')">🛒 Ir al POS</button>`;
     _renderHistorial();
   }
@@ -5035,6 +5036,215 @@ function confirmarImportarClientes(){
   closeModal();
   toast(`✅ ${nuevos} clientes importados${dupes?` · ${dupes} duplicados omitidos`:''}`,'success');
   renderClientes();
+}
+
+// ─── IMPORTAR VENTAS HISTÓRICAS ───────────────
+let _importVentaRows=[];
+
+function descargarPlantillaVentas(){
+  if(typeof XLSX==='undefined'){ toast('Cargando librería...','info'); return; }
+  const ws=XLSX.utils.aoa_to_sheet([
+    ['Fecha','Cliente','RUT','Producto','Cantidad','Precio Unitario','Método de Pago','Documento','Sucursal'],
+    ['15/03/2024','Juan Pérez','12.345.678-9','iPhone 14 Pro Max Pantalla',1,389990,'Efectivo','Boleta','La Dehesa'],
+    ['16/03/2024','María González','9.876.543-2','Batería iPhone 13',2,45000,'GetNet','Boleta','Los Dominicos'],
+  ]);
+  ws['!cols']=[{wch:14},{wch:20},{wch:16},{wch:30},{wch:10},{wch:18},{wch:16},{wch:12},{wch:16}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Ventas');
+  XLSX.writeFile(wb,'plantilla_ventas_historicas.xlsx');
+}
+
+function modalImportarVentas(){
+  _importVentaRows=[];
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Importar ventas históricas</h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="template-info">
+        💡 Descarga la <strong style="cursor:pointer;color:var(--primary);text-decoration:underline" onclick="descargarPlantillaVentas()">plantilla Excel</strong> para ver el formato exacto.
+        Columnas: <strong>Fecha, Cliente, RUT, Producto, Cantidad, Precio Unitario, Método de Pago, Documento, Sucursal</strong>
+      </div>
+      <div class="drop-zone" id="vta-import-drop" onclick="document.getElementById('vta-import-file').click()"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="handleVtaExcelDrop(event)">
+        <div class="drop-zone-icon">📂</div>
+        <p>Arrastra tu archivo Excel aquí o <strong>haz clic para seleccionar</strong></p>
+        <p style="font-size:12px;margin-top:4px;color:var(--gray-400)">Soporta .xlsx y .xls</p>
+        <input type="file" id="vta-import-file" accept=".xlsx,.xls" style="display:none" onchange="handleVtaExcelFile(this.files[0])">
+      </div>
+      <div id="vta-import-preview"></div>
+    </div>
+    <div class="modal-footer" id="vta-import-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    </div>
+  </div></div>`);
+}
+
+function handleVtaExcelDrop(e){
+  e.preventDefault();
+  document.getElementById('vta-import-drop')?.classList.remove('drag-over');
+  const file=e.dataTransfer.files[0];
+  if(file) handleVtaExcelFile(file);
+}
+
+function handleVtaExcelFile(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const data=new Uint8Array(ev.target.result);
+    const wb=XLSX.read(data,{type:'array',cellDates:true});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});
+    parseVtaExcel(rows);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseVtaExcel(rows){
+  if(rows.length<2){ toast('Archivo vacío o sin datos','error'); return; }
+  const hdr=(rows[0]||[]).map(c=>String(c).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''));
+  const ci=(names)=>{ const i=hdr.findIndex(h=>names.some(n=>h.includes(n))); return i; };
+  const iFecha=ci(['fecha','date']);
+  const iCliente=ci(['cliente','customer','nombre']);
+  const iRut=ci(['rut']);
+  const iProd=ci(['producto','product','descripcion','item']);
+  const iCant=ci(['cantidad','qty','cantidad','unidades']);
+  const iPrecio=ci(['precio','price','unit','valor']);
+  const iMetodo=ci(['metodo','pago','payment','medio']);
+  const iDoc=ci(['documento','doc','tipo']);
+  const iSuc=ci(['sucursal','branch','tienda']);
+
+  const dataRows=rows.slice(1).filter(r=>r.some(c=>String(c).trim()!==''));
+
+  // Resolver sucursales para mapeo
+  const bodegas=getBodegas();
+
+  _importVentaRows=dataRows.map((r,idx)=>{
+    const fechaRaw=String(r[iFecha]||'').trim();
+    // Parsear fecha dd/mm/aaaa o aaaa-mm-dd o texto libre
+    let fechaISO=today();
+    const mDMY=fechaRaw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    const mYMD=fechaRaw.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if(mDMY) fechaISO=`${mDMY[3]}-${mDMY[2].padStart(2,'0')}-${mDMY[1].padStart(2,'0')}`;
+    else if(mYMD) fechaISO=`${mYMD[1]}-${mYMD[2].padStart(2,'0')}-${mYMD[3].padStart(2,'0')}`;
+    else if(fechaRaw) fechaISO=fechaRaw.slice(0,10);
+
+    const sucNombre=String(r[iSuc]||'').trim();
+    const sucBodega=bodegas.find(b=>(b.nombre||b.name||'').toLowerCase().includes(sucNombre.toLowerCase()))||null;
+
+    const precio=parseFloat(String(r[iPrecio]||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0;
+    const cantidad=parseInt(String(r[iCant]||'1'))||1;
+
+    return {
+      _idx: idx,
+      fecha: fechaISO,
+      cliente: String(r[iCliente]||'').trim()||'Cliente genérico',
+      rut: String(r[iRut]||'').trim(),
+      producto: String(r[iProd]||'').trim()||'Producto importado',
+      cantidad,
+      precio_unitario: precio,
+      total_iva: precio*cantidad,
+      metodo_pago: String(r[iMetodo]||'').trim()||'Efectivo',
+      documento: String(r[iDoc]||'').trim()||'boleta',
+      sucursalNombre: sucNombre,
+      branchId: sucBodega?.id||'',
+      branchNombre: sucBodega?(sucBodega.nombre||sucBodega.name||''):sucNombre,
+    };
+  }).filter(r=>r.producto&&r.fecha);
+
+  if(!_importVentaRows.length){ toast('No se encontraron filas válidas','error'); return; }
+
+  const fmt=v=>'$'+Math.round(v).toLocaleString('es-CL');
+  const totalImport=_importVentaRows.reduce((s,r)=>s+r.total_iva,0);
+
+  const preview=document.getElementById('vta-import-preview');
+  if(!preview) return;
+  preview.innerHTML=`
+    <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="background:var(--gray-50);border-radius:8px;padding:10px 16px;font-size:13px;color:var(--gray-700)">
+        <strong>${_importVentaRows.length}</strong> ventas a importar
+      </div>
+      <div style="background:var(--gray-50);border-radius:8px;padding:10px 16px;font-size:13px;color:var(--gray-700)">
+        Total histórico: <strong>${fmt(totalImport)}</strong>
+      </div>
+      <div style="background:var(--gray-50);border-radius:8px;padding:10px 16px;font-size:13px;color:var(--gray-700)">
+        Desde <strong>${_importVentaRows[_importVentaRows.length-1]?.fecha||'—'}</strong> hasta <strong>${_importVentaRows[0]?.fecha||'—'}</strong>
+      </div>
+    </div>
+    <div style="max-height:280px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead style="background:var(--gray-50);position:sticky;top:0">
+          <tr>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--gray-600);border-bottom:1px solid var(--gray-200)">Fecha</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--gray-600);border-bottom:1px solid var(--gray-200)">Cliente</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--gray-600);border-bottom:1px solid var(--gray-200)">Producto</th>
+            <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--gray-600);border-bottom:1px solid var(--gray-200)">Cant.</th>
+            <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--gray-600);border-bottom:1px solid var(--gray-200)">Total</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--gray-600);border-bottom:1px solid var(--gray-200)">Método</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--gray-600);border-bottom:1px solid var(--gray-200)">Sucursal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${_importVentaRows.slice(0,20).map((r,i)=>`
+          <tr style="border-bottom:1px solid var(--gray-100);background:${i%2===0?'#fff':'var(--gray-50)'}">
+            <td style="padding:7px 10px;color:var(--gray-700)">${r.fecha}</td>
+            <td style="padding:7px 10px;color:var(--gray-700);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escAttr(r.cliente)}</td>
+            <td style="padding:7px 10px;color:var(--gray-700);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escAttr(r.producto)}</td>
+            <td style="padding:7px 10px;text-align:right;color:var(--gray-700)">${r.cantidad}</td>
+            <td style="padding:7px 10px;text-align:right;font-weight:600;color:var(--gray-800)">${fmt(r.total_iva)}</td>
+            <td style="padding:7px 10px;color:var(--gray-600)">${escAttr(r.metodo_pago)}</td>
+            <td style="padding:7px 10px;color:var(--gray-600)">${escAttr(r.branchNombre||'—')}</td>
+          </tr>`).join('')}
+          ${_importVentaRows.length>20?`<tr><td colspan="7" style="padding:8px;text-align:center;color:var(--gray-400);font-size:11px">… y ${_importVentaRows.length-20} registros más</td></tr>`:''}
+        </tbody>
+      </table>
+    </div>`;
+
+  const footer=document.getElementById('vta-import-footer');
+  if(footer) footer.innerHTML=`
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="confirmarImportarVentas()"><i class="ti ti-check" style="font-size:14px;margin-right:4px"></i> Importar ${_importVentaRows.length} ventas</button>`;
+}
+
+function confirmarImportarVentas(){
+  if(!_importVentaRows.length) return;
+  const ventas=getVentas();
+  let importadas=0;
+  _importVentaRows.forEach(r=>{
+    const num='VTA-IMP-'+String(DB.nextVenta()).padStart(5,'0');
+    ventas.push({
+      id: uid(),
+      numero: num,
+      estado: 'pagada',
+      origen: 'importado',
+      fecha: r.fecha,
+      fecha_creacion: r.fecha,
+      cliente: r.cliente,
+      rut_cliente: r.rut,
+      metodo_pago: r.metodo_pago,
+      branchId: r.branchId||'',
+      branchNombre: r.branchNombre||'',
+      items:[{
+        id: uid(),
+        nombre: r.producto,
+        cantidad: r.cantidad,
+        precio_venta: r.precio_unitario,
+        precio_con_iva: r.precio_unitario,
+      }],
+      total: r.total_iva,
+      total_iva: r.total_iva,
+      documento: r.documento||'boleta',
+    });
+    importadas++;
+  });
+  setVentas(ventas);
+  closeModal();
+  toast(`${importadas} ventas históricas importadas ✓`,'success');
+  renderVentas();
 }
 
 function renderOC(){
