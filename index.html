@@ -11227,7 +11227,7 @@ function tp_loadSeguimientoConfig(){
   set('seg-horario', c.horario||'');
   set('seg-ubicacion', c.ubicacion||'');
   set('seg-especialidad', c.especialidad||'');
-  set('seg-dias', c.dias||30);
+  set('seg-dias', c.dias??0);
   set('seg-asunto', c.asunto||'');
   set('seg-msg-apertura', c.msgApertura||'');
   set('seg-msg-cierre', c.msgCierre||'');
@@ -11316,7 +11316,7 @@ function tp_saveSeguimientoConfig(){
     horario: get('seg-horario'),
     ubicacion: get('seg-ubicacion'),
     especialidad: get('seg-especialidad'),
-    dias: get('seg-dias')!==''?parseInt(get('seg-dias')):30,
+    dias: get('seg-dias')!==''?parseInt(get('seg-dias')):0,
     asunto: get('seg-asunto'),
     msgApertura: get('seg-msg-apertura'),
     msgCierre: get('seg-msg-cierre'),
