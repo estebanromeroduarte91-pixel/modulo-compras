@@ -9754,7 +9754,200 @@ function tp_renderOrders(){
     </tr>`;
   }).join('');
 }
-function tp_renderAll(){tp_updateHeader();tp_renderOrders();tp_updateNotifBadge();}
+function tp_renderAll(){tp_updateHeader();tp_renderOrders();tp_updateNotifBadge();tp_checkSeguimientos();}
+
+// ══════════════════════════════════════════════
+// SISTEMA DE SEGUIMIENTO POST-REPARACIÓN (30 días)
+// ══════════════════════════════════════════════
+function tp_getSeguimientos(){ try{return JSON.parse(localStorage.getItem('erp_tp_seguimientos')||'[]');}catch(e){return[];} }
+function tp_setSeguimientos(v){ localStorage.setItem('erp_tp_seguimientos',JSON.stringify(v)); }
+
+function tp_ordenesParaSeguimiento(){
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const seguimientos=tp_getSeguimientos();
+  const yaEnviados=new Set(seguimientos.map(s=>s.orderId));
+  return (tp_orders||[]).filter(o=>{
+    if(o.status!=='Entregado') return false;
+    if(yaEnviados.has(o.id)) return false;
+    if(!o.clientEmail&&!o.email) return false;
+    // Buscar fecha de entrega (deliveredAt o updatedAt o createdAt)
+    const fechaStr=o.deliveredAt||o.updatedAt||o.createdAt||o.fecha||'';
+    if(!fechaStr) return false;
+    const fechaEntrega=new Date(fechaStr); fechaEntrega.setHours(0,0,0,0);
+    const diasTranscurridos=Math.floor((hoy-fechaEntrega)/(1000*60*60*24));
+    return diasTranscurridos>=30;
+  });
+}
+
+function tp_checkSeguimientos(){
+  const pendientes=tp_ordenesParaSeguimiento();
+  // Banner en page-orders
+  const wrap=document.getElementById('tp-seguimiento-banner');
+  if(wrap) wrap.remove();
+  if(!pendientes.length) return;
+  const cfg=DB.get('tp_smtp_config');
+  if(!cfg?.host) return; // sin SMTP no mostramos
+  const banner=document.createElement('div');
+  banner.id='tp-seguimiento-banner';
+  banner.style.cssText='margin:12px 16px 0;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap';
+  banner.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:250px">
+      <div style="width:36px;height:36px;border-radius:50%;background:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="width:18px;height:18px"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.43 19.79 19.79 0 01.22 4.72 2 2 0 012.18 2.5h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 9.67a16 16 0 006.29 6.29l.55-.55a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:13px;color:#1e40af">📋 Seguimiento post-reparación</div>
+        <div style="font-size:12px;color:#3b82f6;margin-top:1px"><strong>${pendientes.length}</strong> ${pendientes.length===1?'cliente listo':'clientes listos'} para recibir email de satisfacción (≥30 días desde entrega)</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button onclick="tp_modalSeguimiento()" style="padding:7px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">
+        Ver y enviar
+      </button>
+      <button onclick="this.closest('#tp-seguimiento-banner').remove()" style="padding:7px 12px;background:none;color:#6b7280;border:1px solid #d1d5db;border-radius:8px;font-size:12px;cursor:pointer">
+        Luego
+      </button>
+    </div>`;
+  const pageOrders=document.getElementById('page-orders');
+  if(pageOrders) pageOrders.insertBefore(banner, pageOrders.firstChild);
+}
+
+function tp_modalSeguimiento(){
+  const pendientes=tp_ordenesParaSeguimiento();
+  if(!pendientes.length){toast('No hay seguimientos pendientes','info');return;}
+  const cfg=DB.get('tp_smtp_config')||{};
+  const fromName=cfg.fromName||cfg.from_name||'Servicio Técnico';
+  const rows=pendientes.map(o=>{
+    const email=o.clientEmail||o.email||'';
+    const hoy=new Date(); const fechaStr=o.deliveredAt||o.updatedAt||o.createdAt||o.fecha||'';
+    const dias=fechaStr?Math.floor((hoy-new Date(fechaStr))/(1000*60*60*24)):0;
+    return `<tr style="border-bottom:1px solid #f3f4f6">
+      <td style="padding:8px 10px"><input type="checkbox" class="seg-chk" data-id="${o.id}" checked style="width:15px;height:15px;cursor:pointer"></td>
+      <td style="padding:8px 10px;font-size:12px;font-weight:600;color:#111">${o.clientName||o.nombre||'Sin nombre'}</td>
+      <td style="padding:8px 10px;font-size:12px;color:#6b7280">${email}</td>
+      <td style="padding:8px 10px;font-size:12px;color:#6b7280">${o.modelo||o.equipo||'—'}</td>
+      <td style="padding:8px 10px;font-size:12px;color:#2563eb;font-weight:600">${dias} días</td>
+    </tr>`;
+  }).join('');
+  showModal(`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal modal-lg" style="max-width:780px">
+    <div class="modal-header">
+      <div>
+        <h3 style="margin-bottom:2px">Seguimiento post-reparación</h3>
+        <div style="font-size:12px;color:#9ca3af">${pendientes.length} clientes con ≥30 días desde la entrega</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div style="background:#f8fafc;padding:14px 20px;border-bottom:1px solid #e5e7eb;font-size:12.5px;color:#374151">
+        <strong>Email de seguimiento:</strong> Se enviará un mensaje de satisfacción personalizado desde <strong>${cfg.from||cfg.user||'tu cuenta'}</strong> con el nombre de la reparación y el equipo.
+        <a href="#" onclick="closeModal();tp_showPage('settings',null)" style="color:#2563eb;margin-left:8px">Editar plantilla →</a>
+      </div>
+      <div style="max-height:320px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead style="background:#f9fafb;position:sticky;top:0">
+            <tr>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb">
+                <input type="checkbox" id="seg-chk-all" checked onchange="document.querySelectorAll('.seg-chk').forEach(c=>c.checked=this.checked)" style="cursor:pointer">
+              </th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb">CLIENTE</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb">EMAIL</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb">EQUIPO</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb">DÍAS</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;align-items:center">
+      <div style="font-size:12px;color:#9ca3af" id="seg-estado"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="tp_enviarSeguimientos(${JSON.stringify(pendientes.map(o=>o.id)).replace(/"/g,"'")})">
+          📧 Enviar emails seleccionados
+        </button>
+      </div>
+    </div>
+  </div></div>`);
+}
+
+async function tp_enviarSeguimientos(allIds){
+  const seleccionados=[...document.querySelectorAll('.seg-chk:checked')].map(c=>c.dataset.id);
+  if(!seleccionados.length){toast('Selecciona al menos 1 cliente','error');return;}
+  const cfg=DB.get('tp_smtp_config')||{};
+  const fromName=cfg.fromName||cfg.from_name||'Servicio Técnico';
+  const estado=document.getElementById('seg-estado');
+  let ok=0, fail=0;
+  for(const id of seleccionados){
+    const o=(tp_orders||[]).find(x=>x.id===id); if(!o) continue;
+    const email=o.clientEmail||o.email||''; if(!email) continue;
+    const nombre=o.clientName||o.nombre||'Cliente';
+    const equipo=o.modelo||o.equipo||'tu equipo';
+    const descripcion=o.description||o.descripcion||'la reparación realizada';
+    if(estado) estado.textContent=`Enviando a ${nombre}…`;
+    const html=tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, cfg.from||cfg.user||'');
+    const res=await tp_callSendEmail(email, `¿Cómo te ha funcionado tu ${equipo}? 📱`, html);
+    if(res.ok){
+      ok++;
+      const segs=tp_getSeguimientos();
+      segs.push({orderId:id, email, nombre, equipo, fecha:new Date().toISOString(), ok:true});
+      tp_setSeguimientos(segs);
+    } else { fail++; }
+  }
+  closeModal();
+  if(ok) toast(`✅ ${ok} email${ok>1?'s':''} de seguimiento enviado${ok>1?'s':''}`, 'success');
+  if(fail) toast(`⚠️ ${fail} email${fail>1?'s':''} no se pud${fail>1?'ieron':'o'} enviar`, 'error');
+  tp_renderAll();
+}
+
+function tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, fromEmail){
+  const primerNombre=nombre.split(' ')[0];
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 20px">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+      <!-- Header -->
+      <tr><td style="background:#1e40af;border-radius:12px 12px 0 0;padding:32px 40px;text-align:center">
+        <div style="font-size:32px;margin-bottom:8px">🔧</div>
+        <h1 style="color:white;margin:0;font-size:22px;font-weight:700">${fromName}</h1>
+        <p style="color:#93c5fd;margin:6px 0 0;font-size:14px">Servicio técnico especializado</p>
+      </td></tr>
+      <!-- Body -->
+      <tr><td style="background:white;padding:36px 40px">
+        <h2 style="color:#111827;margin:0 0 16px;font-size:20px">¡Hola, ${primerNombre}! 👋</h2>
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px">
+          Han pasado 30 días desde que retiraste tu <strong>${equipo}</strong> de nuestro taller, y queremos saber cómo te ha funcionado.
+        </p>
+        <div style="background:#f0f9ff;border-left:4px solid #2563eb;border-radius:0 8px 8px 0;padding:16px 20px;margin:0 0 24px">
+          <p style="color:#1e40af;font-size:14px;margin:0;font-weight:500">🛠️ Reparación realizada: <span style="font-weight:700">${descripcion}</span></p>
+        </div>
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 28px">
+          Si tienes algún inconveniente, duda o simplemente quieres contarnos cómo te fue, responde este email directamente — estamos para ayudarte.
+        </p>
+        <!-- CTA -->
+        <table cellpadding="0" cellspacing="0" style="margin:0 0 28px">
+          <tr>
+            <td style="background:#2563eb;border-radius:8px;padding:14px 28px">
+              <a href="mailto:${fromEmail}?subject=Seguimiento ${equipo}" style="color:white;font-size:15px;font-weight:600;text-decoration:none">Responder por email →</a>
+            </td>
+          </tr>
+        </table>
+        <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 8px">
+          Si todo ha funcionado perfecto, ¡nos alegra mucho! Y si conoces a alguien que necesite reparación, no dudes en recomendarnos. 🙌
+        </p>
+      </td></tr>
+      <!-- Footer -->
+      <tr><td style="background:#f9fafb;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb">
+        <p style="color:#9ca3af;font-size:12px;margin:0">${fromName} · ${fromEmail}</p>
+        <p style="color:#d1d5db;font-size:11px;margin:6px 0 0">Este email fue enviado porque fuiste cliente de nuestro taller.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+}
 
 // ─── NEW / EDIT ORDER ───
 function tp_toggleNuevoClienteInline(){
