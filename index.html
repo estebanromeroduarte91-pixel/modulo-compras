@@ -8803,6 +8803,26 @@ function renderTaller() {
       <div id="settings-tab-seguimiento" style="display:none">
         <div style="max-width:680px">
 
+          <!-- Logo -->
+          <div class="chart-card" style="background:var(--surface);border:1px solid var(--border);margin-bottom:14px">
+            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Logo del taller</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5">Aparece en el encabezado del email reemplazando el ícono. Recomendado: PNG con fondo transparente, mínimo 300px de ancho.</div>
+            <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+              <div id="seg-logo-preview" style="width:200px;height:80px;background:#1e40af;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+                <span style="color:rgba(255,255,255,0.4);font-size:12px">Sin logo</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <label style="display:inline-flex;align-items:center;gap:7px;padding:7px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;font-size:12.5px;color:var(--text);cursor:pointer;font-weight:500">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Subir logo
+                  <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none" onchange="tp_loadLogoPreview(this)">
+                </label>
+                <div style="font-size:11px;color:var(--text2)">PNG, JPG o SVG · máx 2MB</div>
+                <button class="btn btn-default btn-sm" onclick="tp_eliminarLogo()" id="seg-logo-remove-btn" style="display:none;color:#dc2626;border-color:#fca5a5">Eliminar logo</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Datos del negocio -->
           <div class="chart-card" style="background:var(--surface);border:1px solid var(--border);margin-bottom:14px">
             <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Datos del negocio</div>
@@ -9989,6 +10009,7 @@ async function tp_enviarSeguimientos(allIds){
 function tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, fromEmail){
   const c=tp_getSeguimientoConfig();
   const smtpCfg=DB.get('tp_smtp_config')||{};
+  const logoData=localStorage.getItem('erp_tp_seg_logo')||'';
   const primerNombre=nombre.split(' ')[0];
   const diasUmbral=c.dias||30;
   // Datos del negocio: config de seguimiento > SMTP > fallback
@@ -10015,9 +10036,11 @@ function tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, fromEma
   <tr><td align="center">
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
       <tr><td style="background:#1e40af;border-radius:12px 12px 0 0;padding:32px 40px;text-align:center">
-        <div style="font-size:32px;margin-bottom:10px">🔧</div>
-        <h1 style="color:white;margin:0;font-size:22px;font-weight:700">${tallerNombre}</h1>
-        <p style="color:#93c5fd;margin:6px 0 0;font-size:13px">${tallerEspecialidad}</p>
+        ${logoData
+          ? `<div style="margin:0 auto 14px;display:inline-block"><img src="${logoData}" style="max-width:220px;max-height:80px;object-fit:contain;display:block;margin:0 auto" alt="${tallerNombre}"></div>`
+          : `<div style="font-size:36px;margin-bottom:10px">🔧</div><h1 style="color:white;margin:0;font-size:22px;font-weight:700">${tallerNombre}</h1>`
+        }
+        <p style="color:#93c5fd;margin:${logoData?'10px':'6px'} 0 0;font-size:13px">${tallerEspecialidad}</p>
       </td></tr>
       <tr><td style="background:white;padding:36px 40px">
         <h2 style="color:#111827;margin:0 0 16px;font-size:20px;font-weight:600">¡Hola, ${primerNombre}! 👋</h2>
@@ -11203,6 +11226,44 @@ function tp_loadSeguimientoConfig(){
   set('seg-asunto', c.asunto||'');
   set('seg-msg-apertura', c.msgApertura||'');
   set('seg-msg-cierre', c.msgCierre||'');
+  // Cargar logo guardado
+  const logoData=localStorage.getItem('erp_tp_seg_logo')||'';
+  const prev=document.getElementById('seg-logo-preview');
+  const rmBtn=document.getElementById('seg-logo-remove-btn');
+  if(prev){
+    if(logoData){
+      prev.innerHTML=`<img src="${logoData}" style="max-width:190px;max-height:72px;object-fit:contain;border-radius:6px">`;
+      if(rmBtn) rmBtn.style.display='inline-flex';
+    } else {
+      prev.innerHTML='<span style="color:rgba(255,255,255,0.4);font-size:12px">Sin logo</span>';
+      if(rmBtn) rmBtn.style.display='none';
+    }
+  }
+}
+
+function tp_loadLogoPreview(input){
+  const file=input.files[0]; if(!file) return;
+  if(file.size>2*1024*1024){ toast('El logo debe ser menor a 2MB','error'); return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const data=e.target.result;
+    localStorage.setItem('erp_tp_seg_logo', data);
+    const prev=document.getElementById('seg-logo-preview');
+    const rmBtn=document.getElementById('seg-logo-remove-btn');
+    if(prev) prev.innerHTML=`<img src="${data}" style="max-width:190px;max-height:72px;object-fit:contain;border-radius:6px">`;
+    if(rmBtn) rmBtn.style.display='inline-flex';
+    toast('Logo cargado ✓','success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function tp_eliminarLogo(){
+  localStorage.removeItem('erp_tp_seg_logo');
+  const prev=document.getElementById('seg-logo-preview');
+  const rmBtn=document.getElementById('seg-logo-remove-btn');
+  if(prev) prev.innerHTML='<span style="color:rgba(255,255,255,0.4);font-size:12px">Sin logo</span>';
+  if(rmBtn) rmBtn.style.display='none';
+  toast('Logo eliminado','info');
 }
 function tp_saveSeguimientoConfig(){
   const get=(id)=>document.getElementById(id)?.value?.trim()||'';
