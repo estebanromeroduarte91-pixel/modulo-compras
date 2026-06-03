@@ -9983,28 +9983,41 @@ async function tp_enviarSeguimientos(allIds){
   const seleccionados=[...document.querySelectorAll('.seg-chk:checked')].map(c=>c.dataset.id);
   if(!seleccionados.length){toast('Selecciona al menos 1 cliente','error');return;}
   const cfg=DB.get('tp_smtp_config')||{};
-  const fromName=cfg.fromName||cfg.from_name||'Servicio Técnico';
+  if(!cfg?.host||!cfg?.user||!cfg?.password){
+    toast('Configura el SMTP primero en Configuración → SMTP','error');
+    return;
+  }
+  const fromName=cfg.fromName||cfg.from_name||cfg.fromName||'Servicio Técnico';
   const estado=document.getElementById('seg-estado');
-  let ok=0, fail=0;
+  let ok=0, fail=0; const errores=[];
   for(const id of seleccionados){
     const o=(tp_orders||[]).find(x=>x.id===id); if(!o) continue;
-    const email=o.email||o.clientEmail||''; if(!email) continue;
+    const email=o.email||o.clientEmail||'';
+    if(!email){ errores.push(`${o.nombre||id}: sin email`); continue; }
     const nombre=o.nombre||o.clientName||'Cliente';
     const equipo=o.modelo||o.equipo||'tu equipo';
     const descripcion=o.trabajo||o.description||o.descripcion||'Reparación de '+equipo;
-    if(estado) estado.textContent=`Enviando a ${nombre}…`;
+    const segCfg=tp_getSeguimientoConfig();
+    const asunto=(segCfg.asunto||'¿Cómo te ha funcionado tu {equipo}? 📱').replace(/\{equipo\}/g,equipo).replace(/\{nombre\}/g,nombre.split(' ')[0]);
+    if(estado) estado.textContent=`Enviando a ${email}…`;
     const html=tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, cfg.from||cfg.user||'');
-    const res=await tp_callSendEmail(email, `¿Cómo te ha funcionado tu ${equipo}? 📱`, html);
+    const res=await tp_callSendEmail(email, asunto, html);
     if(res.ok){
       ok++;
       const segs=tp_getSeguimientos();
       segs.push({orderId:id, email, nombre, equipo, fecha:new Date().toISOString(), ok:true});
       tp_setSeguimientos(segs);
-    } else { fail++; }
+    } else {
+      fail++;
+      errores.push(`${email}: ${res.error||'error desconocido'}`);
+    }
   }
   closeModal();
-  if(ok) toast(`✅ ${ok} email${ok>1?'s':''} de seguimiento enviado${ok>1?'s':''}`, 'success');
-  if(fail) toast(`⚠️ ${fail} email${fail>1?'s':''} no se pud${fail>1?'ieron':'o'} enviar`, 'error');
+  if(ok) toast(`✅ ${ok} email${ok>1?'s':''} enviado${ok>1?'s':''}`, 'success');
+  if(fail||errores.length){
+    console.error('Errores seguimiento:', errores);
+    alert(`⚠️ ${fail} email(s) no se enviaron:\n\n${errores.join('\n')}`);
+  }
   tp_renderAll();
 }
 
