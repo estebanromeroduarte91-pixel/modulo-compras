@@ -8818,6 +8818,8 @@ function renderTaller() {
                   <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none" onchange="tp_loadLogoPreview(this)">
                 </label>
                 <div style="font-size:11px;color:var(--text2)">PNG, JPG o SVG · máx 2MB</div>
+                <div style="font-size:11px;color:var(--text2);margin-top:6px">O pega una URL del logo:</div>
+                <input class="form-input" id="seg-logo-url" type="url" placeholder="https://tudominio.cl/logo.png" style="width:260px;margin-top:4px" oninput="tp_previewLogoUrl(this.value)">
                 <button class="btn btn-default btn-sm" onclick="tp_eliminarLogo()" id="seg-logo-remove-btn" style="display:none;color:#dc2626;border-color:#fca5a5">Eliminar logo</button>
               </div>
             </div>
@@ -9875,7 +9877,7 @@ function tp_ordenesParaSeguimiento(){
   return (tp_orders||[]).filter(o=>{
     if(o.status!=='Entregado') return false;
     if(yaEnviados.has(o.id)) return false;
-    if(!o.clientEmail&&!o.email) return false;
+    if(!o.email&&!o.clientEmail) return false;
     const fechaStr=o.deliveredAt||o.updatedAt||o.createdAt||o.fecha||'';
     if(!fechaStr) return false;
     const fechaEntrega=new Date(fechaStr); fechaEntrega.setHours(0,0,0,0);
@@ -9986,10 +9988,10 @@ async function tp_enviarSeguimientos(allIds){
   let ok=0, fail=0;
   for(const id of seleccionados){
     const o=(tp_orders||[]).find(x=>x.id===id); if(!o) continue;
-    const email=o.clientEmail||o.email||''; if(!email) continue;
-    const nombre=o.clientName||o.nombre||'Cliente';
+    const email=o.email||o.clientEmail||''; if(!email) continue;
+    const nombre=o.nombre||o.clientName||'Cliente';
     const equipo=o.modelo||o.equipo||'tu equipo';
-    const descripcion=o.description||o.descripcion||'la reparación realizada';
+    const descripcion=o.trabajo||o.description||o.descripcion||'Reparación de '+equipo;
     if(estado) estado.textContent=`Enviando a ${nombre}…`;
     const html=tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, cfg.from||cfg.user||'');
     const res=await tp_callSendEmail(email, `¿Cómo te ha funcionado tu ${equipo}? 📱`, html);
@@ -10009,7 +10011,8 @@ async function tp_enviarSeguimientos(allIds){
 function tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, fromEmail){
   const c=tp_getSeguimientoConfig();
   const smtpCfg=DB.get('tp_smtp_config')||{};
-  const logoData=localStorage.getItem('erp_tp_seg_logo')||'';
+  // Preferir URL pública (funciona en todos los clientes de email) sobre base64
+  const logoData=c.logoUrl||localStorage.getItem('erp_tp_seg_logo')||'';
   const primerNombre=nombre.split(' ')[0];
   const diasUmbral=c.dias??30;
   // Datos del negocio: config de seguimiento > SMTP > fallback
@@ -11228,6 +11231,8 @@ function tp_loadSeguimientoConfig(){
   set('seg-asunto', c.asunto||'');
   set('seg-msg-apertura', c.msgApertura||'');
   set('seg-msg-cierre', c.msgCierre||'');
+  set('seg-logo-url', c.logoUrl||'');
+  if(c.logoUrl) tp_previewLogoUrl(c.logoUrl);
   // Cargar logo guardado
   const logoData=localStorage.getItem('erp_tp_seg_logo')||'';
   const prev=document.getElementById('seg-logo-preview');
@@ -11243,29 +11248,64 @@ function tp_loadSeguimientoConfig(){
   }
 }
 
-function tp_loadLogoPreview(input){
+async function tp_loadLogoPreview(input){
   const file=input.files[0]; if(!file) return;
   if(file.size>2*1024*1024){ toast('El logo debe ser menor a 2MB','error'); return; }
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const data=e.target.result;
-    localStorage.setItem('erp_tp_seg_logo', data);
-    const prev=document.getElementById('seg-logo-preview');
-    const rmBtn=document.getElementById('seg-logo-remove-btn');
-    if(prev){ prev.style.background='#fff'; prev.innerHTML=`<img src="${data}" style="max-width:190px;max-height:72px;object-fit:contain;border-radius:6px">`; }
+
+  const prev=document.getElementById('seg-logo-preview');
+  const rmBtn=document.getElementById('seg-logo-remove-btn');
+  const urlInp=document.getElementById('seg-logo-url');
+  if(prev) prev.innerHTML='<span style="color:var(--text2);font-size:12px">Subiendo…</span>';
+
+  try {
+    // Subir a Supabase Storage
+    const ext=file.name.split('.').pop().toLowerCase()||'png';
+    const fileName=`logos/${_empresaId||'empresa'}/logo_${Date.now()}.${ext}`;
+    const {data, error}=await _sb.storage.from('erp-assets').upload(fileName, file, {upsert:true, contentType:file.type});
+    if(error) throw error;
+    // Obtener URL pública permanente
+    const {data:{publicUrl}}=_sb.storage.from('erp-assets').getPublicUrl(fileName);
+    // Guardar en config y mostrar preview
+    const cfg=tp_getSeguimientoConfig();
+    cfg.logoUrl=publicUrl;
+    localStorage.setItem('erp_tp_seg_config', JSON.stringify(cfg));
+    localStorage.removeItem('erp_tp_seg_logo'); // limpiar base64 antiguo
+    if(urlInp) urlInp.value=publicUrl;
+    if(prev){ prev.style.background='#fff'; prev.innerHTML=`<img src="${publicUrl}" style="max-width:190px;max-height:72px;object-fit:contain;border-radius:6px">`; }
     if(rmBtn) rmBtn.style.display='inline-flex';
-    toast('Logo cargado ✓','success');
-  };
-  reader.readAsDataURL(file);
+    toast('Logo subido y guardado ✓','success');
+  } catch(err) {
+    // Fallback: guardar como base64 si Supabase Storage no está configurado
+    console.warn('Supabase Storage no disponible, usando base64:', err.message);
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const data=e.target.result;
+      localStorage.setItem('erp_tp_seg_logo', data);
+      if(prev){ prev.style.background='#fff'; prev.innerHTML=`<img src="${data}" style="max-width:190px;max-height:72px;object-fit:contain;border-radius:6px">`; }
+      if(rmBtn) rmBtn.style.display='inline-flex';
+      toast('Logo cargado ✓','success');
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
 function tp_eliminarLogo(){
   localStorage.removeItem('erp_tp_seg_logo');
   const prev=document.getElementById('seg-logo-preview');
   const rmBtn=document.getElementById('seg-logo-remove-btn');
-  if(prev) prev.innerHTML='<span style="color:rgba(255,255,255,0.4);font-size:12px">Sin logo</span>';
+  const urlInp=document.getElementById('seg-logo-url');
+  if(prev){ prev.style.background='#fff'; prev.innerHTML='<span style="color:var(--text2);font-size:12px">Sin logo</span>'; }
   if(rmBtn) rmBtn.style.display='none';
+  if(urlInp) urlInp.value='';
   toast('Logo eliminado','info');
+}
+
+function tp_previewLogoUrl(url){
+  if(!url) return;
+  const prev=document.getElementById('seg-logo-preview');
+  const rmBtn=document.getElementById('seg-logo-remove-btn');
+  if(prev){ prev.style.background='#fff'; prev.innerHTML=`<img src="${url}" style="max-width:190px;max-height:72px;object-fit:contain;border-radius:6px" onerror="this.parentElement.innerHTML='<span style=color:red;font-size:11px>URL inválida</span>'">`; }
+  if(rmBtn) rmBtn.style.display='inline-flex';
 }
 function tp_saveSeguimientoConfig(){
   const get=(id)=>document.getElementById(id)?.value?.trim()||'';
@@ -11280,6 +11320,7 @@ function tp_saveSeguimientoConfig(){
     asunto: get('seg-asunto'),
     msgApertura: get('seg-msg-apertura'),
     msgCierre: get('seg-msg-cierre'),
+    logoUrl: get('seg-logo-url'),
   };
   localStorage.setItem('erp_tp_seg_config', JSON.stringify(cfg));
   const st=document.getElementById('seg-config-status');
