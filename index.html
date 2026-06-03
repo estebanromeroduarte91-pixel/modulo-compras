@@ -8808,8 +8808,8 @@ function renderTaller() {
             <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Logo del taller</div>
             <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5">Aparece en el encabezado del email reemplazando el ícono. Recomendado: PNG con fondo transparente, mínimo 300px de ancho.</div>
             <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-              <div id="seg-logo-preview" style="width:200px;height:80px;background:#1e40af;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-                <span style="color:rgba(255,255,255,0.4);font-size:12px">Sin logo</span>
+              <div id="seg-logo-preview" style="width:200px;height:80px;background:#fff;border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+                <span style="color:var(--text2);font-size:12px">Sin logo</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px">
                 <label style="display:inline-flex;align-items:center;gap:7px;padding:7px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;font-size:12.5px;color:var(--text);cursor:pointer;font-weight:500">
@@ -10035,12 +10035,14 @@ function tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, fromEma
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 20px">
   <tr><td align="center">
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
-      <tr><td style="background:#1e40af;border-radius:12px 12px 0 0;padding:32px 40px;text-align:center">
+      <tr><td style="${logoData?'background:#ffffff;border-bottom:1px solid #e5e7eb;':'background:#1e40af;'}border-radius:12px 12px 0 0;padding:28px 40px;text-align:center">
         ${logoData
-          ? `<div style="margin:0 auto 14px;display:inline-block"><img src="${logoData}" style="max-width:220px;max-height:80px;object-fit:contain;display:block;margin:0 auto" alt="${tallerNombre}"></div>`
-          : `<div style="font-size:36px;margin-bottom:10px">🔧</div><h1 style="color:white;margin:0;font-size:22px;font-weight:700">${tallerNombre}</h1>`
+          ? `<div style="margin:0 auto 10px;display:inline-block"><img src="${logoData}" style="max-width:220px;max-height:80px;object-fit:contain;display:block;margin:0 auto" alt="${tallerNombre}"></div>
+             <p style="color:#6b7280;margin:0;font-size:13px">${tallerEspecialidad}</p>`
+          : `<div style="font-size:36px;margin-bottom:10px">🔧</div>
+             <h1 style="color:white;margin:0;font-size:22px;font-weight:700">${tallerNombre}</h1>
+             <p style="color:#93c5fd;margin:6px 0 0;font-size:13px">${tallerEspecialidad}</p>`
         }
-        <p style="color:#93c5fd;margin:${logoData?'10px':'6px'} 0 0;font-size:13px">${tallerEspecialidad}</p>
       </td></tr>
       <tr><td style="background:white;padding:36px 40px">
         <h2 style="color:#111827;margin:0 0 16px;font-size:20px;font-weight:600">¡Hola, ${primerNombre}! 👋</h2>
@@ -11250,7 +11252,7 @@ function tp_loadLogoPreview(input){
     localStorage.setItem('erp_tp_seg_logo', data);
     const prev=document.getElementById('seg-logo-preview');
     const rmBtn=document.getElementById('seg-logo-remove-btn');
-    if(prev) prev.innerHTML=`<img src="${data}" style="max-width:190px;max-height:72px;object-fit:contain;border-radius:6px">`;
+    if(prev){ prev.style.background='#fff'; prev.innerHTML=`<img src="${data}" style="max-width:190px;max-height:72px;object-fit:contain;border-radius:6px">`; }
     if(rmBtn) rmBtn.style.display='inline-flex';
     toast('Logo cargado ✓','success');
   };
