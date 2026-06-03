@@ -1721,7 +1721,7 @@ function renderConfigGlobal(){
         </div>
         <div>
           <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Nombre remitente</label>
-          <input class="form-input" id="smtp-from-name" value="${cfg.fromName||''}" placeholder="Mi Taller">
+          <input class="form-input" id="smtp-from-name" value="${cfg.from_name||cfg.fromName||''}" placeholder="Mi Taller">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
