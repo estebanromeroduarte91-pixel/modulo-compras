@@ -9871,7 +9871,7 @@ function tp_ordenesParaSeguimiento(){
   const hoy=new Date(); hoy.setHours(0,0,0,0);
   const seguimientos=tp_getSeguimientos();
   const yaEnviados=new Set(seguimientos.map(s=>s.orderId));
-  const diasUmbral=tp_getSeguimientoConfig().dias||30;
+  const diasUmbral=tp_getSeguimientoConfig().dias??30;
   return (tp_orders||[]).filter(o=>{
     if(o.status!=='Entregado') return false;
     if(yaEnviados.has(o.id)) return false;
@@ -10011,7 +10011,7 @@ function tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, fromEma
   const smtpCfg=DB.get('tp_smtp_config')||{};
   const logoData=localStorage.getItem('erp_tp_seg_logo')||'';
   const primerNombre=nombre.split(' ')[0];
-  const diasUmbral=c.dias||30;
+  const diasUmbral=c.dias??30;
   // Datos del negocio: config de seguimiento > SMTP > fallback
   const tallerNombre=c.nombreTaller||smtpCfg.fromName||smtpCfg.from_name||fromName||'Servicio Técnico';
   const tallerEmail=c.emailContacto||smtpCfg.from||smtpCfg.user||fromEmail||'';
@@ -11276,7 +11276,7 @@ function tp_saveSeguimientoConfig(){
     horario: get('seg-horario'),
     ubicacion: get('seg-ubicacion'),
     especialidad: get('seg-especialidad'),
-    dias: parseInt(get('seg-dias'))||30,
+    dias: get('seg-dias')!==''?parseInt(get('seg-dias')):30,
     asunto: get('seg-asunto'),
     msgApertura: get('seg-msg-apertura'),
     msgCierre: get('seg-msg-cierre'),
