@@ -8750,6 +8750,9 @@ function renderTaller() {
         <button id="stab-mensajes" class="tp-subnav-btn" onclick="tp_settingsTab('mensajes')" style="border-bottom:2px solid transparent">
           💬 Mensajes automáticos
         </button>
+        <button id="stab-seguimiento" class="tp-subnav-btn" onclick="tp_settingsTab('seguimiento')" style="border-bottom:2px solid transparent">
+          📧 Seguimiento
+        </button>
       </div>
 
       <!-- TAB: SUCURSALES -->
@@ -8794,6 +8797,88 @@ function renderTaller() {
       <!-- TAB: MENSAJES AUTOMÁTICOS -->
       <div id="settings-tab-mensajes" style="display:none">
         <div id="mensajes-tab-content" style="max-width:700px"></div>
+      </div>
+
+      <!-- TAB: SEGUIMIENTO POST-REPARACIÓN -->
+      <div id="settings-tab-seguimiento" style="display:none">
+        <div style="max-width:680px">
+
+          <!-- Datos del negocio -->
+          <div class="chart-card" style="background:var(--surface);border:1px solid var(--border);margin-bottom:14px">
+            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Datos del negocio</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.5">Información que aparece en el pie del email de seguimiento enviado a tus clientes.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div>
+                <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Nombre del taller</label>
+                <input class="form-input" id="seg-nombre-taller" type="text" placeholder="Ej: Servicio Técnico SD">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Email de contacto</label>
+                <input class="form-input" id="seg-email-contacto" type="email" placeholder="hola@servicio.cl">
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div>
+                <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Teléfono</label>
+                <input class="form-input" id="seg-telefono" type="text" placeholder="+56 9 6658 7162">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Horario de atención</label>
+                <input class="form-input" id="seg-horario" type="text" placeholder="Lun–Sáb 10:00–20:00">
+              </div>
+            </div>
+            <div style="margin-bottom:18px">
+              <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Ubicación / Sucursales</label>
+              <input class="form-input" id="seg-ubicacion" type="text" placeholder="Los Dominicos / La Dehesa">
+            </div>
+            <div style="margin-bottom:18px">
+              <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Especialidad (subtítulo bajo el nombre)</label>
+              <input class="form-input" id="seg-especialidad" type="text" placeholder="Especialistas en reparación de dispositivos Apple">
+            </div>
+          </div>
+
+          <!-- Configuración del envío -->
+          <div class="chart-card" style="background:var(--surface);border:1px solid var(--border);margin-bottom:14px">
+            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Configuración del envío</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.5">Define cuándo y cómo se envía el email de seguimiento.</div>
+            <div style="display:grid;grid-template-columns:160px 1fr;gap:12px;margin-bottom:12px;align-items:end">
+              <div>
+                <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Días desde entrega</label>
+                <input class="form-input" id="seg-dias" type="number" min="1" max="180" placeholder="30" style="text-align:center">
+              </div>
+              <div style="font-size:12px;color:var(--text2);padding-bottom:8px;line-height:1.5">
+                El banner aparecerá cuando hayan pasado este número de días desde que la OT fue marcada como <strong>Entregado</strong>.
+              </div>
+            </div>
+            <div style="margin-bottom:18px">
+              <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Asunto del email</label>
+              <input class="form-input" id="seg-asunto" type="text" placeholder="¿Cómo te ha funcionado tu {equipo}? 📱">
+              <div style="font-size:11px;color:var(--text2);margin-top:4px">Puedes usar <code>{equipo}</code> y <code>{nombre}</code> como variables.</div>
+            </div>
+          </div>
+
+          <!-- Mensaje personalizado -->
+          <div class="chart-card" style="background:var(--surface);border:1px solid var(--border);margin-bottom:14px">
+            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Mensaje personalizado</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.5">Texto que aparece en el cuerpo del email. Puedes usar <code>{nombre}</code>, <code>{equipo}</code> y <code>{reparacion}</code> como variables.</div>
+            <div style="margin-bottom:12px">
+              <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Párrafo de apertura</label>
+              <textarea class="form-input" id="seg-msg-apertura" rows="2" style="resize:vertical" placeholder="Han pasado {dias} días desde que retiraste tu {equipo} de nuestro taller, y queremos saber cómo te ha funcionado."></textarea>
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px">Párrafo de cierre</label>
+              <textarea class="form-input" id="seg-msg-cierre" rows="2" style="resize:vertical" placeholder="Si todo ha funcionado perfecto, ¡nos alegra mucho! Y si conoces a alguien que necesite reparación, no dudes en recomendarnos. 🙌"></textarea>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center">
+            <button class="btn btn-primary" onclick="tp_saveSeguimientoConfig()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Guardar configuración
+            </button>
+            <div id="seg-config-status" style="font-size:12px;color:var(--text2)"></div>
+          </div>
+        </div>
       </div>
 
       <!-- TAB: SMTP / EMAIL -->
@@ -9766,16 +9851,16 @@ function tp_ordenesParaSeguimiento(){
   const hoy=new Date(); hoy.setHours(0,0,0,0);
   const seguimientos=tp_getSeguimientos();
   const yaEnviados=new Set(seguimientos.map(s=>s.orderId));
+  const diasUmbral=tp_getSeguimientoConfig().dias||30;
   return (tp_orders||[]).filter(o=>{
     if(o.status!=='Entregado') return false;
     if(yaEnviados.has(o.id)) return false;
     if(!o.clientEmail&&!o.email) return false;
-    // Buscar fecha de entrega (deliveredAt o updatedAt o createdAt)
     const fechaStr=o.deliveredAt||o.updatedAt||o.createdAt||o.fecha||'';
     if(!fechaStr) return false;
     const fechaEntrega=new Date(fechaStr); fechaEntrega.setHours(0,0,0,0);
     const diasTranscurridos=Math.floor((hoy-fechaEntrega)/(1000*60*60*24));
-    return diasTranscurridos>=30;
+    return diasTranscurridos>=diasUmbral;
   });
 }
 
@@ -9902,46 +9987,59 @@ async function tp_enviarSeguimientos(allIds){
 }
 
 function tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, fromEmail){
+  const c=tp_getSeguimientoConfig();
+  const smtpCfg=DB.get('tp_smtp_config')||{};
   const primerNombre=nombre.split(' ')[0];
+  const diasUmbral=c.dias||30;
+  // Datos del negocio: config de seguimiento > SMTP > fallback
+  const tallerNombre=c.nombreTaller||smtpCfg.fromName||smtpCfg.from_name||fromName||'Servicio Técnico';
+  const tallerEmail=c.emailContacto||smtpCfg.from||smtpCfg.user||fromEmail||'';
+  const tallerTel=c.telefono||'';
+  const tallerHorario=c.horario||'';
+  const tallerUbicacion=c.ubicacion||'';
+  const tallerEspecialidad=c.especialidad||'Servicio técnico especializado';
+  // Mensajes personalizados con variables
+  const repl=(txt,def)=>(txt||def).replace(/\{nombre\}/g,primerNombre).replace(/\{equipo\}/g,equipo).replace(/\{reparacion\}/g,descripcion).replace(/\{dias\}/g,diasUmbral);
+  const msgApertura=repl(c.msgApertura,`Han pasado ${diasUmbral} días desde que retiraste tu ${equipo} de nuestro taller, y queremos saber cómo te ha funcionado.`);
+  const msgCierre=repl(c.msgCierre,'Si todo ha funcionado perfecto, ¡nos alegra mucho! Y si conoces a alguien que necesite reparación, no dudes en recomendarnos. 🙌');
+
+  const footerItems=[
+    tallerTel?`<td style="padding:0 16px 0 0;white-space:nowrap"><span style="color:#9ca3af">📞</span> <span style="color:#6b7280;font-size:12px">${tallerTel}</span></td>`:'',
+    tallerHorario?`<td style="padding:0 16px 0 0;white-space:nowrap"><span style="color:#9ca3af">🕐</span> <span style="color:#6b7280;font-size:12px">${tallerHorario}</span></td>`:'',
+    tallerUbicacion?`<td style="padding:0;white-space:nowrap"><span style="color:#9ca3af">📍</span> <span style="color:#6b7280;font-size:12px">${tallerUbicacion}</span></td>`:'',
+  ].filter(Boolean).join('');
+
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 20px">
   <tr><td align="center">
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
-      <!-- Header -->
       <tr><td style="background:#1e40af;border-radius:12px 12px 0 0;padding:32px 40px;text-align:center">
-        <div style="font-size:32px;margin-bottom:8px">🔧</div>
-        <h1 style="color:white;margin:0;font-size:22px;font-weight:700">${fromName}</h1>
-        <p style="color:#93c5fd;margin:6px 0 0;font-size:14px">Servicio técnico especializado</p>
+        <div style="font-size:32px;margin-bottom:10px">🔧</div>
+        <h1 style="color:white;margin:0;font-size:22px;font-weight:700">${tallerNombre}</h1>
+        <p style="color:#93c5fd;margin:6px 0 0;font-size:13px">${tallerEspecialidad}</p>
       </td></tr>
-      <!-- Body -->
       <tr><td style="background:white;padding:36px 40px">
-        <h2 style="color:#111827;margin:0 0 16px;font-size:20px">¡Hola, ${primerNombre}! 👋</h2>
-        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px">
-          Han pasado 30 días desde que retiraste tu <strong>${equipo}</strong> de nuestro taller, y queremos saber cómo te ha funcionado.
-        </p>
-        <div style="background:#f0f9ff;border-left:4px solid #2563eb;border-radius:0 8px 8px 0;padding:16px 20px;margin:0 0 24px">
-          <p style="color:#1e40af;font-size:14px;margin:0;font-weight:500">🛠️ Reparación realizada: <span style="font-weight:700">${descripcion}</span></p>
+        <h2 style="color:#111827;margin:0 0 16px;font-size:20px;font-weight:600">¡Hola, ${primerNombre}! 👋</h2>
+        <p style="color:#374151;font-size:15px;line-height:1.65;margin:0 0 20px">${msgApertura}</p>
+        <div style="background:#f0f9ff;border-left:4px solid #2563eb;border-radius:0 8px 8px 0;padding:14px 18px;margin:0 0 24px">
+          <p style="color:#6b7280;font-size:11px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Reparación realizada</p>
+          <p style="color:#1e40af;font-size:14px;margin:0;font-weight:600">${descripcion}</p>
         </div>
-        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 28px">
+        <p style="color:#374151;font-size:15px;line-height:1.65;margin:0 0 28px">
           Si tienes algún inconveniente, duda o simplemente quieres contarnos cómo te fue, responde este email directamente — estamos para ayudarte.
         </p>
-        <!-- CTA -->
         <table cellpadding="0" cellspacing="0" style="margin:0 0 28px">
-          <tr>
-            <td style="background:#2563eb;border-radius:8px;padding:14px 28px">
-              <a href="mailto:${fromEmail}?subject=Seguimiento ${equipo}" style="color:white;font-size:15px;font-weight:600;text-decoration:none">Responder por email →</a>
-            </td>
-          </tr>
+          <tr><td style="background:#2563eb;border-radius:8px;padding:14px 28px">
+            <a href="mailto:${tallerEmail}?subject=Seguimiento ${equipo}" style="color:white;font-size:15px;font-weight:600;text-decoration:none">Responder por email →</a>
+          </td></tr>
         </table>
-        <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 8px">
-          Si todo ha funcionado perfecto, ¡nos alegra mucho! Y si conoces a alguien que necesite reparación, no dudes en recomendarnos. 🙌
-        </p>
+        <p style="color:#6b7280;font-size:14px;line-height:1.65;margin:0 0 8px">${msgCierre}</p>
       </td></tr>
-      <!-- Footer -->
-      <tr><td style="background:#f9fafb;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb">
-        <p style="color:#9ca3af;font-size:12px;margin:0">${fromName} · ${fromEmail}</p>
-        <p style="color:#d1d5db;font-size:11px;margin:6px 0 0">Este email fue enviado porque fuiste cliente de nuestro taller.</p>
+      <tr><td style="background:#f9fafb;border-radius:0 0 12px 12px;padding:20px 40px;border-top:1px solid #e5e7eb">
+        ${footerItems?`<table cellpadding="0" cellspacing="0" style="margin:0 auto 10px"><tr>${footerItems}</tr></table>`:''}
+        <p style="color:#9ca3af;font-size:12px;margin:0;text-align:center">${tallerNombre}${tallerEmail?' · '+tallerEmail:''}</p>
+        <p style="color:#d1d5db;font-size:11px;margin:6px 0 0;text-align:center">Este email fue enviado porque fuiste cliente de nuestro taller.</p>
       </td></tr>
     </table>
   </td></tr>
@@ -11071,7 +11169,7 @@ function tp_refreshTecnicoSelect(){
 
 // ─── SETTINGS TABS ───
 function tp_settingsTab(tab){
-  ['sucursales','checklist','smtp','mensajes'].forEach(t=>{
+  ['sucursales','checklist','smtp','mensajes','seguimiento'].forEach(t=>{
     const el=document.getElementById('settings-tab-'+t);
     const btn=document.getElementById('stab-'+t);
     if(!el||!btn) return;
@@ -11086,6 +11184,44 @@ function tp_settingsTab(tab){
   if(tab==='checklist') tp_renderSettingsChecklists();
   if(tab==='smtp') tp_renderSmtpSettings();
   if(tab==='mensajes') tp_renderMensajesSettings();
+  if(tab==='seguimiento') tp_loadSeguimientoConfig();
+}
+
+function tp_getSeguimientoConfig(){
+  try{ return JSON.parse(localStorage.getItem('erp_tp_seg_config')||'{}'); }catch(e){ return {}; }
+}
+function tp_loadSeguimientoConfig(){
+  const c=tp_getSeguimientoConfig();
+  const set=(id,val)=>{ const el=document.getElementById(id); if(el&&val!==undefined) el.value=val; };
+  set('seg-nombre-taller', c.nombreTaller||'');
+  set('seg-email-contacto', c.emailContacto||'');
+  set('seg-telefono', c.telefono||'');
+  set('seg-horario', c.horario||'');
+  set('seg-ubicacion', c.ubicacion||'');
+  set('seg-especialidad', c.especialidad||'');
+  set('seg-dias', c.dias||30);
+  set('seg-asunto', c.asunto||'');
+  set('seg-msg-apertura', c.msgApertura||'');
+  set('seg-msg-cierre', c.msgCierre||'');
+}
+function tp_saveSeguimientoConfig(){
+  const get=(id)=>document.getElementById(id)?.value?.trim()||'';
+  const cfg={
+    nombreTaller: get('seg-nombre-taller'),
+    emailContacto: get('seg-email-contacto'),
+    telefono: get('seg-telefono'),
+    horario: get('seg-horario'),
+    ubicacion: get('seg-ubicacion'),
+    especialidad: get('seg-especialidad'),
+    dias: parseInt(get('seg-dias'))||30,
+    asunto: get('seg-asunto'),
+    msgApertura: get('seg-msg-apertura'),
+    msgCierre: get('seg-msg-cierre'),
+  };
+  localStorage.setItem('erp_tp_seg_config', JSON.stringify(cfg));
+  const st=document.getElementById('seg-config-status');
+  if(st){ st.textContent='✓ Guardado'; st.style.color='#10b981'; setTimeout(()=>st.textContent='',2500); }
+  toast('Configuración de seguimiento guardada','success');
 }
 
 function tp_renderSettingsBranches(){
