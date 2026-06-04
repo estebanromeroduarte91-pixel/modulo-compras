@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Subir fotos — Orden</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;min-height:100vh;padding:20px 16px 40px}
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;margin-bottom:16px}
+.header{background:#1e3a5f;padding:20px 20px 16px;text-align:center}
+.header h1{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px}
+.header p{color:#93c5fd;font-size:13px}
+.badge{display:inline-block;background:#1e40af;color:#93c5fd;font-size:11px;font-weight:600;padding:3px 12px;border-radius:20px;margin-bottom:10px;letter-spacing:.4px}
+.info-body{padding:16px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-label{color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.info-val{color:#111827;font-weight:600}
+.upload-area{padding:16px}
+.btn-cam{width:100%;padding:16px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.btn-cam:active{opacity:.85}
+.btn-gal{width:100%;padding:14px;background:#f1f5f9;color:#374151;border:1.5px solid #e5e7eb;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.btn-gal:active{opacity:.85}
+input[type=file]{display:none}
+.photos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:16px;padding-top:0}
+.photo-thumb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#f1f5f9}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-del{position:absolute;top:4px;right:4px;width:24px;height:24px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
+.spinner{display:inline-block;width:18px;height:18px;border:2.5px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-bar{margin:0 16px 12px;padding:12px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:center;display:none}
+.status-ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;display:block}
+.status-err{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;display:block}
+.status-load{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;display:block}
+.empty-state{text-align:center;padding:28px 16px;color:#9ca3af;font-size:13px}
+.count-badge{background:#eff6ff;color:#1e40af;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+</style>
+</head>
+<body>
+<div id="loading" style="text-align:center;padding:60px 20px;color:#6b7280">
+  <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto 12px;display:block"></div>
+  <p>Cargando orden...</p>
+</div>
+<div id="app" style="display:none">
+  <div class="card">
+    <div class="header">
+      <div class="badge" id="orden-num">Orden #—</div>
+      <h1 id="orden-modelo">—</h1>
+      <p id="orden-cliente">—</p>
+    </div>
+    <div class="info-body">
+      <div class="info-row"><span class="info-label">Estado</span><span class="info-val" id="orden-estado">—</span></div>
+      <div class="info-row"><span class="info-label">Sucursal</span><span class="info-val" id="orden-sucursal">—</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:14px;font-weight:600;color:#111827">Fotos de ingreso</span>
+      <span class="count-badge" id="foto-count">0 fotos</span>
+    </div>
+    <div class="upload-area">
+      <button class="btn-cam" onclick="document.getElementById('cam-input').click()">📷 Tomar foto</button>
+      <button class="btn-gal" onclick="document.getElementById('gal-input').click()">🖼 Elegir desde galería</button>
+      <input id="cam-input" type="file" accept="image/*" capture="environment" onchange="handleFiles(this.files)">
+      <input id="gal-input" type="file" accept="image/*" multiple onchange="handleFiles(this.files)">
+    </div>
+    <div id="status-bar" class="status-bar"></div>
+    <div id="photos-grid" class="photos-grid"></div>
+    <div id="empty-state" class="empty-state">
+      <div style="font-size:36px;margin-bottom:8px">📸</div>
+      <p>Aún no hay fotos.<br>Toma la primera foto del equipo.</p>
+    </div>
+  </div>
+</div>
+<div id="error-screen" style="display:none;text-align:center;padding:60px 20px">
+  <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+  <h2 style="font-size:18px;color:#111827;margin-bottom:8px">Orden no encontrada</h2>
+  <p style="color:#6b7280;font-size:14px" id="error-msg">El enlace es inválido o ha expirado.</p>
+</div>
+<script>
+const _SB_URL='https://nfcdqdbhrsjhbnbtqewl.supabase.co';
+const _SB_KEY='sb_publishable_hbmva0O8zTFwr-EfnqBUdw_X8lwOPoZ';
+const sb=supabase.createClient(_SB_URL,_SB_KEY);
+const params=new URLSearchParams(window.location.search);
+const empresaId=params.get('e');
+const ordenId=params.get('o');
+let currentOrder=null,allOrders=[];
+
+function showStatus(msg,cls){
+  const el=document.getElementById('status-bar');
+  el.className='status-bar '+cls;
+  el.innerHTML=cls==='status-load'?'<span class="spinner"></span>'+msg:msg;
+}
+
+function renderPhotos(){
+  const grid=document.getElementById('photos-grid');
+  const empty=document.getElementById('empty-state');
+  const count=document.getElementById('foto-count');
+  const photos=currentOrder.photosIngreso||[];
+  count.textContent=photos.length+(photos.length===1?' foto':' fotos');
+  if(!photos.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=photos.map((src,i)=>`<div class="photo-thumb"><img src="${src}" loading="lazy"><button class="photo-del" onclick="deletePhoto(${i})">×</button></div>`).join('');
+}
+
+async function deletePhoto(idx){
+  currentOrder.photosIngreso.splice(idx,1);
+  await saveOrder();
+  renderPhotos();
+}
+
+async function saveOrder(){
+  const idx=allOrders.findIndex(o=>o.id===ordenId);
+  if(idx<0)return;
+  allOrders[idx]=currentOrder;
+  await sb.from('erp_data').upsert({empresa_id:empresaId,clave:'tp_orders',datos:allOrders,actualizado_en:new Date().toISOString()},{onConflict:'empresa_id,clave'});
+}
+
+async function handleFiles(files){
+  if(!files||!files.length)return;
+  showStatus('Subiendo foto...','status-load');
+  let ok=0;
+  for(const file of Array.from(files)){
+    try{
+      const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+      const path=empresaId+'/ordenes/'+ordenId+'/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+      const {error}=await sb.storage.from('erp-assets').upload(path,file,{upsert:true});
+      if(error)throw error;
+      const {data:urlData}=sb.storage.from('erp-assets').getPublicUrl(path);
+      if(!currentOrder.photosIngreso)currentOrder.photosIngreso=[];
+      currentOrder.photosIngreso.push(urlData.publicUrl);
+      ok++;
+    }catch(e){console.error(e);}
+  }
+  await saveOrder();
+  renderPhotos();
+  if(ok===files.length){
+    showStatus('✅ '+(ok>1?ok+' fotos subidas':'Foto subida')+' correctamente','status-ok');
+    setTimeout(()=>{document.getElementById('status-bar').style.display='none';},3000);
+  }else{
+    showStatus('⚠️ '+ok+' de '+files.length+' fotos subidas','status-err');
+  }
+}
+
+async function load(){
+  if(!empresaId||!ordenId){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('error-screen').style.display='block';
+    document.getElementById('error-msg').textContent='El enlace no tiene los parámetros necesarios.';
+    return;
+  }
+  const {data,error}=await sb.from('erp_data').select('datos').eq('empresa_id',empresaId).eq('clave','tp_orders').maybeSingle();
+  if(error||!data){document.getElementById('loading').style.display='none';document.getElementById('error-screen').style.display='block';return;}
+  allOrders=data.datos||[];
+  currentOrder=allOrders.find(o=>o.id===ordenId);
+  if(!currentOrder){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('error-screen').style.display='block';
+    document.getElementById('error-msg').textContent='No se encontró la orden en la base de datos.';
+    return;
+  }
+  document.getElementById('orden-num').textContent='Orden #OT-'+String(currentOrder.num||'').padStart(4,'0');
+  document.getElementById('orden-modelo').textContent=currentOrder.modelo||'—';
+  document.getElementById('orden-cliente').textContent=currentOrder.nombre||'—';
+  document.getElementById('orden-estado').textContent=currentOrder.status||'—';
+  document.getElementById('orden-sucursal').textContent=currentOrder.branchNombre||'—';
+  renderPhotos();
+  document.getElementById('loading').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+load();
+</script>
+</body>
+</html>
