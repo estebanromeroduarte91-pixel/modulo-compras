@@ -11817,7 +11817,7 @@ function tp_showQrFotos(ordenId, tipo='ingreso'){
   if(existing) existing.remove();
   const modal=document.createElement('div');
   modal.id='qr-fotos-modal';
-  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
   modal.innerHTML=`
     <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:320px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
       <h3 style="font-size:16px;font-weight:700;color:#111827;margin-bottom:6px">📱 Subir fotos desde iPhone</h3>
