@@ -10187,7 +10187,8 @@ function tp_saveOrder(){
     photosIngreso:[...tp_photoBuffers.ingreso],
   };
   // Stock se rebaja en módulo de Ventas, no al crear la orden
-  if(tp_editingOrderId){
+  const _isEditing=tp_orders.some(o=>o.id===tp_editingOrderId);
+  if(_isEditing){
     const idx=tp_orders.findIndex(o=>o.id===tp_editingOrderId);
     if(idx!==-1)tp_orders[idx]={...tp_orders[idx],...data};
   } else {
