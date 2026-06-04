@@ -10685,6 +10685,10 @@ function _initRealtimeOrders(){
         _dbCache['tp_orders'] = raw;
         localStorage.setItem('erp_tp_orders', JSON.stringify(raw));
         tp_renderAll();
+        // Refrescar el detalle si está abierto
+        if(_currentDetailOrderId && document.getElementById('mod-detail')?.classList.contains('open')){
+          tp_openDetail(_currentDetailOrderId);
+        }
         if(hasNewPhotos) toast('📱 Fotos actualizadas desde iPhone', 'success');
       } catch(e) { console.error('realtime error', e); }
     })
@@ -10692,7 +10696,9 @@ function _initRealtimeOrders(){
 }
 
 // ─── DETAIL ───
+let _currentDetailOrderId=null;
 function tp_openDetail(id){
+  _currentDetailOrderId=id;
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
   const statuses=['Chequeo','Reparación','Listo','Entregado'];
   const si=statuses.indexOf(o.status);
@@ -10777,6 +10783,19 @@ function tp_openDetail(id){
         </div>
         <div class="od-pipeline">${pipelineHtml}</div>
         <div class="od-pipe-meta">${tp_getOrderAge(o)===0?'Ingresado hoy':tp_getOrderAge(o)===1?'1 día en taller':tp_getOrderAge(o)+' días en taller'}</div>
+      </div>
+      <div class="od-section" style="padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${(o.photosIngreso||[]).length?'10px':'0'}">
+          <span style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">📸 Fotos de ingreso</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${(o.photosIngreso||[]).length?`<span style="background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px">${o.photosIngreso.length} foto${o.photosIngreso.length!==1?'s':''}</span>`:''}
+            <button onclick="tp_showQrFotos('${o.id}')" style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📱 QR iPhone</button>
+          </div>
+        </div>
+        ${(o.photosIngreso||[]).length
+          ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px">${o.photosIngreso.map(src=>`<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:#f1f5f9"><img src="${src}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer" onclick="window.open('${src}','_blank')"></div>`).join('')}</div>`
+          : `<div style="text-align:center;padding:16px 0;color:var(--text3);font-size:13px">Sin fotos — escanea el QR con el iPhone para agregar</div>`
+        }
       </div>
       ${(()=>{
         const insp=o.inspeccion||{};
