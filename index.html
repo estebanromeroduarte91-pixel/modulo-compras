@@ -10689,6 +10689,14 @@ function _initRealtimeOrders(){
         if(_currentDetailOrderId && document.getElementById('mod-detail')?.classList.contains('open')){
           tp_openDetail(_currentDetailOrderId);
         }
+        // Refrescar grilla de fotos si el form de edición está abierto
+        if(tp_editingOrderId && document.getElementById('mod-order')?.classList.contains('open')){
+          const updatedOrder = newOrders.find(o => o.id === tp_editingOrderId);
+          if(updatedOrder && (updatedOrder.photosIngreso||[]).length !== tp_photoBuffers.ingreso.length){
+            tp_photoBuffers.ingreso = [...(updatedOrder.photosIngreso||[])];
+            tp_renderPhotoGrid('ingreso');
+          }
+        }
         if(hasNewPhotos) toast('📱 Fotos actualizadas desde iPhone', 'success');
       } catch(e) { console.error('realtime error', e); }
     })
