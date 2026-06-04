@@ -10,25 +10,21 @@
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;min-height:100vh;padding:20px 16px 40px}
 .card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;margin-bottom:16px}
 .header{background:#1e3a5f;padding:20px 20px 16px;text-align:center}
-.header h1{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px}
-.header p{color:#93c5fd;font-size:13px}
 .badge{display:inline-block;background:#1e40af;color:#93c5fd;font-size:11px;font-weight:600;padding:3px 12px;border-radius:20px;margin-bottom:10px;letter-spacing:.4px}
 .info-body{padding:16px}
-.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+.info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
 .info-row:last-child{border-bottom:none}
 .info-label{color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
 .info-val{color:#111827;font-weight:600}
 .upload-area{padding:16px}
-.btn-cam{width:100%;padding:16px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;font-family:inherit;-webkit-tap-highlight-color:transparent}
-.btn-cam:active{opacity:.85}
-.btn-gal{width:100%;padding:14px;background:#f1f5f9;color:#374151;border:1.5px solid #e5e7eb;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;-webkit-tap-highlight-color:transparent}
-.btn-gal:active{opacity:.85}
+.btn-cam{width:100%;padding:16px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;font-family:inherit}
+.btn-gal{width:100%;padding:14px;background:#f1f5f9;color:#374151;border:1.5px solid #e5e7eb;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit}
 input[type=file]{display:none}
 .photos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:16px;padding-top:0}
 .photo-thumb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#f1f5f9}
 .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.photo-del{position:absolute;top:4px;right:4px;width:24px;height:24px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
-.spinner{display:inline-block;width:18px;height:18px;border:2.5px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+.photo-del{position:absolute;top:4px;right:4px;width:24px;height:24px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.spinner{display:inline-block;width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px;display:block}
 @keyframes spin{to{transform:rotate(360deg)}}
 .status-bar{margin:0 16px 12px;padding:12px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:center;display:none}
 .status-ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;display:block}
@@ -40,15 +36,15 @@ input[type=file]{display:none}
 </head>
 <body>
 <div id="loading" style="text-align:center;padding:60px 20px;color:#6b7280">
-  <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto 12px;display:block"></div>
-  <p>Cargando orden...</p>
+  <div class="spinner"></div>
+  <p id="loading-msg">Cargando orden...</p>
 </div>
 <div id="app" style="display:none">
   <div class="card">
     <div class="header">
       <div class="badge" id="orden-num">Orden #—</div>
-      <h1 id="orden-modelo">—</h1>
-      <p id="orden-cliente">—</p>
+      <h1 style="color:#fff;font-size:18px;font-weight:700;margin-bottom:4px" id="orden-modelo">—</h1>
+      <p style="color:#93c5fd;font-size:13px" id="orden-cliente">—</p>
     </div>
     <div class="info-body">
       <div class="info-row"><span class="info-label">Estado</span><span class="info-val" id="orden-estado">—</span></div>
@@ -74,10 +70,11 @@ input[type=file]{display:none}
     </div>
   </div>
 </div>
-<div id="error-screen" style="display:none;text-align:center;padding:60px 20px">
+<div id="error-screen" style="display:none;text-align:center;padding:40px 20px">
   <div style="font-size:48px;margin-bottom:12px">⚠️</div>
-  <h2 style="font-size:18px;color:#111827;margin-bottom:8px">Orden no encontrada</h2>
-  <p style="color:#6b7280;font-size:14px" id="error-msg">El enlace es inválido o ha expirado.</p>
+  <h2 style="font-size:18px;color:#111827;margin-bottom:8px" id="error-title">Error</h2>
+  <p style="color:#6b7280;font-size:13px;word-break:break-all;line-height:1.6" id="error-msg">—</p>
+  <button onclick="load()" style="margin-top:16px;padding:10px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Reintentar</button>
 </div>
 <script>
 const _SB_URL='https://nfcdqdbhrsjhbnbtqewl.supabase.co';
@@ -88,10 +85,13 @@ const empresaId=params.get('e');
 const ordenId=params.get('o');
 let currentOrder=null,allOrders=[];
 
+function setLoading(msg){ document.getElementById('loading-msg').textContent=msg; }
+function showError(title,msg){ document.getElementById('loading').style.display='none';document.getElementById('app').style.display='none';document.getElementById('error-screen').style.display='block';document.getElementById('error-title').textContent=title;document.getElementById('error-msg').textContent=msg; }
+
 function showStatus(msg,cls){
   const el=document.getElementById('status-bar');
   el.className='status-bar '+cls;
-  el.innerHTML=cls==='status-load'?'<span class="spinner"></span>'+msg:msg;
+  el.textContent=msg;
 }
 
 function renderPhotos(){
@@ -107,8 +107,7 @@ function renderPhotos(){
 
 async function deletePhoto(idx){
   currentOrder.photosIngreso.splice(idx,1);
-  await saveOrder();
-  renderPhotos();
+  await saveOrder();renderPhotos();
 }
 
 async function saveOrder(){
@@ -134,8 +133,7 @@ async function handleFiles(files){
       ok++;
     }catch(e){console.error(e);}
   }
-  await saveOrder();
-  renderPhotos();
+  await saveOrder();renderPhotos();
   if(ok===files.length){
     showStatus('✅ '+(ok>1?ok+' fotos subidas':'Foto subida')+' correctamente','status-ok');
     setTimeout(()=>{document.getElementById('status-bar').style.display='none';},3000);
@@ -145,30 +143,58 @@ async function handleFiles(files){
 }
 
 async function load(){
+  document.getElementById('loading').style.display='block';
+  document.getElementById('error-screen').style.display='none';
+  document.getElementById('app').style.display='none';
+
   if(!empresaId||!ordenId){
+    showError('Enlace inválido','Faltan parámetros: e='+empresaId+' o='+ordenId);
+    return;
+  }
+
+  setLoading('Conectando a Supabase...');
+
+  // Timeout de 10 segundos
+  let timedOut=false;
+  const timeoutId=setTimeout(()=>{
+    timedOut=true;
+    showError('Timeout','No se pudo conectar a Supabase en 10 segundos. Verifica tu conexión a internet.');
+  },10000);
+
+  try{
+    setLoading('Cargando datos...');
+    const {data,error}=await sb.from('erp_data').select('datos').eq('empresa_id',empresaId).eq('clave','tp_orders').maybeSingle();
+    clearTimeout(timeoutId);
+    if(timedOut)return;
+
+    if(error){showError('Error Supabase',error.message+'  |  code: '+error.code+'  |  e='+empresaId);return;}
+    if(!data){showError('Sin datos','No se encontraron datos para empresa: '+empresaId);return;}
+
+    allOrders=data.datos||[];
+    currentOrder=allOrders.find(o=>o.id===ordenId);
+
+    if(!currentOrder){
+      document.getElementById('loading').innerHTML=`
+        <div style="font-size:36px;margin-bottom:12px">⏳</div>
+        <p style="font-size:14px;font-weight:600;color:#111827;margin-bottom:6px">Esperando que se guarde la orden...</p>
+        <p style="font-size:13px;color:#6b7280">Guarda la orden en el PC y esta página se actualizará.</p>
+      `;
+      setTimeout(()=>load(),3000);
+      return;
+    }
+
+    document.getElementById('orden-num').textContent='Orden #OT-'+String(currentOrder.num||'').padStart(4,'0');
+    document.getElementById('orden-modelo').textContent=currentOrder.modelo||'—';
+    document.getElementById('orden-cliente').textContent=currentOrder.nombre||'—';
+    document.getElementById('orden-estado').textContent=currentOrder.status||'—';
+    document.getElementById('orden-sucursal').textContent=currentOrder.branchNombre||'—';
+    renderPhotos();
     document.getElementById('loading').style.display='none';
-    document.getElementById('error-screen').style.display='block';
-    document.getElementById('error-msg').textContent='El enlace no tiene los parámetros necesarios.';
-    return;
+    document.getElementById('app').style.display='block';
+  }catch(e){
+    clearTimeout(timeoutId);
+    if(!timedOut)showError('Error inesperado',e.message||String(e));
   }
-  const {data,error}=await sb.from('erp_data').select('datos').eq('empresa_id',empresaId).eq('clave','tp_orders').maybeSingle();
-  if(error||!data){document.getElementById('loading').style.display='none';document.getElementById('error-screen').style.display='block';document.getElementById('error-msg').textContent='Error: '+(error?.message||'Sin datos')+'  |  empresaId='+empresaId+'  |  ordenId='+ordenId;return;}
-  allOrders=data.datos||[];
-  currentOrder=allOrders.find(o=>o.id===ordenId);
-  if(!currentOrder){
-    // Orden no guardada aún — esperar
-    document.getElementById('loading').innerHTML='<div style="font-size:36px;margin-bottom:12px">⏳</div><p style="font-size:14px;font-weight:600;color:#111827;margin-bottom:6px">Esperando que se guarde la orden...</p><p style="font-size:13px;color:#6b7280">Guarda la orden en el PC y esta página se actualizará automáticamente.</p>';
-    setTimeout(()=>load(), 3000);
-    return;
-  }
-  document.getElementById('orden-num').textContent='Orden #OT-'+String(currentOrder.num||'').padStart(4,'0');
-  document.getElementById('orden-modelo').textContent=currentOrder.modelo||'—';
-  document.getElementById('orden-cliente').textContent=currentOrder.nombre||'—';
-  document.getElementById('orden-estado').textContent=currentOrder.status||'—';
-  document.getElementById('orden-sucursal').textContent=currentOrder.branchNombre||'—';
-  renderPhotos();
-  document.getElementById('loading').style.display='none';
-  document.getElementById('app').style.display='block';
 }
 load();
 </script>
