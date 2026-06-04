@@ -11774,6 +11774,25 @@ function tp_confirmRepuesto(){
 
 // ─── SEND ───
 function tp_showQrFotos(ordenId){
+  // Si la orden es nueva (no está guardada aún), crear un borrador antes de mostrar el QR
+  const yaExisteEnLista = tp_orders.some(o => o.id === ordenId);
+  if(!yaExisteEnLista && ordenId){
+    const nombre=(document.getElementById('f-nombre')?.value||'').trim();
+    const modelo=(document.getElementById('f-modelo')?.value||'').trim();
+    const draft={
+      id: ordenId,
+      num: tp_nextNum(),
+      branchId: tp_currentBranchId,
+      branchNombre: tp_branches.find(b=>b.id===tp_currentBranchId)?.nombre||'',
+      fecha: new Date().toISOString(),
+      nombre, modelo,
+      status: document.getElementById('f-status')?.value||'Chequeo',
+      _draft: true
+    };
+    tp_orders.unshift(draft);
+    tp_saveState();
+    tp_editingOrderId = ordenId;
+  }
   const url=`https://erp-stevedocs.netlify.app/foto-orden.html?e=${_empresaId}&o=${ordenId}`;
   const existing=document.getElementById('qr-fotos-modal');
   if(existing) existing.remove();
