@@ -56,7 +56,7 @@ input[type=file]{display:none}
   </div>
   <div class="card">
     <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:14px;font-weight:600;color:#111827">Fotos de ingreso</span>
+      <span style="font-size:14px;font-weight:600;color:#111827" id="fotos-label">Fotos de ingreso</span>
       <span class="count-badge" id="foto-count">0 fotos</span>
     </div>
     <div class="upload-area">
@@ -95,7 +95,11 @@ const sb=supabase.createClient(_SB_URL,_SB_KEY);
 const params=new URLSearchParams(window.location.search);
 const empresaId=params.get('e');
 const ordenId=params.get('o');
+const tipoFotos=params.get('tipo')||'ingreso'; // 'ingreso' o 'inspeccion'
 let currentOrder=null,allOrders=[];
+
+function getFotos(){ return tipoFotos==='inspeccion'?(currentOrder.inspeccion?.fotos||[]):(currentOrder.photosIngreso||[]); }
+function setFotos(arr){ if(tipoFotos==='inspeccion'){ if(!currentOrder.inspeccion) currentOrder.inspeccion={}; currentOrder.inspeccion.fotos=arr; } else { currentOrder.photosIngreso=arr; } }
 
 function setLoading(msg){ document.getElementById('loading-msg').textContent=msg; }
 function showError(title,msg){ document.getElementById('loading').style.display='none';document.getElementById('app').style.display='none';document.getElementById('error-screen').style.display='block';document.getElementById('error-title').textContent=title;document.getElementById('error-msg').textContent=msg; }
@@ -111,7 +115,7 @@ function renderPhotos(){
   const empty=document.getElementById('empty-state');
   const count=document.getElementById('foto-count');
   const wrap=document.getElementById('save-btn-wrap');
-  const photos=currentOrder.photosIngreso||[];
+  const photos=getFotos();
   count.textContent=photos.length+(photos.length===1?' foto':' fotos');
   if(!photos.length){grid.innerHTML='';empty.style.display='block';wrap.style.display='none';return;}
   empty.style.display='none';
@@ -120,7 +124,7 @@ function renderPhotos(){
 }
 
 async function deletePhoto(idx){
-  currentOrder.photosIngreso.splice(idx,1);
+  const arr=getFotos();arr.splice(idx,1);setFotos(arr);
   await saveOrder();renderPhotos();
 }
 
@@ -153,8 +157,7 @@ async function handleFiles(files){
       const {error}=await sb.storage.from('erp-assets').upload(path,file,{upsert:true});
       if(error)throw error;
       const {data:urlData}=sb.storage.from('erp-assets').getPublicUrl(path);
-      if(!currentOrder.photosIngreso)currentOrder.photosIngreso=[];
-      currentOrder.photosIngreso.push(urlData.publicUrl);
+      const arr=getFotos();arr.push(urlData.publicUrl);setFotos(arr);
       ok++;
     }catch(e){console.error(e);}
   }
@@ -208,6 +211,7 @@ async function load(){
       return;
     }
 
+    if(tipoFotos==='inspeccion') document.getElementById('fotos-label').textContent='Fotos de inspección';
     document.getElementById('orden-num').textContent='Orden #OT-'+String(currentOrder.num||'').padStart(4,'0');
     document.getElementById('orden-modelo').textContent=currentOrder.modelo||'—';
     document.getElementById('orden-cliente').textContent=currentOrder.nombre||'—';
