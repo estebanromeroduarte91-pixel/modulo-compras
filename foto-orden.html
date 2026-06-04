@@ -152,7 +152,7 @@ async function load(){
     return;
   }
   const {data,error}=await sb.from('erp_data').select('datos').eq('empresa_id',empresaId).eq('clave','tp_orders').maybeSingle();
-  if(error||!data){document.getElementById('loading').style.display='none';document.getElementById('error-screen').style.display='block';return;}
+  if(error||!data){document.getElementById('loading').style.display='none';document.getElementById('error-screen').style.display='block';document.getElementById('error-msg').textContent='Error: '+(error?.message||'Sin datos')+'  |  empresaId='+empresaId+'  |  ordenId='+ordenId;return;}
   allOrders=data.datos||[];
   currentOrder=allOrders.find(o=>o.id===ordenId);
   if(!currentOrder){
