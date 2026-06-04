@@ -1026,6 +1026,7 @@ async function _iniciarApp(user){
 
   _empresaId = empresaId;
   await _cargarDesdeSupabase();
+  _initRealtimeOrders();
 
   // Cargar cargo y sucursal del usuario desde config local
   const _uCfg = getUserConfig(_currentUserId);
@@ -10660,6 +10661,35 @@ async function tp_pollAprobaciones(){
 
 // Iniciar polling cada 30 segundos
 setInterval(tp_pollAprobaciones, 30000);
+
+// ─── REAL-TIME: fotos desde iPhone ───
+function _initRealtimeOrders(){
+  if(!_empresaId) return;
+  _sb.channel('rt-orders-'+_empresaId)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'erp_data',
+      filter: 'clave=eq.tp_orders'
+    }, payload => {
+      try {
+        const raw = payload.new?.datos;
+        const newOrders = Array.isArray(raw) ? raw : (typeof raw === 'string' ? JSON.parse(raw) : null);
+        if(!newOrders) return;
+        // Solo actualizar si cambió algo en las órdenes que ya tenemos
+        const hasNewPhotos = newOrders.some(n => {
+          const old = tp_orders.find(o => o.id === n.id);
+          return old && (n.photosIngreso||[]).length !== (old.photosIngreso||[]).length;
+        });
+        tp_orders = newOrders;
+        _dbCache['tp_orders'] = raw;
+        localStorage.setItem('erp_tp_orders', JSON.stringify(raw));
+        tp_renderAll();
+        if(hasNewPhotos) toast('📱 Fotos actualizadas desde iPhone', 'success');
+      } catch(e) { console.error('realtime error', e); }
+    })
+    .subscribe();
+}
 
 // ─── DETAIL ───
 function tp_openDetail(id){
