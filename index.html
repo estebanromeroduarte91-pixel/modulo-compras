@@ -9133,7 +9133,7 @@ function renderTaller() {
       </div>
       <div class="form-section-title">Checklist de ingreso</div>
       <div class="checklist-group" id="checklist-ingreso-form"></div>
-      <div class="form-section-title">Fotos de ingreso (hasta 6)</div>
+      <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">Fotos de ingreso (hasta 6)<button id="btn-qr-form" type="button" onclick="tp_showQrFotos(tp_editingOrderId)" style="display:none;padding:4px 10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📱 QR iPhone</button></div>
       <div class="photo-grid" id="photos-ingreso-grid"></div>
       <input type="file" id="ph-ingreso-inp" accept="image/*" multiple style="display:none" onchange="tp_handlePhotos('ingreso',this)">
     </div>
@@ -10129,7 +10129,7 @@ function tp_crearClienteInline(){
 }
 
 function tp_openNewOrder(){
-  tp_editingOrderId=null;tp_currentRepuestos=[];tp_photoBuffers={ingreso:[],salida:[]};
+  tp_editingOrderId='new_'+Date.now().toString();tp_currentRepuestos=[];tp_photoBuffers={ingreso:[],salida:[]};setTimeout(()=>{ const b=document.getElementById('btn-qr-form'); if(b) b.style.display='flex'; },100);
   const t=document.getElementById('order-modal-title');if(t)t.textContent='Nueva orden de trabajo';
   const s=document.getElementById('order-modal-sub');if(s)s.textContent='Completa los datos del cliente y equipo';
   const sb=document.getElementById('save-order-btn');if(sb)sb.textContent='Guardar orden';
@@ -10143,6 +10143,7 @@ function tp_openNewOrder(){
   document.getElementById('mod-order').classList.add('open');
 }
 function tp_openEditOrder(id){
+  setTimeout(()=>{ const b=document.getElementById('btn-qr-form'); if(b) b.style.display='flex'; },100);
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
   tp_editingOrderId=id;tp_currentRepuestos=[...(o.repuestos||[])];
   tp_photoBuffers={ingreso:[...(o.photosIngreso||[])],salida:[...(o.photosSalida||[])]};
@@ -10190,7 +10191,7 @@ function tp_saveOrder(){
     const idx=tp_orders.findIndex(o=>o.id===tp_editingOrderId);
     if(idx!==-1)tp_orders[idx]={...tp_orders[idx],...data};
   } else {
-    const newOrder={id:Date.now().toString(),num:tp_nextNum(),branchId:tp_currentBranchId,fecha:new Date().toISOString(),...data};
+    const newOrder={id:tp_editingOrderId||Date.now().toString(),num:tp_nextNum(),branchId:tp_currentBranchId,fecha:new Date().toISOString(),...data};
     tp_orders.unshift(newOrder);
     // Auto-registrar cliente en BD compartida si no existe
     const clis=getClientes();
