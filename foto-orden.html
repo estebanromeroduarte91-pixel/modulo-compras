@@ -170,7 +170,7 @@ async function load(){
     if(error){showError('Error Supabase',error.message+'  |  code: '+error.code+'  |  e='+empresaId);return;}
     if(!data){showError('Sin datos','No se encontraron datos para empresa: '+empresaId);return;}
 
-    allOrders=data.datos||[];
+    const raw=data.datos; allOrders=Array.isArray(raw)?raw:(typeof raw==='string'?JSON.parse(raw):[]);
     currentOrder=allOrders.find(o=>o.id===ordenId);
 
     if(!currentOrder){
