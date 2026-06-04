@@ -10790,7 +10790,6 @@ function tp_openDetail(id){
           <div class="od-action-bar">
             ${o.status==='Listo'?`<button class="btn btn-default btn-sm" onclick="tp_openSalidaModal('${o.id}');tp_closeModal('mod-detail')">Fotos salida</button>`:''}
             <button class="btn btn-default btn-sm" onclick="tp_openSend('${o.id}','salida')">Avisar retiro</button>
-            <button class="btn btn-default btn-sm" onclick="tp_showQrFotos('${o.id}')" title="Subir fotos desde iPhone">📱 QR fotos</button>
           </div>
         </div>
         <div class="od-pipeline">${pipelineHtml}</div>
