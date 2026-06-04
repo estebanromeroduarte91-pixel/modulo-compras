@@ -10230,6 +10230,8 @@ async function tp_enviarCorreoIngreso(order){
   const branchTel=(branch.tel||cfg.tel||'').replace(/\s/g,'');
   const fechaStr=new Date().toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
   const horaStr=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  const _segCfgIng=tp_getSeguimientoConfig();
+  const logoIngreso=_segCfgIng.logoUrl||localStorage.getItem('erp_tp_seg_logo')||'';
 
   // Helper: section header using table (compatible con Apple Mail — sin flex)
   // svgPath: solo el contenido interno del SVG (paths/circles), sin el tag <svg>
