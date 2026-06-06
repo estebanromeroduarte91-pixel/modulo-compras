@@ -2950,11 +2950,16 @@ function vtaAplicarRango(){
 }
 
 function _renderHistorial(){
-  console.time('renderHistorial_total');
-  console.time('rh_getVentas');
+  // Mostrar spinner inmediatamente, luego renderizar en diferido para no bloquear la UI
+  document.getElementById('page-content').innerHTML=`<div style="padding:40px;text-align:center;color:#9ca3af;font-size:14px">
+    <div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div>
+    Cargando ventas...
+  </div>`;
+  setTimeout(()=>_renderHistorialReal(), 0);
+}
+
+function _renderHistorialReal(){
   const todasVentas=getVentas();
-  console.timeEnd('rh_getVentas');
-  console.log('Total ventas:', todasVentas.length);
   const utilColor=(u)=>u>=0?'#10b981':'#ef4444';
   const bodegas=getBodegas();
   const isGlobal=!_currentBranchContext&&!tp_currentBranchId;
@@ -3143,7 +3148,6 @@ function _renderHistorial(){
       ${renderVentasTable(_vtaFiltrarPorFecha(_vtaFiltro==='todas'?todasFiltSuc:todasFiltSuc.filter(v=>v.estado===_vtaFiltro)),isGlobal&&!_vtaSucursal)}
     </div>
   </div>`;
-  console.timeEnd('renderHistorial_total');
 }
 
 function renderVentasTable(ventas, showSuc=false){
