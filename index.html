@@ -1299,6 +1299,8 @@ function navTaller(subpage, title){
   tp_showPage(subpage, null);
 }
 function toggleVentas(){
+  console.log('🔵 toggleVentas clicked');
+  console.time('toggleVentas_total');
   const parent=document.getElementById('nav-ventas-parent');
   const submenu=document.getElementById('submenu-ventas');
   if(!parent||!submenu) return;
@@ -1307,8 +1309,11 @@ function toggleVentas(){
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
   if(!isOpen) navVentas('resumen');
+  console.timeEnd('toggleVentas_total');
 }
 function navVentas(sub){
+  console.log('🟢 navVentas called:', sub);
+  console.time('navVentas_total');
   currentPage=sub==='config'?'ventas-config':'ventas';
   document.querySelectorAll('.nav-item,.nav-subitem,.nav-item-parent').forEach(n=>n.classList.remove('active'));
   document.getElementById('submenu-ventas')?.classList.add('open');
@@ -1322,6 +1327,7 @@ function navVentas(sub){
   if(sub==='config') renderVentasConfig();
   else if(sub==='pos'){ _vtaTab='pos'; renderVentas(); }
   else { _vtaTab='historial'; renderVentas(); }
+  console.timeEnd('navVentas_total');
 }
 function toggleInventario(){
   const parent=document.getElementById('nav-inventario-parent');
