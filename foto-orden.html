@@ -124,23 +124,29 @@ function renderPhotos(){
 }
 
 async function deletePhoto(idx){
-  const arr=getFotos();arr.splice(idx,1);setFotos(arr);
-  await saveOrder();renderPhotos();
+  const arr=getFotos();
+  const backup=[...arr];
+  arr.splice(idx,1);
+  setFotos(arr);
+  const err=await saveOrder();
+  if(err){setFotos(backup);showStatus('Error al eliminar foto','status-err');renderPhotos();return;}
+  renderPhotos();
 }
 
 async function saveOrder(){
   const idx=allOrders.findIndex(o=>o.id===ordenId);
-  if(idx<0)return;
+  if(idx<0)return null;
   allOrders[idx]=currentOrder;
-  // Guardar como string igual que index.html usa JSON.stringify
-  await sb.from('erp_data').upsert({empresa_id:empresaId,clave:'tp_orders',datos:JSON.stringify(allOrders),actualizado_en:new Date().toISOString()},{onConflict:'empresa_id,clave'});
+  const {error}=await sb.from('erp_data').upsert({empresa_id:empresaId,clave:'tp_orders',datos:JSON.stringify(allOrders),actualizado_en:new Date().toISOString()},{onConflict:'empresa_id,clave'});
+  return error||null;
 }
 
 async function guardarFotos(){
   const btn=document.getElementById('btn-guardar');
   btn.disabled=true;
   btn.textContent='Guardando...';
-  await saveOrder();
+  const err=await saveOrder();
+  if(err){btn.disabled=false;btn.textContent='✅ Guardar fotos';showStatus('Error al guardar. Intenta de nuevo.','status-err');return;}
   document.getElementById('app').style.display='none';
   document.getElementById('done-screen').style.display='block';
   document.getElementById('done-orden').textContent='Orden #OT-'+String(currentOrder.num||'').padStart(4,'0')+' · '+(currentOrder.modelo||'')+(currentOrder.nombre?' · '+currentOrder.nombre:'');
@@ -161,7 +167,11 @@ async function handleFiles(files){
       ok++;
     }catch(e){console.error(e);}
   }
-  await saveOrder();renderPhotos();
+  if(ok>0){
+    const saveErr=await saveOrder();
+    if(saveErr){showStatus('⚠️ Fotos subidas pero no guardadas: '+saveErr.message,'status-err');return;}
+  }
+  renderPhotos();
   if(ok===files.length){
     showStatus('✅ '+(ok>1?ok+' fotos subidas':'Foto subida')+' correctamente','status-ok');
     setTimeout(()=>{document.getElementById('status-bar').style.display='none';},3000);
@@ -176,7 +186,7 @@ async function load(){
   document.getElementById('app').style.display='none';
 
   if(!empresaId||!ordenId){
-    showError('Enlace inválido','Faltan parámetros: e='+empresaId+' o='+ordenId);
+    showError('Enlace inválido','Faltan parámetros en el enlace. Verifica que el QR sea correcto.');
     return;
   }
 

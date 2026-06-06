@@ -38,14 +38,16 @@ serve(async (req) => {
       },
     });
 
-    await client.send({
-      from: `${from_name || "TallerPro"} <${from || user}>`,
-      to: [to],
-      subject,
-      html: html || "",
-    });
-
-    await client.close();
+    try {
+      await client.send({
+        from: `${from_name || "TallerPro"} <${from || user}>`,
+        to: [to],
+        subject,
+        html: html || "",
+      });
+    } finally {
+      await client.close();
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

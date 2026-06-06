@@ -1983,7 +1983,7 @@ function _renderDashboardGlobal(){
       });
       // Leyenda
       const legend=document.getElementById('dash-chart-legend');
-      if(legend) legend.innerHTML=bodegas.map((b,i)=>`<span style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;background:${colores[i]||colores[0]};display:inline-block;border-radius:2px"></span>${b.nombre||b.name}</span>`).join('');
+      if(legend) legend.innerHTML=bodegas.map((b,i)=>`<span style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;background:${colores[i]||colores[0]};display:inline-block;border-radius:2px"></span>${escAttr(b.nombre||b.name)}</span>`).join('');
       // Chart.js — cargar si no está disponible
       function _buildChart(){
         if(window.Chart){

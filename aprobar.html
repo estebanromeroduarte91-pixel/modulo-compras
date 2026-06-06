@@ -56,6 +56,8 @@
     const _SB_KEY = 'sb_publishable_hbmva0O8zTFwr-EfnqBUdw_X8lwOPoZ';
     const sb = supabase.createClient(_SB_URL, _SB_KEY);
 
+    function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
     const params = new URLSearchParams(window.location.search);
     const token = params.get('t');
     let _record = null;
@@ -93,7 +95,7 @@
             ${meta.items.map(r=>`
               <div class="item-row">
                 <div>
-                  <div class="item-name">${r.name}</div>
+                  <div class="item-name">${esc(r.name)}</div>
                   <div class="item-qty">x${r.qty||1}</div>
                 </div>
                 <div class="item-price">${r.precio?fmtMoney((r.precio)*(r.qty||1)):'—'}</div>
@@ -109,22 +111,22 @@
             <p style="font-size:28px;font-weight:700;color:#111">${fmtMoney(d.presupuesto)}</p>
           </div>`:
           meta.trabajo?`<div class="info-box" style="margin-bottom:20px">
-            <div class="info-row"><span class="info-label">Trabajo</span><span class="info-val">${meta.trabajo}</span></div>
+            <div class="info-row"><span class="info-label">Trabajo</span><span class="info-val">${esc(meta.trabajo)}</span></div>
           </div>`:'');
 
       const contactInfo=[meta.horario,meta.sucursal].filter(Boolean).join(' · ');
 
       return `
         <div class="header">
-          <div class="header-label">${taller}</div>
+          <div class="header-label">${esc(taller)}</div>
           <div class="header-title">Solicitud de aprobación</div>
           <div class="header-sub">Por favor revisa el detalle y confirma</div>
         </div>
         <div class="body">
           <div class="info-box">
-            ${d.cliente?`<div class="info-row"><span class="info-label">Cliente</span><span class="info-val">${d.cliente}</span></div>`:''}
-            ${d.equipo?`<div class="info-row"><span class="info-label">Equipo</span><span class="info-val">${d.equipo}</span></div>`:''}
-            ${d.orden_num?`<div class="info-row"><span class="info-label">N° orden</span><span class="info-val">#${d.orden_num}</span></div>`:''}
+            ${d.cliente?`<div class="info-row"><span class="info-label">Cliente</span><span class="info-val">${esc(d.cliente)}</span></div>`:''}
+            ${d.equipo?`<div class="info-row"><span class="info-label">Equipo</span><span class="info-val">${esc(d.equipo)}</span></div>`:''}
+            ${d.orden_num?`<div class="info-row"><span class="info-label">N° orden</span><span class="info-val">#${esc(d.orden_num)}</span></div>`:''}
           </div>
           ${itemsHtml}
           <button class="btn btn-green" onclick="responder('aprobado')">✅ Aprobar presupuesto</button>
@@ -141,14 +143,14 @@
       const meta=parseTrabajo(d.trabajo);
       const taller=meta.taller||'TallerPro';
       if(estado==='aprobado') return `
-        <div class="header"><div class="header-label">${taller}</div><div class="header-title">Aprobación recibida</div></div>
+        <div class="header"><div class="header-label">${esc(taller)}</div><div class="header-title">Aprobación recibida</div></div>
         <div class="body" style="text-align:center;padding:32px 24px">
           <div class="icon ok">✅</div>
           <h1>¡Presupuesto aprobado!</h1>
-          <p class="msg">Gracias <strong>${d.cliente||''}</strong>, hemos recibido tu aprobación.<br>Nos pondremos en contacto pronto.</p>
+          <p class="msg">Gracias <strong>${esc(d.cliente||'')}</strong>, hemos recibido tu aprobación.<br>Nos pondremos en contacto pronto.</p>
         </div>`;
       return `
-        <div class="header" style="background:#dc2626"><div class="header-label">${taller}</div><div class="header-title">Respuesta registrada</div></div>
+        <div class="header" style="background:#dc2626"><div class="header-label">${esc(taller)}</div><div class="header-title">Respuesta registrada</div></div>
         <div class="body" style="text-align:center;padding:32px 24px">
           <div class="icon ko">❌</div>
           <h1>Presupuesto no aprobado</h1>

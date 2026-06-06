@@ -13,7 +13,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const EMPRESA_ID = Deno.env.get('EMPRESA_ID') ?? 'default';
-const WOO_SECRET = Deno.env.get('WOO_WEBHOOK_SECRET') ?? ''; // opcional pero recomendado
+const WOO_SECRET = Deno.env.get('WOO_WEBHOOK_SECRET') ?? '';
 
 // Supabase con service_role (para saltarse RLS)
 const sb = createClient(
@@ -25,7 +25,7 @@ const sb = createClient(
 // WooCommerce firma cada request con HMAC-SHA256 del body
 // La firma viene en el header X-WC-Webhook-Signature (base64)
 async function verificarFirma(req: Request, body: string): Promise<boolean> {
-  if (!WOO_SECRET) return true; // Si no hay secret configurado, omitir verificación
+  if (!WOO_SECRET) return false; // Si no hay secret configurado, rechazar todo
 
   const firma = req.headers.get('X-WC-Webhook-Signature');
   if (!firma) return false;
