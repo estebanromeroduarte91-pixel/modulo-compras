@@ -2903,11 +2903,11 @@ function moverMetodoPago(idx,dir){
 // ────────────────────────────────────────────────
 
 function _calcUtilidadVentas(lista){
-  const prods=getProductos();
+  const prodsMap=new Map(getProductos().map(p=>[p.id,p]));
   return lista.reduce((sum,v)=>{
     const costo=(v.items||[]).reduce((cs,it)=>{
       if(!it.producto_id) return cs;
-      const p=prods.find(x=>x.id===it.producto_id);
+      const p=prodsMap.get(it.producto_id);
       return cs+(it.cantidad||1)*(+(p?.precio_compra)||0);
     },0);
     return sum+(+(v.total)||0)-costo;
