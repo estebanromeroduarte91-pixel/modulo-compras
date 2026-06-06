@@ -1299,8 +1299,6 @@ function navTaller(subpage, title){
   tp_showPage(subpage, null);
 }
 function toggleVentas(){
-  console.log('🔵 toggleVentas clicked');
-  console.time('toggleVentas_total');
   const parent=document.getElementById('nav-ventas-parent');
   const submenu=document.getElementById('submenu-ventas');
   if(!parent||!submenu) return;
@@ -1309,25 +1307,26 @@ function toggleVentas(){
   submenu.classList.toggle('open',!isOpen);
   parent.classList.toggle('open',!isOpen);
   if(!isOpen) navVentas('resumen');
-  console.timeEnd('toggleVentas_total');
 }
 function navVentas(sub){
-  console.log('🟢 navVentas called:', sub);
-  console.time('navVentas_total');
+  // Trabajo mínimo sincrónico: solo actualizar sidebar y mostrar spinner
   currentPage=sub==='config'?'ventas-config':'ventas';
   document.getElementById('sidebar')?.querySelectorAll('.nav-item,.nav-subitem,.nav-item-parent').forEach(n=>n.classList.remove('active'));
   document.getElementById('submenu-ventas')?.classList.add('open');
   document.getElementById('nav-ventas-parent')?.classList.add('open');
   const activeId=sub==='config'?'nav-ventas-config':sub==='pos'?'nav-ventas-pos':'nav-ventas';
   document.getElementById(activeId)?.classList.add('active');
-  const tb=document.getElementById('topbar'); if(tb) tb.style.display='';
   document.getElementById('page-title').textContent=sub==='config'?'Ventas — Configuración':sub==='pos'?'Ventas — POS':'Ventas — Resumen';
   document.getElementById('topbar-actions').innerHTML='';
-  closeModal();
-  if(sub==='config') renderVentasConfig();
-  else if(sub==='pos'){ _vtaTab='pos'; renderVentas(); }
-  else { _vtaTab='historial'; renderVentas(); }
-  console.timeEnd('navVentas_total');
+  document.getElementById('page-content').innerHTML='<div style="padding:40px;text-align:center;color:#9ca3af;font-size:14px"><div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div>Cargando...</div>';
+  // Todo el trabajo pesado diferido
+  setTimeout(()=>{
+    const tb=document.getElementById('topbar'); if(tb) tb.style.display='';
+    closeModal();
+    if(sub==='config') renderVentasConfig();
+    else if(sub==='pos'){ _vtaTab='pos'; renderVentas(); }
+    else { _vtaTab='historial'; renderVentas(); }
+  }, 0);
 }
 function toggleInventario(){
   const parent=document.getElementById('nav-inventario-parent');
@@ -2956,11 +2955,6 @@ function vtaAplicarRango(){
 }
 
 function _renderHistorial(){
-  // Mostrar spinner inmediatamente, luego renderizar en diferido para no bloquear la UI
-  document.getElementById('page-content').innerHTML=`<div style="padding:40px;text-align:center;color:#9ca3af;font-size:14px">
-    <div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div>
-    Cargando ventas...
-  </div>`;
   setTimeout(()=>_renderHistorialReal(), 0);
 }
 
