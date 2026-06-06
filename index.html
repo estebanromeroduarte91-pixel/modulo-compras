@@ -2973,18 +2973,14 @@ function _renderHistorialReal(){
   const periodo=_vtaFiltrarPorFecha(activas);
 
   // Métricas del período seleccionado
-  console.time('rh_utilPer');
   const totalPer=periodo.reduce((s,v)=>s+(+v.total_iva||0),0);
   const netoPer=periodo.reduce((s,v)=>s+(+v.total||0),0);
   const utilPer=(_vtaPeriodo==='todo'&&_vtaUtilHistCache!==null)?_vtaUtilHistCache:_calcUtilidadVentas(periodo);
-  console.timeEnd('rh_utilPer');
 
   // Totales históricos (respeta filtro sucursal) — utilidad cacheada para no recalcular con miles de ventas
   const totalHist=activas.reduce((s,v)=>s+(+v.total_iva||0),0);
-  console.time('rh_utilHist');
   if(_vtaUtilHistCache===null) _vtaUtilHistCache=_calcUtilidadVentas(activas);
   const utilHist=_vtaUtilHistCache;
-  console.timeEnd('rh_utilHist');
 
   // Desglose por método de pago (período)
   const metodoInfo={efectivo:{icon:'💵',label:'Efectivo'},transfer:{icon:'🏦',label:'Transferencia'},transferencia:{icon:'🏦',label:'Transferencia'},tarjeta:{icon:'💳',label:'Tarjeta'},debito:{icon:'💳',label:'Débito'},credito:{icon:'💳',label:'Crédito'}};
