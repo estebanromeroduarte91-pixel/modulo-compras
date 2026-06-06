@@ -1315,7 +1315,7 @@ function navVentas(sub){
   console.log('🟢 navVentas called:', sub);
   console.time('navVentas_total');
   currentPage=sub==='config'?'ventas-config':'ventas';
-  document.querySelectorAll('.nav-item,.nav-subitem,.nav-item-parent').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sidebar')?.querySelectorAll('.nav-item,.nav-subitem,.nav-item-parent').forEach(n=>n.classList.remove('active'));
   document.getElementById('submenu-ventas')?.classList.add('open');
   document.getElementById('nav-ventas-parent')?.classList.add('open');
   const activeId=sub==='config'?'nav-ventas-config':sub==='pos'?'nav-ventas-pos':'nav-ventas';
@@ -1358,7 +1358,7 @@ function toggleContabilidad(){
 }
 function nav(page){
   currentPage=page;
-  document.querySelectorAll('.nav-item,.nav-subitem').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sidebar')?.querySelectorAll('.nav-item,.nav-subitem').forEach(n=>n.classList.remove('active'));
   const ni=document.getElementById('nav-'+page);
   if(ni) ni.classList.add('active');
   // Si es una subpágina de inventario, abrir el menú
