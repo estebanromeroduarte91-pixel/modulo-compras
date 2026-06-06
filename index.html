@@ -2950,7 +2950,11 @@ function vtaAplicarRango(){
 }
 
 function _renderHistorial(){
+  console.time('renderHistorial_total');
+  console.time('rh_getVentas');
   const todasVentas=getVentas();
+  console.timeEnd('rh_getVentas');
+  console.log('Total ventas:', todasVentas.length);
   const utilColor=(u)=>u>=0?'#10b981':'#ef4444';
   const bodegas=getBodegas();
   const isGlobal=!_currentBranchContext&&!tp_currentBranchId;
@@ -2964,14 +2968,18 @@ function _renderHistorial(){
   const periodo=_vtaFiltrarPorFecha(activas);
 
   // Métricas del período seleccionado
+  console.time('rh_utilPer');
   const totalPer=periodo.reduce((s,v)=>s+(+v.total_iva||0),0);
   const netoPer=periodo.reduce((s,v)=>s+(+v.total||0),0);
-  const utilPer=_calcUtilidadVentas(periodo);
+  const utilPer=(_vtaPeriodo==='todo'&&_vtaUtilHistCache!==null)?_vtaUtilHistCache:_calcUtilidadVentas(periodo);
+  console.timeEnd('rh_utilPer');
 
   // Totales históricos (respeta filtro sucursal) — utilidad cacheada para no recalcular con miles de ventas
   const totalHist=activas.reduce((s,v)=>s+(+v.total_iva||0),0);
+  console.time('rh_utilHist');
   if(_vtaUtilHistCache===null) _vtaUtilHistCache=_calcUtilidadVentas(activas);
   const utilHist=_vtaUtilHistCache;
+  console.timeEnd('rh_utilHist');
 
   // Desglose por método de pago (período)
   const metodoInfo={efectivo:{icon:'💵',label:'Efectivo'},transfer:{icon:'🏦',label:'Transferencia'},transferencia:{icon:'🏦',label:'Transferencia'},tarjeta:{icon:'💳',label:'Tarjeta'},debito:{icon:'💳',label:'Débito'},credito:{icon:'💳',label:'Crédito'}};
@@ -3135,6 +3143,7 @@ function _renderHistorial(){
       ${renderVentasTable(_vtaFiltrarPorFecha(_vtaFiltro==='todas'?todasFiltSuc:todasFiltSuc.filter(v=>v.estado===_vtaFiltro)),isGlobal&&!_vtaSucursal)}
     </div>
   </div>`;
+  console.timeEnd('renderHistorial_total');
 }
 
 function renderVentasTable(ventas, showSuc=false){
