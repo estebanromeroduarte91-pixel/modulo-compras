@@ -1682,72 +1682,153 @@ function _cajaCerrar(branchId, cajaId, esperadoEfect, totalVentas, countVentas){
 // ─────────────────────────────────────────────
 function renderConfigGlobal(){
   const cfg=DB.get('tp_smtp_config')||{};
+  const isConnected=!!(cfg.host&&cfg.user&&cfg.password);
+  const badgeHtml=isConnected
+    ?`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;background:#e7f7ef;color:#0c9b66;border:1px solid #c8ecdb;white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:#0c9b66;display:inline-block"></span>Conectado</span>`
+    :`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;background:#fdf6e7;color:#b7791f;border:1px solid #f1e2bd;white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:#b7791f;display:inline-block"></span>Sin configurar</span>`;
+
+  // Ícono SVG servidor
+  const iconServer=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>`;
+  const iconSend=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 11 13"/><path d="M21.5 2.5 15 21l-4-8-8-4 18.5-6.5z"/></svg>`;
+  const iconSave=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 14 8"/></svg>`;
+  const iconEye=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7z"/><circle cx="12" cy="12" r="2.8"/></svg>`;
+  const iconInfo=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16.5v-5M12 8h.01"/></svg>`;
+  const iconShield=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-9.5V5l-8-3-8 3v7.5C4 18.5 12 22 12 22z"/></svg>`;
+  const iconExternal=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>`;
+  const iconCheck=`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg>`;
+  const iconAlert=`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4.5M12 17.5h.01"/></svg>`;
+
+  // Campos del formulario
+  const field=(label,id,opts={})=>`
+    <div style="grid-column:span ${opts.span||6};display:flex;flex-direction:column;gap:6px;min-width:0">
+      <label style="font-size:12.5px;font-weight:600;color:var(--gray-600)">${label}</label>
+      <div style="position:relative;display:flex">
+        ${opts.select
+          ?`<select id="${id}" class="form-input" style="font-family:monospace;font-size:13px;padding-right:36px;appearance:none;cursor:pointer">${opts.options}</select>
+             <span style="position:absolute;right:11px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gray-400)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></span>`
+          :`<input id="${id}" type="${opts.type||'text'}" class="form-input"
+              style="${opts.mono?'font-family:monospace;font-size:13px;':''}${opts.hasEye?'padding-right:42px;':''}"
+              value="${escAttr(opts.value||'')}" placeholder="${escAttr(opts.placeholder||'')}">
+             ${opts.hasEye?`<span onclick="tp_toggleSmtpPw()" style="position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--gray-400);cursor:pointer;display:inline-flex" title="Ver/ocultar">${iconEye}</span>`:''}`
+        }
+      </div>
+    </div>`;
+
   document.getElementById('page-content').innerHTML=`
-  <div style="max-width:680px">
-    <div style="margin-bottom:24px">
-      <div style="font-size:18px;font-weight:700;color:var(--text)">Configuración global</div>
-      <div style="font-size:13px;color:var(--text2)">Ajustes del sistema compartidos por todas las sucursales</div>
+  <div style="max-width:1080px;margin:0 auto;padding:4px 0 32px">
+
+    <!-- Page head -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:22px">
+      <div>
+        <h1 style="margin:0;font-size:22px;font-weight:800;color:var(--gray-900);letter-spacing:-.025em">Configuración global</h1>
+        <p style="margin:5px 0 0;font-size:13.5px;color:var(--gray-500);font-weight:500">Ajustes del sistema compartidos por todas las sucursales.</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-shrink:0">
+        <button class="btn btn-default" onclick="renderConfigGlobal()" style="font-size:13px">Descartar</button>
+        <button class="btn btn-primary" onclick="tp_saveSmtp()" style="display:inline-flex;align-items:center;gap:7px;font-size:13px">${iconSave} Guardar cambios</button>
+      </div>
     </div>
 
-    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:16px">
-      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Correo saliente (SMTP)</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.5">Configuración para envío de emails automáticos — confirmaciones de OT, reportes de inspección y aprobaciones de presupuesto. Para Gmail usa <strong>smtp.gmail.com</strong>, puerto <strong>587</strong>, cifrado <strong>TLS</strong> y una <strong>Contraseña de aplicación</strong>.</div>
-      <div style="display:grid;grid-template-columns:1fr 120px 150px;gap:12px;margin-bottom:12px">
-        <div>
-          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Servidor SMTP</label>
-          <input class="form-input" id="smtp-host" value="${cfg.host||''}" placeholder="smtp.gmail.com">
+    <!-- Tabs -->
+    <div style="display:flex;gap:2px;border-bottom:1px solid var(--gray-200);margin-bottom:24px">
+      ${['Correo','Empresa','Seguridad','Facturación','Notificaciones'].map((t,i)=>`
+        <div style="padding:9px 14px 12px;font-size:13.5px;font-weight:600;cursor:pointer;position:relative;margin-bottom:-1px;
+          color:${i===0?'var(--primary)':'var(--gray-500)'};transition:color .15s"
+          ${i===0?'':`onmouseover="this.style.color='var(--gray-800)'" onmouseout="this.style.color='var(--gray-500)'"`}>
+          ${t}
+          ${i===0?`<span style="position:absolute;left:8px;right:8px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:var(--primary)"></span>`:''}
+        </div>`).join('')}
+    </div>
+
+    <!-- 2-col grid -->
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:22px;align-items:start">
+
+      <!-- SMTP card (izquierda) -->
+      <section style="background:#fff;border:1px solid var(--gray-200);border-radius:14px;box-shadow:0 1px 2px rgba(16,18,24,.03),0 6px 20px rgba(16,18,24,.04);overflow:hidden">
+
+        <!-- Card head -->
+        <div style="display:flex;gap:14px;padding:22px 24px 18px;align-items:flex-start">
+          <div style="width:40px;height:40px;border-radius:10px;flex:0 0 40px;background:var(--primary-light);color:var(--primary);display:grid;place-items:center">${iconServer}</div>
+          <div style="flex:1;min-width:0">
+            <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--gray-900);letter-spacing:-.015em">Correo saliente (SMTP)</h2>
+            <p style="margin:5px 0 0;font-size:13px;color:var(--gray-500);font-weight:500;line-height:1.5">Envío de emails automáticos: confirmaciones de OT, reportes de inspección y aprobaciones de presupuesto.</p>
+          </div>
+          ${badgeHtml}
         </div>
-        <div>
-          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Puerto</label>
-          <input class="form-input" id="smtp-port" type="number" value="${cfg.port||587}" placeholder="587">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Cifrado</label>
-          <select class="form-input" id="smtp-security">
+
+        <!-- Form -->
+        <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:16px 14px;padding:4px 24px 22px">
+          ${field('Servidor SMTP','smtp-host',{span:6,mono:true,value:cfg.host||'',placeholder:'mail.stevedocs.cl'})}
+          ${field('Puerto','smtp-port',{span:3,mono:true,type:'number',value:cfg.port||587,placeholder:'587'})}
+          ${field('Cifrado','smtp-security',{span:3,select:true,options:`
+            <option value="SSL" ${(cfg.security||'SSL')==='SSL'?'selected':''}>SSL (465)</option>
             <option value="TLS" ${cfg.security==='TLS'?'selected':''}>TLS (587)</option>
-            <option value="SSL" ${cfg.security==='SSL'?'selected':''}>SSL (465)</option>
-            <option value="NONE" ${cfg.security==='NONE'?'selected':''}>Sin cifrado</option>
-          </select>
+            <option value="NONE" ${cfg.security==='NONE'?'selected':''}>Ninguno</option>`})}
+          ${field('Usuario (email)','smtp-user',{span:6,mono:true,type:'email',value:cfg.user||'',placeholder:'contacto@stevedocs.cl'})}
+          ${field('Contraseña / App Password','smtp-password',{span:6,mono:true,type:'password',value:'',placeholder:'••••••••••••••',hasEye:true})}
+          ${field('Email remitente','smtp-from',{span:6,mono:true,type:'email',value:cfg.from||'',placeholder:'contacto@stevedocs.cl'})}
+          ${field('Nombre remitente','smtp-from-name',{span:6,value:cfg.from_name||cfg.fromName||'',placeholder:'Steve Docs'})}
         </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-        <div>
-          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Usuario (email)</label>
-          <input class="form-input" id="smtp-user" type="email" value="${cfg.user||''}" placeholder="tucorreo@gmail.com">
+
+        <!-- Card foot -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;border-top:1px solid var(--gray-100);background:var(--gray-50)">
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--gray-500);font-weight:500">
+            ${iconInfo} Los cambios afectan a todas las sucursales.
+          </span>
+          <div style="display:flex;gap:9px">
+            <button class="btn btn-default" onclick="renderConfigGlobal()" style="font-size:13px;padding:7px 14px">Cancelar</button>
+            <button class="btn btn-primary" onclick="tp_saveSmtp()" style="font-size:13px;padding:7px 14px">Guardar SMTP</button>
+          </div>
         </div>
-        <div>
-          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Contraseña / App Password</label>
-          <input class="form-input" id="smtp-password" type="password" value="${cfg.password||''}" placeholder="••••••••••••••••">
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
-        <div>
-          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Email remitente</label>
-          <input class="form-input" id="smtp-from" type="email" value="${cfg.from||''}" placeholder="tucorreo@gmail.com">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:4px">Nombre remitente</label>
-          <input class="form-input" id="smtp-from-name" value="${cfg.from_name||cfg.fromName||''}" placeholder="Mi Taller">
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="tp_saveSmtp()">Guardar SMTP</button>
-        <input class="form-input" id="smtp-test-email" type="email" placeholder="email de prueba" style="width:200px">
-        <button class="btn btn-default" onclick="tp_testSmtp()">Probar envío</button>
-      </div>
-      <div id="smtp-status" style="display:none;margin-top:14px;font-size:12.5px;padding:10px 14px;border-radius:8px"></div>
-      <div style="margin-top:12px;font-size:12px;color:var(--text3);line-height:1.6">
-        Para Gmail: activa verificación en 2 pasos y genera una Contraseña de aplicación en <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--accent)">myaccount.google.com/apppasswords</a>.
+      </section>
+
+      <!-- Columna lateral (derecha) -->
+      <div style="display:flex;flex-direction:column;gap:20px">
+
+        <!-- Test card -->
+        <section style="background:#fff;border:1px solid var(--gray-200);border-radius:14px;box-shadow:0 1px 2px rgba(16,18,24,.03),0 6px 20px rgba(16,18,24,.04);padding:22px">
+          <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--gray-900);letter-spacing:-.01em">Probar configuración</h3>
+          <p style="margin:7px 0 0;font-size:12.5px;color:var(--gray-500);font-weight:500;line-height:1.55">Envía un correo de prueba para validar las credenciales antes de guardar.</p>
+          <label style="display:block;font-size:12.5px;font-weight:600;color:var(--gray-600);margin:16px 0 7px">Destinatario</label>
+          <input id="smtp-test-email" type="email" class="form-input" style="font-family:monospace;font-size:13px"
+            value="${escAttr(cfg.user||'')}" placeholder="correo@ejemplo.com">
+          <button onclick="tp_testSmtp()" id="smtp-test-btn"
+            style="width:100%;margin-top:10px;padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;box-shadow:0 2px 8px rgba(37,99,235,.25);transition:filter .15s"
+            onmouseover="this.style.filter='brightness(1.06)'" onmouseout="this.style.filter=''">
+            ${iconSend} Enviar prueba
+          </button>
+          <div id="smtp-status" style="display:none;margin-top:14px;gap:10px;padding:12px 13px;border-radius:11px;border:1px solid transparent"></div>
+        </section>
+
+        <!-- Gmail tip card -->
+        <section style="background:#fff;border:1px solid var(--gray-200);border-radius:14px;box-shadow:0 1px 2px rgba(16,18,24,.03),0 6px 20px rgba(16,18,24,.04);padding:20px 22px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="width:30px;height:30px;border-radius:8px;background:var(--primary-light);color:var(--primary);display:grid;place-items:center;flex:0 0 30px">${iconShield}</span>
+            <h4 style="margin:0;font-size:14px;font-weight:700;color:var(--gray-900)">¿Usas Gmail?</h4>
+          </div>
+          <p style="margin:0;font-size:12.5px;color:var(--gray-500);font-weight:500;line-height:1.55">
+            Servidor <code style="font-family:monospace;font-size:11.5px;background:var(--gray-100);padding:1px 5px;border-radius:5px;color:var(--gray-800)">smtp.gmail.com</code>,
+            puerto <code style="font-family:monospace;font-size:11.5px;background:var(--gray-100);padding:1px 5px;border-radius:5px;color:var(--gray-800)">587</code>,
+            cifrado <strong>TLS</strong>. Activa la verificación en 2 pasos y genera una Contraseña de aplicación.
+          </p>
+          <a href="https://myaccount.google.com/apppasswords" target="_blank"
+            style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--primary);text-decoration:none"
+            onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+            Generar App Password ${iconExternal}
+          </a>
+        </section>
       </div>
     </div>
   </div>`;
-  // Pre-rellenar valores actuales
-  const s=DB.get('tp_smtp_config')||{};
-  ['host','port','user','password','from','smtp-from-name'].forEach(k=>{
-    const el=document.getElementById('smtp-'+k.replace('smtp-',''));
-    if(el&&s[k.replace('smtp-','')]) el.value=s[k.replace('smtp-','')] ;
-  });
-  if(s.security){ const sel=document.getElementById('smtp-security'); if(sel) sel.value=s.security; }
+
+  // Restaurar contraseña placeholder si ya hay config guardada
+  if(cfg.password){ const pw=document.getElementById('smtp-password'); if(pw) pw.placeholder='(sin cambios)'; }
+}
+
+function tp_toggleSmtpPw(){
+  const el=document.getElementById('smtp-password');
+  if(!el) return;
+  el.type=el.type==='password'?'text':'password';
 }
 
 // ─────────────────────────────────────────────
@@ -11640,16 +11721,24 @@ async function tp_testSmtp(){
   const cfg=DB.get('tp_smtp_config');
   if(!cfg?.host||!cfg?.user||!cfg?.password){toast('Guarda la configuración SMTP primero','error');return;}
   const statusEl=document.getElementById('smtp-status');
-  if(statusEl){statusEl.style.display='block';statusEl.style.background='var(--bg)';statusEl.style.color='var(--text2)';statusEl.textContent='⏳ Enviando correo de prueba...';}
+  const btn=document.getElementById('smtp-test-btn');
+  const iconSend=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 11 13"/><path d="M21.5 2.5 15 21l-4-8-8-4 18.5-6.5z"/></svg>`;
+  if(btn){btn.disabled=true;btn.innerHTML='<span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span> Enviando...';}
+  if(statusEl){statusEl.style.display='none';}
   const res=await tp_callSendEmail(
     testTo,
     'Prueba SMTP — TallerPro',
     '<div style="font-family:sans-serif"><h2 style="color:#1e40af">✅ Configuración SMTP correcta</h2><p>Este es un correo de prueba desde <strong>TallerPro</strong>. Tu servidor SMTP está funcionando correctamente.</p></div>'
   );
-  if(res.ok){
-    if(statusEl){statusEl.style.background='#f0fdf4';statusEl.style.color='#166534';statusEl.textContent='✅ Email enviado correctamente a '+testTo;}
-  } else {
-    if(statusEl){statusEl.style.background='#fef2f2';statusEl.style.color='#991b1b';statusEl.textContent='❌ Error: '+res.error;}
+  if(btn){btn.disabled=false;btn.innerHTML=iconSend+' Enviar prueba';}
+  if(statusEl){
+    if(res.ok){
+      statusEl.style.cssText='display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px 13px;border-radius:11px;background:#e7f7ef;border:1px solid #c8ecdb;color:#0c9b66';
+      statusEl.innerHTML=`<span style="flex:0 0 auto;margin-top:1px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 9.5"/></svg></span><div><strong style="font-size:13px;font-weight:700">Correo enviado</strong><div style="font-size:12px;font-weight:500;margin-top:2px;color:#3a8e6f">Entregado a ${escAttr(testTo)}</div></div>`;
+    } else {
+      statusEl.style.cssText='display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px 13px;border-radius:11px;background:#fdecec;border:1px solid #f6cfcd;color:#d8413a';
+      statusEl.innerHTML=`<span style="flex:0 0 auto;margin-top:1px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4.5M12 17.5h.01"/></svg></span><div><strong style="font-size:13px;font-weight:700">Error de envío</strong><div style="font-size:12px;font-weight:500;margin-top:2px;color:#b24c48">${escAttr(res.error||'Error desconocido')}</div></div>`;
+    }
   }
 }
 
