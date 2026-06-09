@@ -1,8 +1,7 @@
 // ─── SUPABASE EDGE FUNCTION: send-email ───
-// Despliega esto en: supabase.com/dashboard/project/nfcdqdbhrsjhbnbtqewl/functions
+// Despliega en: supabase.com/dashboard → Edge Functions → send-email
 // Nombre de la función: send-email
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
@@ -10,7 +9,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
