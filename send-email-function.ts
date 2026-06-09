@@ -1,5 +1,4 @@
 // ─── SUPABASE EDGE FUNCTION: send-email ───
-// Despliega en: supabase.com/dashboard → Edge Functions → send-email
 // Nombre de la función: send-email
 
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
@@ -37,23 +36,33 @@ Deno.serve(async (req) => {
       },
     });
 
-    try {
-      await client.send({
-        from: `${from_name || "TallerPro"} <${from || user}>`,
-        to: [to],
-        subject,
-        html: html || "",
-      });
-    } finally {
-      await client.close();
-    }
+    // Timeout de 15s — si el SMTP no responde, devolvemos error en vez de que Supabase mate la función con 503
+    const smtpTask = async () => {
+      try {
+        await client.send({
+          from: `${from_name || "TallerPro"} <${from || user}>`,
+          to: [to],
+          subject,
+          html: html || "",
+        });
+      } finally {
+        await client.close().catch(() => {});
+      }
+    };
+
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("SMTP timeout: el servidor no respondió en 15s. Verifica host/puerto o usa otro proveedor SMTP.")), 15000)
+    );
+
+    await Promise.race([smtpTask(), timeout]);
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (error) {
     return new Response(
-      JSON.stringify({ ok: false, error: error.message }),
+      JSON.stringify({ ok: false, error: String(error?.message || error) }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
