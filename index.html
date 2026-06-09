@@ -10175,7 +10175,8 @@ function tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, fromEma
   const c=tp_getSeguimientoConfig();
   const smtpCfg=DB.get('tp_smtp_config')||{};
   // Preferir URL pública (funciona en todos los clientes de email) sobre base64
-  const logoData=c.logoUrl||localStorage.getItem('erp_tp_seg_logo')||'';
+  // Solo usar URL pública — nunca base64 en email (causa fallos en iPhone Mail y timeouts SMTP)
+  const logoData=c.logoUrl||'';
   const primerNombre=nombre.split(' ')[0];
   const diasUmbral=c.dias??30;
   // Datos del negocio: config de seguimiento > SMTP > fallback
@@ -10383,7 +10384,8 @@ async function tp_enviarCorreoIngreso(order){
   const fechaStr=new Date().toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
   const horaStr=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
   const _segCfgIng=tp_getSeguimientoConfig();
-  const logoIngreso=_segCfgIng.logoUrl||localStorage.getItem('erp_tp_seg_logo')||'';
+  // Solo URL pública — nunca base64 en email
+  const logoIngreso=_segCfgIng.logoUrl||'';
 
   // Helper: section header using table (compatible con Apple Mail — sin flex)
   // svgPath: solo el contenido interno del SVG (paths/circles), sin el tag <svg>
@@ -11465,8 +11467,10 @@ function tp_loadSeguimientoConfig(){
   set('seg-msg-cierre', c.msgCierre||'');
   set('seg-logo-url', c.logoUrl||'');
   if(c.logoUrl) tp_previewLogoUrl(c.logoUrl);
-  // Cargar logo guardado
-  const logoData=localStorage.getItem('erp_tp_seg_logo')||'';
+  // Limpiar base64 antiguo del localStorage (causaba fallos en iPhone Mail)
+  localStorage.removeItem('erp_tp_seg_logo');
+  // Cargar logo guardado (solo URL pública)
+  const logoData=c.logoUrl||'';
   const prev=document.getElementById('seg-logo-preview');
   const rmBtn=document.getElementById('seg-logo-remove-btn');
   if(prev){
