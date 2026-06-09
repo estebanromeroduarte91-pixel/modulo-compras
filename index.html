@@ -791,7 +791,6 @@ select{cursor:pointer}
   <div class="nav-submenu" id="submenu-inventario">
     <div class="nav-subitem" id="nav-productos" onclick="nav('productos')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span> Productos</div>
     <div class="nav-subitem" id="nav-categorias" onclick="nav('categorias')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span> Categorías</div>
-    <div class="nav-subitem" id="nav-kits" onclick="nav('kits')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.7-3.7a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9l-3.7 3.7z"/></svg></span> Kits / Equipos</div>
     <div class="nav-subitem" id="nav-bodegas" onclick="nav('bodegas')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Bodegas / Sucursales</div>
   </div>
 
@@ -803,6 +802,7 @@ select{cursor:pointer}
   <div class="nav-item-parent" id="nav-contabilidad" onclick="toggleContabilidad()"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2.5H20v19H6.5A2.5 2.5 0 0 1 4 19v-14a2.5 2.5 0 0 1 2.5-2.5z"/></svg></span> Contabilidad<span class="arrow">▶</span></div>
   <div class="nav-submenu" id="submenu-contabilidad">
     <div class="nav-subitem" id="nav-oc" onclick="nav('oc')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span> Compras</div>
+    <div class="nav-subitem" id="nav-kits" onclick="nav('kits')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.7-3.7a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9l-3.7 3.7z"/></svg></span> Kits / Equipos</div>
     <div class="nav-subitem" id="nav-gastos" onclick="nav('gastos')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19"/><path d="M6 15h4"/></svg></span> Gastos</div>
     <div class="nav-subitem" id="nav-contabilidad-page" onclick="nav('contabilidad')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2.5H20v19H6.5A2.5 2.5 0 0 1 4 19v-14a2.5 2.5 0 0 1 2.5-2.5z"/></svg></span> Libro contable</div>
   </div>
@@ -1108,8 +1108,8 @@ function _applyRoleAccess(){
   if(!p.ventas)      _hide('nav-ventas-parent','submenu-ventas');
   if(!p.taller)      _hide('nav-taller-parent','submenu-taller');
   if(!p.clientes)    _hide('nav-clientes','nav-contactos-parent','submenu-contactos');
-  if(!p.inventario)  _hide('nav-inventario-parent','submenu-inventario','nav-kits','nav-bodegas');
-  if(!p.compras)     _hide('nav-contabilidad','submenu-contabilidad');
+  if(!p.inventario)  _hide('nav-inventario-parent','submenu-inventario','nav-bodegas');
+  if(!p.compras)     _hide('nav-contabilidad','submenu-contabilidad','nav-kits');
   if(!p.estadisticas)_hide('nav-estadisticas');
 
   _updateSidebarBadge();
@@ -5505,6 +5505,10 @@ function renderOC(){
   const ocs=getOCs();
   const log=getOCLog();
   document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-outline" onclick="nav('kits')" style="display:inline-flex;align-items:center;gap:6px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.7-3.7a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9l-3.7 3.7z"/></svg>
+      Kits / Equipos
+    </button>
     <button class="btn btn-primary" onclick="modalNuevaOC()">➕ Nueva OC</button>`;
   // recalculate dynamic estado for each OC
   ocs.forEach(o=>{ const d=calcularEstadoOC(o); if(o.estado!=='cancelada'&&o.estado!=='confirmada'&&o.estado!==d){ o.estado=d; } });
