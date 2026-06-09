@@ -10215,43 +10215,45 @@ function tp_buildSeguimientoEmail(nombre, equipo, descripcion, fromName, fromEma
   ].filter(Boolean).join('');
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 20px">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
-      <tr><td style="${logoData?'background:#ffffff;border-bottom:1px solid #e5e7eb;':'background:#1e40af;'}border-radius:12px 12px 0 0;padding:28px 40px;text-align:center">
-        ${logoData
-          ? `<div style="margin:0 auto 10px;display:inline-block"><img src="${logoData}" style="max-width:220px;max-height:80px;object-fit:contain;display:block;margin:0 auto" alt="${tallerNombre}"></div>
-             <p style="color:#6b7280;margin:0;font-size:13px">${tallerEspecialidad}</p>`
-          : `<div style="font-size:36px;margin-bottom:10px">🔧</div>
-             <h1 style="color:white;margin:0;font-size:22px;font-weight:700">${tallerNombre}</h1>
-             <p style="color:#93c5fd;margin:6px 0 0;font-size:13px">${tallerEspecialidad}</p>`
-        }
-      </td></tr>
-      <tr><td style="background:white;padding:36px 40px">
-        <h2 style="color:#111827;margin:0 0 16px;font-size:20px;font-weight:600">¡Hola, ${primerNombre}! 👋</h2>
-        <p style="color:#374151;font-size:15px;line-height:1.65;margin:0 0 20px">${msgApertura}</p>
-        <div style="background:#f0f9ff;border-left:4px solid #2563eb;border-radius:0 8px 8px 0;padding:14px 18px;margin:0 0 24px">
-          <p style="color:#6b7280;font-size:11px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Reparación realizada</p>
-          <p style="color:#1e40af;font-size:14px;margin:0;font-weight:600">${descripcion}</p>
-        </div>
-        <p style="color:#374151;font-size:15px;line-height:1.65;margin:0 0 28px">
-          Si tienes algún inconveniente, duda o simplemente quieres contarnos cómo te fue, responde este email directamente — estamos para ayudarte.
-        </p>
-        <table cellpadding="0" cellspacing="0" style="margin:0 0 28px">
-          <tr><td style="background:#2563eb;border-radius:8px;padding:14px 28px">
-            <a href="mailto:${tallerEmail}?subject=Seguimiento ${equipo}" style="color:white;font-size:15px;font-weight:600;text-decoration:none">Responder por email →</a>
-          </td></tr>
-        </table>
-        <p style="color:#6b7280;font-size:14px;line-height:1.65;margin:0 0 8px">${msgCierre}</p>
-      </td></tr>
-      <tr><td style="background:#f9fafb;border-radius:0 0 12px 12px;padding:20px 40px;border-top:1px solid #e5e7eb">
-        ${footerItems?`<table cellpadding="0" cellspacing="0" style="margin:0 auto 10px"><tr>${footerItems}</tr></table>`:''}
-        <p style="color:#9ca3af;font-size:12px;margin:0;text-align:center">${tallerNombre}${tallerEmail?' · '+tallerEmail:''}</p>
-        <p style="color:#d1d5db;font-size:11px;margin:6px 0 0;text-align:center">Este email fue enviado porque fuiste cliente de nuestro taller.</p>
-      </td></tr>
-    </table>
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;padding:32px 16px">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+  <!-- HEADER -->
+  <tr><td style="${logoData?'background:#ffffff;border-bottom:1px solid #e5e7eb;':'background:#3656e6;'}border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+    ${logoData
+      ? `<img src="${logoData}" style="max-width:200px;max-height:72px;object-fit:contain;display:block;margin:0 auto 10px" alt="${tallerNombre}">
+         <p style="color:#6b7280;font-size:13px;margin:0">${tallerEspecialidad}</p>`
+      : `<h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 6px;letter-spacing:-.3px">${tallerNombre}</h1>
+         <p style="color:rgba(255,255,255,.75);font-size:13px;margin:0">${tallerEspecialidad}</p>`
+    }
   </td></tr>
+  <!-- BODY -->
+  <tr><td style="background:#ffffff;padding:36px 40px">
+    <h2 style="color:#111827;font-size:20px;font-weight:700;margin:0 0 8px;letter-spacing:-.3px">¡Hola, ${primerNombre}! 👋</h2>
+    <p style="color:#6b7280;font-size:14px;line-height:1.65;margin:0 0 28px">${msgApertura}</p>
+    <!-- Reparación -->
+    <div style="background:#f0f4ff;border-left:3px solid #3656e6;border-radius:0 12px 12px 0;padding:16px 20px;margin:0 0 28px">
+      <p style="font-size:10px;font-weight:700;color:#3656e6;text-transform:uppercase;letter-spacing:.7px;margin:0 0 6px">Reparación realizada</p>
+      <p style="color:#111827;font-size:15px;font-weight:600;margin:0">${descripcion}</p>
+      <p style="color:#6b7280;font-size:13px;margin:6px 0 0">${equipo}</p>
+    </div>
+    <p style="color:#374151;font-size:14px;line-height:1.65;margin:0 0 28px">Si tienes algún inconveniente, duda o simplemente quieres contarnos cómo te fue, responde este email directamente — estamos para ayudarte.</p>
+    ${tallerEmail?`<table cellpadding="0" cellspacing="0" style="margin:0 0 28px">
+      <tr><td style="background:#3656e6;border-radius:10px;padding:14px 32px">
+        <a href="mailto:${tallerEmail}?subject=Seguimiento ${equipo}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none">Responder por email →</a>
+      </td></tr>
+    </table>`:''}
+    <p style="color:#6b7280;font-size:14px;line-height:1.65;margin:0">${msgCierre}</p>
+  </td></tr>
+  <!-- FOOTER -->
+  <tr><td style="background:#f8fafc;border-radius:0 0 16px 16px;padding:22px 40px;border-top:1px solid #e5e7eb;text-align:center">
+    ${footerItems?`<table cellpadding="0" cellspacing="0" style="margin:0 auto 12px"><tr>${footerItems}</tr></table>`:''}
+    <p style="color:#9ca3af;font-size:12px;margin:0">${tallerNombre}${tallerEmail?' · '+tallerEmail:''}</p>
+    <p style="color:#d1d5db;font-size:11px;margin:6px 0 0">Este email fue enviado porque fuiste cliente de nuestro taller.</p>
+  </td></tr>
+</table>
+</td></tr>
 </table>
 </body></html>`;
 }
@@ -10457,26 +10459,32 @@ async function tp_enviarCorreoIngreso(order){
     ? `<table cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#25d366;border-radius:8px"><a href="https://wa.me/${branchTel.replace(/\D/g,'')}" style="display:inline-block;background:#25d366;color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:8px;text-decoration:none"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="vertical-align:middle;padding-right:8px">${_waLogoSvg}</td><td style="vertical-align:middle;color:#fff;font-size:13px;font-weight:600">${branchTel}</td></tr></table></a></td></tr></table>`
     : `<span style="font-size:13px;color:#6b7280">Sin teléfono registrado</span>`;
 
-  const bodyHtml=`<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;background:#f1f5f9;padding:20px">
-    <!-- Header -->
-    <div style="${logoIngreso?'background:#ffffff;border-bottom:2px solid #e5e7eb;':'background:#0f172a;'}border-radius:12px 12px 0 0;padding:24px 32px;text-align:center">
+  const bodyHtml=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;padding:32px 16px">
+<tr><td align="center">
+<table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%">
+    <!-- HEADER -->
+    <tr><td style="${logoIngreso?'background:#ffffff;border-bottom:1px solid #e5e7eb;':'background:#3656e6;'}border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
       ${logoIngreso
         ? `<img src="${logoIngreso}" style="max-width:200px;max-height:72px;object-fit:contain;display:block;margin:0 auto 12px" alt="${tallerNombre}">
-           <span style="font-size:11px;font-weight:600;color:#2563eb;background:#eff6ff;display:inline-block;padding:4px 12px;border-radius:20px;margin-bottom:8px;letter-spacing:.4px">Orden #OT-${order.num}</span>
+           <span style="font-size:11px;font-weight:600;color:#3656e6;background:#ecefff;display:inline-block;padding:5px 14px;border-radius:20px;margin-bottom:6px;letter-spacing:.4px">Orden #OT-${order.num}</span>
            <p style="color:#6b7280;font-size:12px;margin:4px 0 0">${fechaStr} · ${horaStr} hrs</p>`
-        : `<span style="font-size:11px;font-weight:600;color:#93c5fd;background:#1e3a5f;display:inline-block;padding:4px 12px;border-radius:20px;margin-bottom:12px;letter-spacing:.4px">Orden #OT-${order.num}</span>
-           <h2 style="color:#ffffff;font-size:18px;font-weight:600;margin:0 0 6px">Tu equipo ingresó al taller</h2>
-           <p style="color:#94a3b8;font-size:13px;margin:0">${fechaStr} · ${horaStr} hrs</p>`
+        : `<div style="background:rgba(255,255,255,.15);display:inline-block;padding:5px 14px;border-radius:20px;margin-bottom:14px">
+             <span style="color:rgba(255,255,255,.9);font-size:11px;font-weight:600;letter-spacing:.5px">Orden #OT-${order.num}</span>
+           </div>
+           <h2 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 6px;letter-spacing:-.3px">Tu equipo ingresó al taller</h2>
+           <p style="color:rgba(255,255,255,.75);font-size:13px;margin:0">${fechaStr} · ${horaStr} hrs</p>`
       }
-    </div>
+    </td></tr>
     <!-- Body -->
-    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:28px 32px">
-      <p style="font-size:15px;color:#111827;margin:0 0 6px">Hola ${order.nombre},</p>
-      <p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 24px">Hemos recibido tu equipo correctamente. A continuación el resumen de tu orden de trabajo.</p>
+    <tr><td style="background:#ffffff;padding:32px 40px">
+      <p style="font-size:15px;color:#111827;margin:0 0 6px;font-weight:600">Hola ${order.nombre},</p>
+      <p style="font-size:14px;color:#6b7280;line-height:1.65;margin:0 0 28px">Hemos recibido tu equipo correctamente. A continuación el resumen de tu orden de trabajo.</p>
 
       <!-- Equipo -->
       <div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
-        ${secHeader('','','#2563eb','Datos del equipo')}
+        ${secHeader('','','#3656e6','Datos del equipo')}
         <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
           <tr>
             <td style="width:50%;padding:0 8px 10px 0;vertical-align:top">
@@ -10507,7 +10515,7 @@ async function tp_enviarCorreoIngreso(order){
 
       <!-- Cliente -->
       <div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
-        ${secHeader('','','#059669','Datos del cliente')}
+        ${secHeader('','','#3656e6','Datos del cliente')}
         <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
           <tr>
             <td style="width:50%;padding:0 8px 10px 0;vertical-align:top">
@@ -10534,7 +10542,7 @@ async function tp_enviarCorreoIngreso(order){
 
       <!-- Sucursal -->
       <div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
-        ${secHeader('','','#7c3aed','Sucursal asignada')}
+        ${secHeader('','','#3656e6','Sucursal asignada')}
         <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
           <tr>
             <td style="width:50%;padding:0 8px 10px 0;vertical-align:top">
@@ -10555,7 +10563,7 @@ async function tp_enviarCorreoIngreso(order){
 
       <!-- Checklist -->
       ${checkRows?`<div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
-        ${secHeader('','','#16a34a','Checklist de ingreso')}
+        ${secHeader('','','#3656e6','Checklist de ingreso')}
         <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">${checkRows}</table>
         <table cellpadding="0" cellspacing="0" border="0" style="margin-top:10px"><tr>
           <td style="padding-right:16px;font-size:11px;color:#6b7280"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dcfce7;margin-right:4px;vertical-align:middle"></span>OK</td>
@@ -10568,18 +10576,21 @@ async function tp_enviarCorreoIngreso(order){
       ${fotosHtml}
 
       <!-- Nota -->
-      <div style="background:#f8fafc;border-left:3px solid #d1d5db;padding:12px 16px;margin:4px 0 24px">
-        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0"><strong>Nota:</strong> Cualquier trabajo adicional será consultado contigo antes de realizarlo.</p>
+      <div style="background:#f0f4ff;border-left:3px solid #3656e6;border-radius:0 10px 10px 0;padding:12px 16px;margin:4px 0 24px">
+        <p style="font-size:13px;color:#374151;line-height:1.6;margin:0"><strong>Nota:</strong> Cualquier trabajo adicional será consultado contigo antes de realizarlo.</p>
       </div>
 
       <p style="font-size:13px;color:#6b7280;margin:0">Consultas respondiendo este correo${branchTel?' o por WhatsApp al <strong style="color:#111827">'+branchTel+'</strong>':''}.</p>
-    </div>
-    <!-- Footer -->
-    <div style="text-align:center;padding:16px 0 4px">
-      <p style="font-size:12px;color:#94a3b8;margin:0 0 4px"><strong style="color:#6b7280">${tallerNombre}</strong>${branchNombre&&branchNombre!==tallerNombre?' · '+branchNombre:''}${branchDir?' · '+branchDir:''}</p>
-      <p style="font-size:12px;color:#94a3b8;margin:0">Correo generado automáticamente desde el sistema de gestión.</p>
-    </div>
-  </div>`;
+    </td></tr>
+    <!-- FOOTER -->
+    <tr><td style="background:#f8fafc;border-radius:0 0 16px 16px;padding:20px 40px;border-top:1px solid #e5e7eb;text-align:center">
+      <p style="font-size:12px;color:#9ca3af;margin:0"><strong style="color:#6b7280">${tallerNombre}</strong>${branchNombre&&branchNombre!==tallerNombre?' · '+branchNombre:''}${branchDir?' · '+branchDir:''}</p>
+      <p style="font-size:12px;color:#d1d5db;margin:6px 0 0">Correo generado automáticamente desde el sistema de gestión.</p>
+    </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
 
   await tp_callSendEmail(order.email,`Orden de trabajo #OT-${order.num} — ${order.modelo||'Equipo'} ingresado`,bodyHtml);
 }
@@ -10594,21 +10605,66 @@ async function tp_notificarListo(id){
   const tplData={nombre:o.nombre,modelo:o.modelo,orden:o.num,sucursal,horario,tecnico:o.tecnico||'',fecha_estimada:o.fechaEstimada?tp_fmtDate(o.fechaEstimada):''};
   const textoWA=tp_applyMsgTemplate('listo_wa',tplData);
   const emailPlain=tp_applyMsgTemplate('listo_email',tplData);
-  const bodyHtml=`<div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:24px">
-    <div style="background:#16a34a;border-radius:12px 12px 0 0;padding:20px 24px">
-      <h2 style="color:#fff;margin:0;font-size:18px">Tu equipo está listo</h2>
-      <p style="color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px">${taller}</p>
+  const bodyHtml=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;padding:32px 16px">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+  <!-- HEADER -->
+  <tr><td style="background:#16a34a;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+    <div style="background:rgba(255,255,255,.2);display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;margin-bottom:16px">
+      <span style="font-size:26px">✅</span>
     </div>
-    <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
-      <p style="font-size:14px;color:#374151;line-height:1.7">${(emailPlain||'').replace(/\n/g,'<br>')}</p>
-      <p style="font-size:11px;color:#9ca3af;margin-top:20px;border-top:1px solid #f3f4f6;padding-top:14px">Este mensaje fue generado automáticamente por ${taller}.</p>
+    <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 6px;letter-spacing:-.3px">Tu equipo está listo</h1>
+    <p style="color:rgba(255,255,255,.8);font-size:13px;margin:0">${taller}</p>
+  </td></tr>
+  <!-- BODY -->
+  <tr><td style="background:#ffffff;padding:32px 40px">
+    <p style="font-size:15px;color:#111827;margin:0 0 6px;font-weight:600">Hola ${o.nombre},</p>
+    <p style="font-size:14px;color:#6b7280;line-height:1.65;margin:0 0 28px">¡Buenas noticias! Tu equipo ya está reparado y listo para retirar en nuestra sucursal.</p>
+    <!-- Info -->
+    <div style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:24px">
+      <p style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin:0 0 14px">Detalle de la orden</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="width:50%;padding:0 12px 12px 0;vertical-align:top">
+            <p style="font-size:11px;color:#9ca3af;margin:0 0 3px;text-transform:uppercase;letter-spacing:.5px">Equipo</p>
+            <p style="font-size:14px;font-weight:600;color:#111827;margin:0">${o.modelo||'—'}</p>
+          </td>
+          <td style="width:50%;padding:0 0 12px 0;vertical-align:top">
+            <p style="font-size:11px;color:#9ca3af;margin:0 0 3px;text-transform:uppercase;letter-spacing:.5px">N° Orden</p>
+            <p style="font-size:14px;font-weight:600;color:#111827;margin:0">#OT-${o.num}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 12px 0 0;vertical-align:top">
+            <p style="font-size:11px;color:#9ca3af;margin:0 0 3px;text-transform:uppercase;letter-spacing:.5px">Sucursal</p>
+            <p style="font-size:14px;font-weight:600;color:#111827;margin:0">${sucursal}</p>
+          </td>
+          <td style="padding:0;vertical-align:top">
+            <p style="font-size:11px;color:#9ca3af;margin:0 0 3px;text-transform:uppercase;letter-spacing:.5px">Horario</p>
+            <p style="font-size:14px;font-weight:600;color:#111827;margin:0">${horario}</p>
+          </td>
+        </tr>
+      </table>
     </div>
-  </div>`;
+    <!-- Mensaje personalizado -->
+    ${emailPlain?`<p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 24px">${(emailPlain||'').replace(/\n/g,'<br>')}</p>`:''}
+    <p style="font-size:13px;color:#6b7280;margin:0">¿Tienes alguna pregunta? Responde directamente a este correo.</p>
+  </td></tr>
+  <!-- FOOTER -->
+  <tr><td style="background:#f8fafc;border-radius:0 0 16px 16px;padding:20px 40px;border-top:1px solid #e5e7eb;text-align:center">
+    <p style="font-size:12px;color:#9ca3af;margin:0">${taller} · Mensaje generado automáticamente</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
 
   // Enviar email automáticamente
-  const smtpCfg=DB.get('tp_smtp_config');
   let emailEnviado=false;
-  if(o.email&&smtpCfg?.host&&smtpCfg?.user&&smtpCfg?.password){
+  const resendKeyListo=localStorage.getItem('erp_resend_key')||'';
+  if(o.email&&resendKeyListo){
     const res=await tp_callSendEmail(o.email,`Tu ${o.modelo} está listo para retirar — #${o.num}`,bodyHtml);
     emailEnviado=res.ok;
   }
@@ -11316,23 +11372,63 @@ async function tp_enviarInspeccionReporte(orderId, via){
     const notasHtml=notasEnvio
       ?`<div style="background:#f9fafb;border-radius:10px;padding:14px 16px;margin:12px 0"><p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 8px">Estado del equipo:</p><p style="font-size:13.5px;color:#374151;margin:0;line-height:1.7">${notasEnvio.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</p></div>`
       :'';
-    const bodyHtml=`<div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:24px">
-      <div style="background:#2563eb;border-radius:12px 12px 0 0;padding:20px 24px">
-        <h2 style="color:#fff;margin:0;font-size:18px">Reporte de Inspección</h2>
-        <p style="color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px">${tallerNombre}</p>
-      </div>
-      <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
-        <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
-          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;width:130px">Cliente</td><td style="font-size:13px;font-weight:600;color:#111">${o.nombre}</td></tr>
-          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280">Equipo</td><td style="font-size:13px;font-weight:600;color:#111">${o.modelo}</td></tr>
-          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280">Orden N°</td><td style="font-size:13px;font-weight:600;color:#111">#${o.num}</td></tr>
-          ${fecha?`<tr><td style="padding:6px 0;font-size:13px;color:#6b7280">Fecha</td><td style="font-size:13px;color:#111">${fecha}</td></tr>`:''}
-        </table>
-        ${notasHtml}
-        ${fotosHtml}
-        <p style="font-size:12px;color:#9ca3af;margin-top:20px;border-top:1px solid #f3f4f6;padding-top:14px">Este reporte fue generado automáticamente por ${tallerNombre}.</p>
-      </div>
-    </div>`;
+    const bodyHtml=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;padding:32px 16px">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+  <!-- HEADER -->
+  <tr><td style="background:#3656e6;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+    <div style="display:inline-block;background:rgba(255,255,255,.15);border-radius:10px;padding:6px 14px;margin-bottom:16px">
+      <span style="color:rgba(255,255,255,.9);font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase">Orden #OT-${o.num}</span>
+    </div>
+    <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 6px;letter-spacing:-.3px">Reporte de Inspección</h1>
+    <p style="color:rgba(255,255,255,.75);font-size:13px;margin:0">${tallerNombre}${fecha?' · '+fecha:''}</p>
+  </td></tr>
+  <!-- BODY -->
+  <tr><td style="background:#ffffff;padding:32px 40px">
+    <p style="font-size:15px;color:#111827;margin:0 0 6px;font-weight:600">Hola ${o.nombre},</p>
+    <p style="font-size:14px;color:#6b7280;line-height:1.65;margin:0 0 28px">Adjuntamos el reporte de inspección de tu equipo. A continuación encontrarás el detalle del estado encontrado.</p>
+    <!-- Info equipo -->
+    <div style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:20px">
+      <p style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin:0 0 14px">Datos de la orden</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="width:50%;padding:0 12px 12px 0;vertical-align:top">
+            <p style="font-size:11px;color:#9ca3af;margin:0 0 3px;text-transform:uppercase;letter-spacing:.5px">Equipo</p>
+            <p style="font-size:14px;font-weight:600;color:#111827;margin:0">${o.modelo||'—'}</p>
+          </td>
+          <td style="width:50%;padding:0 0 12px 0;vertical-align:top">
+            <p style="font-size:11px;color:#9ca3af;margin:0 0 3px;text-transform:uppercase;letter-spacing:.5px">Cliente</p>
+            <p style="font-size:14px;font-weight:600;color:#111827;margin:0">${o.nombre||'—'}</p>
+          </td>
+        </tr>
+        ${o.serie?`<tr><td colspan="2" style="padding:0">
+          <p style="font-size:11px;color:#9ca3af;margin:0 0 3px;text-transform:uppercase;letter-spacing:.5px">N° serie / IMEI</p>
+          <p style="font-size:14px;font-weight:600;color:#111827;margin:0">${o.serie}</p>
+        </td></tr>`:''}
+      </table>
+    </div>
+    <!-- Notas inspección -->
+    ${notasEnvio?`<div style="background:#f0f4ff;border-left:3px solid #3656e6;border-radius:0 12px 12px 0;padding:18px 20px;margin-bottom:20px">
+      <p style="font-size:10px;font-weight:700;color:#3656e6;text-transform:uppercase;letter-spacing:.7px;margin:0 0 10px">Estado del equipo</p>
+      <p style="font-size:14px;color:#374151;line-height:1.7;margin:0">${notasEnvio.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</p>
+    </div>`:''}
+    <!-- Fotos -->
+    ${fotoCount?`<div style="margin-bottom:20px">
+      <p style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin:0 0 12px">Fotos del equipo (${fotoCount})</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${(insp.fotos||[]).map(src=>`<img src="${src}" style="width:156px;height:156px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb">`).join('')}</div>
+    </div>`:''}
+    <p style="font-size:13px;color:#6b7280;margin:0">Cualquier consulta puedes responder directamente a este correo.</p>
+  </td></tr>
+  <!-- FOOTER -->
+  <tr><td style="background:#f8fafc;border-radius:0 0 16px 16px;padding:20px 40px;border-top:1px solid #e5e7eb;text-align:center">
+    <p style="font-size:12px;color:#9ca3af;margin:0">${tallerNombre} · Reporte generado automáticamente</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
     const asunto=`Inspección de equipo - ${o.modelo} #${o.num}`;
     const resendKey=localStorage.getItem('erp_resend_key')||'';
     if(resendKey){
