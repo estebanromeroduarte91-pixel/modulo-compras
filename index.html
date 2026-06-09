@@ -1825,7 +1825,7 @@ function renderConfigGlobal(){
                 <div style="font-size:12.5px;font-weight:700;color:#0369a1;margin-bottom:6px">Resend API Key (recomendado)</div>
                 <div style="font-size:12px;color:#0284c7;margin-bottom:10px">Usa <strong>Resend</strong> para enviar emails de forma confiable. El servidor SMTP se ignora cuando hay una API Key configurada.</div>
                 <input id="smtp-resend-key" type="password"
-                  placeholder="${cfg.resend_key?'(sin cambios — clave guardada)':'re_xxxxxxxxxxxxxxxxxxxx'}"
+                  placeholder="${localStorage.getItem('erp_resend_key')?'✓ Clave guardada — pega nueva para cambiar':'re_xxxxxxxxxxxxxxxxxxxx'}"
                   style="width:100%;padding:8px 12px;border:1px solid #bae6fd;border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;background:#fff;outline:none;color:#0c4a6e">
               </div>
             </div>
@@ -11756,6 +11756,8 @@ function tp_saveSmtp(){
   const prev=DB.get('tp_smtp_config')||{};
   const pwInput=(document.getElementById('smtp-password')?.value||'').trim();
   const resendInput=(document.getElementById('smtp-resend-key')?.value||'').trim();
+  // Guardar Resend key en localStorage propio (no sincroniza a Supabase para no perderlo)
+  if(resendInput) localStorage.setItem('erp_resend_key', resendInput);
   const cfg={
     host,
     port:parseInt(document.getElementById('smtp-port')?.value)||587,
@@ -11763,8 +11765,7 @@ function tp_saveSmtp(){
     user,
     password:pwInput||prev.password||'',
     from:(document.getElementById('smtp-from')?.value||'').trim()||user,
-    from_name:(document.getElementById('smtp-from-name')?.value||'').trim()||'TallerPro',
-    resend_key:resendInput||prev.resend_key||''
+    from_name:(document.getElementById('smtp-from-name')?.value||'').trim()||'TallerPro'
   };
   DB.set('tp_smtp_config',cfg);
   document.getElementById('smtp-password').value='';
@@ -11775,13 +11776,15 @@ function tp_saveSmtp(){
 async function tp_callSendEmail(to, subject, bodyHtml){
   const cfg=DB.get('tp_smtp_config');
   if(!cfg) return {ok:false,error:'Sin configuración de correo'};
+  const resendKey=localStorage.getItem('erp_resend_key')||'';
+  if(!resendKey) return {ok:false,error:'Configura el Resend API Key en Configuración → Correo'};
   try{
     const {data,error}=await _sb.functions.invoke('send-email',{
       body:{
         to, subject, html:bodyHtml,
         from:cfg.from||cfg.user||'',
         from_name:cfg.from_name||'TallerPro',
-        resend_api_key:cfg.resend_key||''
+        resend_api_key:resendKey
       }
     });
     if(error) return {ok:false,error:error.message};
