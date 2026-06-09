@@ -11307,12 +11307,14 @@ async function tp_enviarInspeccionReporte(orderId, via){
   if(via==='email'){
     const email=o.email||'';
     if(!email){ toast('Esta orden no tiene email del cliente','error'); return; }
+    // Leer textarea si está abierto (el usuario puede no haber guardado aún)
+    const notasEnvio=(document.getElementById('insp-notas-input')?.value||'').trim()||notasTexto;
     const smtpCfg=DB.get('tp_smtp_config');
     const fotosHtml=fotoCount
       ?`<div style="margin:16px 0"><p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px">📷 Fotos del equipo (${fotoCount}):</p><div style="display:flex;flex-wrap:wrap;gap:8px">${(insp.fotos||[]).map(src=>`<img src="${src}" style="width:160px;height:160px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb">`).join('')}</div></div>`
       :'';
-    const notasHtml=notasTexto
-      ?`<div style="background:#f9fafb;border-radius:10px;padding:14px 16px;margin:12px 0"><p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 8px">Estado del equipo:</p><p style="font-size:13.5px;color:#374151;margin:0;line-height:1.7">${notasTexto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</p></div>`
+    const notasHtml=notasEnvio
+      ?`<div style="background:#f9fafb;border-radius:10px;padding:14px 16px;margin:12px 0"><p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 8px">Estado del equipo:</p><p style="font-size:13.5px;color:#374151;margin:0;line-height:1.7">${notasEnvio.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</p></div>`
       :'';
     const bodyHtml=`<div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:24px">
       <div style="background:#2563eb;border-radius:12px 12px 0 0;padding:20px 24px">
@@ -11332,13 +11334,14 @@ async function tp_enviarInspeccionReporte(orderId, via){
       </div>
     </div>`;
     const asunto=`Inspección de equipo - ${o.modelo} #${o.num}`;
-    if(smtpCfg?.host&&smtpCfg?.user&&smtpCfg?.password){
+    const resendKey=localStorage.getItem('erp_resend_key')||'';
+    if(resendKey){
       toast('Enviando reporte...','');
       const res=await tp_callSendEmail(email,asunto,bodyHtml);
       if(res.ok) toast('✅ Reporte enviado a '+email,'success');
       else toast('⚠️ Error al enviar: '+res.error,'error');
     } else {
-      window.open(`mailto:${email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent('Reporte de inspección adjunto.\n\nEquipo: '+o.modelo+'\nOrden: #'+o.num+(notasTexto?'\n\nEstado del equipo:\n'+notasTexto:''))}`, '_blank');
+      window.open(`mailto:${email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent('Reporte de inspección adjunto.\n\nEquipo: '+o.modelo+'\nOrden: #'+o.num+(notasEnvio?'\n\nEstado del equipo:\n'+notasEnvio:''))}`, '_blank');
     }
   }
 }
