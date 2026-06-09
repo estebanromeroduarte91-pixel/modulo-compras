@@ -1818,6 +1818,18 @@ function renderConfigGlobal(){
           ${field('Contraseña / App Password','smtp-password',{span:6,mono:true,type:'password',value:'',placeholder:'••••••••••••••',hasEye:true})}
           ${field('Email remitente','smtp-from',{span:6,mono:true,type:'email',value:cfg.from||'',placeholder:'contacto@stevedocs.cl'})}
           ${field('Nombre remitente','smtp-from-name',{span:6,value:cfg.from_name||cfg.fromName||'',placeholder:'Steve Docs'})}
+          <div style="grid-column:span 12">
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px 18px;display:flex;align-items:flex-start;gap:12px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              <div style="flex:1">
+                <div style="font-size:12.5px;font-weight:700;color:#0369a1;margin-bottom:6px">Resend API Key (recomendado)</div>
+                <div style="font-size:12px;color:#0284c7;margin-bottom:10px">Usa <strong>Resend</strong> para enviar emails de forma confiable. El servidor SMTP se ignora cuando hay una API Key configurada.</div>
+                <input id="smtp-resend-key" type="password"
+                  placeholder="${cfg.resend_key?'(sin cambios — clave guardada)':'re_xxxxxxxxxxxxxxxxxxxx'}"
+                  style="width:100%;padding:8px 12px;border:1px solid #bae6fd;border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;background:#fff;outline:none;color:#0c4a6e">
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Card foot -->
@@ -11743,6 +11755,7 @@ function tp_saveSmtp(){
   if(!host||!user){toast('Completa al menos el servidor y usuario','error');return;}
   const prev=DB.get('tp_smtp_config')||{};
   const pwInput=(document.getElementById('smtp-password')?.value||'').trim();
+  const resendInput=(document.getElementById('smtp-resend-key')?.value||'').trim();
   const cfg={
     host,
     port:parseInt(document.getElementById('smtp-port')?.value)||587,
@@ -11750,23 +11763,25 @@ function tp_saveSmtp(){
     user,
     password:pwInput||prev.password||'',
     from:(document.getElementById('smtp-from')?.value||'').trim()||user,
-    from_name:(document.getElementById('smtp-from-name')?.value||'').trim()||'TallerPro'
+    from_name:(document.getElementById('smtp-from-name')?.value||'').trim()||'TallerPro',
+    resend_key:resendInput||prev.resend_key||''
   };
   DB.set('tp_smtp_config',cfg);
   document.getElementById('smtp-password').value='';
-  toast('Configuración SMTP guardada ✓','success');
+  if(document.getElementById('smtp-resend-key')) document.getElementById('smtp-resend-key').value='';
+  toast('Configuración guardada ✓','success');
 }
 
 async function tp_callSendEmail(to, subject, bodyHtml){
   const cfg=DB.get('tp_smtp_config');
-  if(!cfg?.host||!cfg?.user||!cfg?.password) return {ok:false,error:'Sin configuración SMTP'};
+  if(!cfg) return {ok:false,error:'Sin configuración de correo'};
   try{
     const {data,error}=await _sb.functions.invoke('send-email',{
       body:{
         to, subject, html:bodyHtml,
-        host:cfg.host, port:cfg.port||587,
-        user:cfg.user, password:cfg.password,
-        from:cfg.from||cfg.user, from_name:cfg.from_name||'TallerPro'
+        from:cfg.from||cfg.user||'',
+        from_name:cfg.from_name||'TallerPro',
+        resend_api_key:cfg.resend_key||''
       }
     });
     if(error) return {ok:false,error:error.message};
