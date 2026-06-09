@@ -1880,6 +1880,7 @@ function tp_toggleSmtpPw(){
 // DASHBOARD
 // ─────────────────────────────────────────────
 function renderDashboard(){
+  _closeOtherSubmenus(''); // cerrar todos los submenús al ir al dashboard
   if(_currentRole==='admin' && !_currentBranchContext){ _renderDashboardGlobal(); return; }
   _renderDashboardLocal();
 }
