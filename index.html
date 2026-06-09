@@ -11782,7 +11782,7 @@ async function tp_callSendEmail(to, subject, bodyHtml){
     const {data,error}=await _sb.functions.invoke('send-email',{
       body:{
         to, subject, html:bodyHtml,
-        from:cfg.from||cfg.user||'',
+        from:'onboarding@resend.dev',
         from_name:cfg.from_name||'TallerPro',
         resend_api_key:resendKey
       }
