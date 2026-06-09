@@ -10392,8 +10392,8 @@ function tp_updateStatus(id,val){
 
 async function tp_enviarCorreoIngreso(order){
   if(!order.email) return;
-  const smtpCfg=DB.get('tp_smtp_config');
-  if(!smtpCfg?.host||!smtpCfg?.user||!smtpCfg?.password) return;
+  const resendKeyIng=localStorage.getItem('erp_resend_key')||'';
+  if(!resendKeyIng) return;
   const cfg=DB.get('tp_config')||{};
   const branch=tp_branches.find(b=>b.id===order.branchId)||{};
   const tallerNombre=cfg.nombre||'Taller';
@@ -10453,6 +10453,10 @@ async function tp_enviarCorreoIngreso(order){
     </div>`;
   }
 
+  // Mensaje personalizado desde configuración
+  const ingresoTplData={nombre:order.nombre||'',modelo:order.modelo||'',orden:order.num||'',sucursal:branchNombre,horario:cfg.horario||'',tecnico:order.tecnico||'',fecha_estimada:order.fechaEstimada||'',presupuesto:'',link:''};
+  const emailPlainIngreso=tp_applyMsgTemplate('ingreso_email',ingresoTplData);
+
   // Botón WhatsApp
   const _waLogoSvg=`<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTE3LjQ3MiAxNC4zODJjLS4yOTctLjE0OS0xLjc1OC0uODY3LTIuMDMtLjk2Ny0uMjczLS4wOTktLjQ3MS0uMTQ4LS42Ny4xNS0uMTk3LjI5Ny0uNzY3Ljk2Ni0uOTQgMS4xNjQtLjE3My4xOTktLjM0Ny4yMjMtLjY0NC4wNzUtLjI5Ny0uMTUtMS4yNTUtLjQ2My0yLjM5LTEuNDc1LS44ODMtLjc4OC0xLjQ4LTEuNzYxLTEuNjUzLTIuMDU5LS4xNzMtLjI5Ny0uMDE4LS40NTguMTMtLjYwNi4xMzQtLjEzMy4yOTgtLjM0Ny40NDYtLjUyLjE0OS0uMTc0LjE5OC0uMjk4LjI5OC0uNDk3LjA5OS0uMTk4LjA1LS4zNzEtLjAyNS0uNTItLjA3NS0uMTQ5LS42NjktMS42MTItLjkxNi0yLjIwNy0uMjQyLS41NzktLjQ4Ny0uNS0uNjY5LS41MS0uMTczLS4wMDgtLjM3MS0uMDEtLjU3LS4wMS0uMTk4IDAtLjUyLjA3NC0uNzkyLjM3Mi0uMjcyLjI5Ny0xLjA0IDEuMDE2LTEuMDQgMi40NzkgMCAxLjQ2MiAxLjA2NSAyLjg3NSAxLjIxMyAzLjA3NC4xNDkuMTk4IDIuMDk2IDMuMiA1LjA3NyA0LjQ4Ny43MDkuMzA2IDEuMjYyLjQ4OSAxLjY5NC42MjUuNzEyLjIyNyAxLjM2LjE5NSAxLjg3MS4xMTguNTcxLS4wODUgMS43NTgtLjcxOSAyLjAwNi0xLjQxMy4yNDgtLjY5NC4yNDgtMS4yODkuMTczLTEuNDEzLS4wNzQtLjEyNC0uMjcyLS4xOTgtLjU3LS4zNDd6Ii8+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJjMCAxLjg5LjUyNSAzLjY2IDEuNDM4IDUuMTY4TDIgMjJsNC45ODctMS4zOTlBOS45NTQgOS45NTQgMCAwIDAgMTIgMjJjNS41MjMgMCAxMC00LjQ3NyAxMC0xMFMxNy41MjMgMiAxMiAyem0wIDE4Yy0xLjY2IDAtMy4yMDItLjQ5LTQuNDg5LTEuMzMzbC0uMzIyLS4xOS0zLjMuOTI0LjkxNi0zLjIyLS4yMS0uMzM4QTcuOTU3IDcuOTU3IDAgMCAxIDQgMTJjMC00LjQxOCAzLjU4Mi04IDgtOHM4IDMuNTgyIDggOC0zLjU4MiA4LTggOHoiLz48L3N2Zz4=" width="18" height="18" style="display:inline-block;vertical-align:middle">`;
   const waBtn=branchTel
@@ -10479,8 +10483,7 @@ async function tp_enviarCorreoIngreso(order){
     </td></tr>
     <!-- Body -->
     <tr><td style="background:#ffffff;padding:32px 40px">
-      <p style="font-size:15px;color:#111827;margin:0 0 6px;font-weight:600">Hola ${order.nombre},</p>
-      <p style="font-size:14px;color:#6b7280;line-height:1.65;margin:0 0 28px">Hemos recibido tu equipo correctamente. A continuación el resumen de tu orden de trabajo.</p>
+      <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${emailPlainIngreso.replace(/\n/g,'<br>')}</p>
 
       <!-- Equipo -->
       <div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
@@ -10620,9 +10623,9 @@ async function tp_notificarListo(id){
   </td></tr>
   <!-- BODY -->
   <tr><td style="background:#ffffff;padding:32px 40px">
-    <p style="font-size:15px;color:#111827;margin:0 0 6px;font-weight:600">Hola ${o.nombre},</p>
-    <p style="font-size:14px;color:#6b7280;line-height:1.65;margin:0 0 28px">¡Buenas noticias! Tu equipo ya está reparado y listo para retirar en nuestra sucursal.</p>
-    <!-- Info -->
+    <!-- Mensaje personalizado desde configuración -->
+    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${(emailPlain||'').replace(/\n/g,'<br>')}</p>
+    <!-- Info detalle -->
     <div style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:24px">
       <p style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin:0 0 14px">Detalle de la orden</p>
       <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">
@@ -10648,8 +10651,6 @@ async function tp_notificarListo(id){
         </tr>
       </table>
     </div>
-    <!-- Mensaje personalizado -->
-    ${emailPlain?`<p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 24px">${(emailPlain||'').replace(/\n/g,'<br>')}</p>`:''}
     <p style="font-size:13px;color:#6b7280;margin:0">¿Tienes alguna pregunta? Responde directamente a este correo.</p>
   </td></tr>
   <!-- FOOTER -->
@@ -10831,33 +10832,44 @@ async function tp_enviarAprobacion(orderId, canal){
     tp_renderAll();
   } else {
     const asunto=`Aprobación de presupuesto — ${o.modelo||'Equipo'} #${o.num||''}`;
-    const smtpCfg=DB.get('tp_smtp_config');
-    if(smtpCfg?.host&&smtpCfg?.user&&smtpCfg?.password){
-      // Envío directo por SMTP usando template aprobacion_email
-      const bodyHtml=`<div style="font-family:sans-serif;max-width:560px;margin:auto">
-        <div style="background:#1e40af;border-radius:12px 12px 0 0;padding:20px 24px">
-          <h2 style="color:#fff;margin:0;font-size:18px">Aprobación de presupuesto</h2>
-        </div>
-        <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
-          <p style="font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap">${emailPlain.replace(/\n/g,'<br>')}</p>
-          <div style="margin:24px 0;text-align:center">
-            <a href="${link}" style="background:#2563eb;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px">Revisar y Aprobar presupuesto →</a>
-          </div>
-          <p style="color:#6b7280;font-size:12px">Si el botón no funciona, copia este enlace:<br>${link}</p>
-        </div>
-      </div>`;
+    const resendKeyAprob=localStorage.getItem('erp_resend_key')||'';
+    const bodyHtmlAprob=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;padding:32px 16px">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
+  <tr><td style="background:#3656e6;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+    <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 6px;letter-spacing:-.3px">Solicitud de aprobación</h1>
+    <p style="color:rgba(255,255,255,.75);font-size:13px;margin:0">${o.modelo||'Equipo'} · Orden #${o.num||''}</p>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:32px 40px">
+    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${emailPlain.replace(/\n/g,'<br>')}</p>
+    <table cellpadding="0" cellspacing="0" style="margin:0 0 24px">
+      <tr><td style="background:#3656e6;border-radius:10px;padding:14px 32px;text-align:center">
+        <a href="${link}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none">Revisar y aprobar presupuesto →</a>
+      </td></tr>
+    </table>
+    <p style="color:#9ca3af;font-size:12px;margin:0">Si el botón no funciona, copia este enlace:<br><span style="color:#6b7280">${link}</span></p>
+  </td></tr>
+  <tr><td style="background:#f8fafc;border-radius:0 0 16px 16px;padding:18px 40px;border-top:1px solid #e5e7eb;text-align:center">
+    <p style="font-size:12px;color:#9ca3af;margin:0">Mensaje generado automáticamente por el taller.</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+    if(resendKeyAprob){
       closeModal();
       toast('Enviando email...','');
-      tp_enviarEmailDirecto(o.email, asunto, bodyHtml).then(ok=>{
-        if(ok) toast('✅ Email enviado directamente a '+o.email,'success');
-        else toast('⚠️ No se pudo enviar. Revisa config SMTP.','error');
+      tp_callSendEmail(o.email, asunto, bodyHtmlAprob).then(res=>{
+        if(res.ok) toast('✅ Email enviado a '+o.email,'success');
+        else toast('⚠️ Error al enviar: '+res.error,'error');
       });
       tp_renderAll();
     } else {
-      // Fallback: abrir cliente de correo con template email
       window.open(`mailto:${o.email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(emailPlain)}`,'_blank');
       closeModal();
-      toast('Abriendo cliente de correo — configura SMTP para envío directo','');
+      toast('Abriendo cliente de correo — configura Resend para envío directo','');
       tp_renderAll();
     }
   }
@@ -11365,6 +11377,9 @@ async function tp_enviarInspeccionReporte(orderId, via){
     if(!email){ toast('Esta orden no tiene email del cliente','error'); return; }
     // Leer textarea si está abierto (el usuario puede no haber guardado aún)
     const notasEnvio=(document.getElementById('insp-notas-input')?.value||'').trim()||notasTexto;
+    // Mensaje personalizado desde configuración
+    const inspTplData={nombre:o.nombre||'',modelo:o.modelo||'',orden:o.num||'',sucursal:'',horario:'',tecnico:o.tecnico||'',fecha_estimada:'',presupuesto:'',link:''};
+    const emailPlainInsp=tp_applyMsgTemplate('inspeccion_email',inspTplData);
     const smtpCfg=DB.get('tp_smtp_config');
     const fotosHtml=fotoCount
       ?`<div style="margin:16px 0"><p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px">📷 Fotos del equipo (${fotoCount}):</p><div style="display:flex;flex-wrap:wrap;gap:8px">${(insp.fotos||[]).map(src=>`<img src="${src}" style="width:160px;height:160px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb">`).join('')}</div></div>`
@@ -11387,8 +11402,7 @@ async function tp_enviarInspeccionReporte(orderId, via){
   </td></tr>
   <!-- BODY -->
   <tr><td style="background:#ffffff;padding:32px 40px">
-    <p style="font-size:15px;color:#111827;margin:0 0 6px;font-weight:600">Hola ${o.nombre},</p>
-    <p style="font-size:14px;color:#6b7280;line-height:1.65;margin:0 0 28px">Adjuntamos el reporte de inspección de tu equipo. A continuación encontrarás el detalle del estado encontrado.</p>
+    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${emailPlainInsp.replace(/\n/g,'<br>')}</p>
     <!-- Info equipo -->
     <div style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:20px">
       <p style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin:0 0 14px">Datos de la orden</p>
