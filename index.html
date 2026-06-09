@@ -305,6 +305,7 @@ select{cursor:pointer}
 /* PRODUCT AUTOCOMPLETE */
 .lbl-item{display:block;font-size:11px;color:var(--gray-500);font-weight:600;margin-bottom:4px}
 .prod-search-wrap{position:relative}
+.prod-search-wrap input:hover,.prod-search-wrap input:focus{position:absolute;z-index:100;width:280px;left:0;top:0;box-shadow:0 4px 16px rgba(0,0,0,.13)}
 .prod-dropdown{position:fixed;background:#fff;border:1.5px solid var(--primary);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);z-index:9999;max-height:240px;overflow-y:auto;display:none;min-width:200px;-webkit-overflow-scrolling:touch}
 .prod-drop-item{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;cursor:pointer;font-size:13px;gap:8px;-webkit-tap-highlight-color:rgba(0,0,0,0);touch-action:manipulation;user-select:none}
 .prod-drop-item:hover,.prod-drop-item.focused{background:var(--primary-light)}
