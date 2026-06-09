@@ -1402,6 +1402,11 @@ function toggleContabilidad(){
 }
 function nav(page){
   currentPage=page;
+  // Cerrar todos los submenús al ir al dashboard
+  if(page==='dashboard') _SUBMENUS.forEach(({parent,submenu})=>{
+    document.getElementById(submenu)?.classList.remove('open');
+    document.getElementById(parent)?.classList.remove('open');
+  });
   document.getElementById('sidebar')?.querySelectorAll('.nav-item,.nav-subitem').forEach(n=>n.classList.remove('active'));
   const ni=document.getElementById('nav-'+page);
   if(ni) ni.classList.add('active');
@@ -1880,7 +1885,6 @@ function tp_toggleSmtpPw(){
 // DASHBOARD
 // ─────────────────────────────────────────────
 function renderDashboard(){
-  _closeOtherSubmenus(''); // cerrar todos los submenús al ir al dashboard
   if(_currentRole==='admin' && !_currentBranchContext){ _renderDashboardGlobal(); return; }
   _renderDashboardLocal();
 }
