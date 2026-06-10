@@ -4596,8 +4596,14 @@ function _modalTrasladoDesdeOrden(t){
         </div>
 
         <div class="form-group" style="margin-bottom:14px">
-          <label class="form-label">Evidencia fotográfica del estado al enviar</label>
-          <div id="tsl-photos-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <label class="form-label" style="margin:0">Evidencia fotográfica del estado al enviar</label>
+            <button type="button" onclick="tp_showQrFotos(document.getElementById('tsl-order-id').value,'traslado')"
+              style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
+              📱 QR iPhone
+            </button>
+          </div>
+          <div id="tsl-photos-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:2px"></div>
           <button type="button" onclick="document.getElementById('tsl-photo-inp').click()"
             style="margin-top:8px;display:flex;align-items:center;gap:6px;border:1.5px dashed var(--border);border-radius:8px;padding:8px 14px;background:none;cursor:pointer;color:var(--text2);font-size:13px;font-family:inherit;width:100%;justify-content:center">
             📷 Agregar fotos de evidencia
@@ -4618,7 +4624,12 @@ function _modalTrasladoDesdeOrden(t){
       </button>
     </div>`;
 
-  tp_tslPhotoBuffer=[...(t.fotos||[])];
+  // Combinar fotos ya guardadas en el traslado + fotos QR pendientes en la orden
+  const _tslOrder = tp_orders.find(o => o.id === orderId);
+  const _qrFotos = _tslOrder?.photosTraslado || [];
+  const _savedFotos = t.fotos || [];
+  // Unión sin duplicados
+  tp_tslPhotoBuffer = [...new Set([..._savedFotos, ..._qrFotos])];
   document.getElementById('mod-tsl').classList.add('open');
   setTimeout(()=>_renderTslPhotosGrid(),50);
 }
@@ -11205,6 +11216,18 @@ function _initRealtimeOrders(){
             if(newInspFotos.length !== _inspFotos.length){
               _inspFotos = [...newInspFotos];
               tp_refreshInspFotosGrid();
+            }
+          }
+        }
+        // Refrescar fotos de traslado si el modal está abierto
+        if(document.getElementById('mod-tsl')?.classList.contains('open')){
+          const tslOrderId = document.getElementById('tsl-order-id')?.value;
+          if(tslOrderId){
+            const updatedOrder = newOrders.find(o => o.id === tslOrderId);
+            if(updatedOrder && (updatedOrder.photosTraslado||[]).length > tp_tslPhotoBuffer.length){
+              tp_tslPhotoBuffer = [...(updatedOrder.photosTraslado||[])];
+              _renderTslPhotosGrid();
+              toast('📱 Fotos de traslado actualizadas desde iPhone','success');
             }
           }
         }
