@@ -1394,16 +1394,16 @@ const getVentaLog = ()=> DB.get('venta_log')||[];
 const getGastos = ()=> DB.get('gastos')||[];
 const setGastos = v=> DB.set('gastos',v);
 const DEFAULT_GASTO_CATS=[
-  {id:'cat-1',nombre:'Servicios',color:'#3b82f6',icono:'⚡'},
-  {id:'cat-2',nombre:'RRHH',color:'#8b5cf6',icono:'👔'},
-  {id:'cat-3',nombre:'Arriendo',color:'#f59e0b',icono:'🏠'},
-  {id:'cat-4',nombre:'Limpieza',color:'#10b981',icono:'🧹'},
-  {id:'cat-5',nombre:'Logística',color:'#f97316',icono:'🚗'},
-  {id:'cat-6',nombre:'Alimentación',color:'#ec4899',icono:'🍽️'},
-  {id:'cat-7',nombre:'Mantenimiento',color:'#6b7280',icono:'🔧'},
-  {id:'cat-8',nombre:'Materiales',color:'#14b8a6',icono:'📦'},
-  {id:'cat-9',nombre:'Administrativo',color:'#64748b',icono:'🧾'},
-  {id:'cat-10',nombre:'Otros',color:'#94a3b8',icono:'💼'},
+  {id:'cat-1',nombre:'Servicios',color:'#3b82f6',icono:'zap'},
+  {id:'cat-2',nombre:'RRHH',color:'#8b5cf6',icono:'user'},
+  {id:'cat-3',nombre:'Arriendo',color:'#f59e0b',icono:'home'},
+  {id:'cat-4',nombre:'Limpieza',color:'#10b981',icono:'sparkle'},
+  {id:'cat-5',nombre:'Logística',color:'#f97316',icono:'truck'},
+  {id:'cat-6',nombre:'Alimentación',color:'#ec4899',icono:'utensils'},
+  {id:'cat-7',nombre:'Mantenimiento',color:'#6b7280',icono:'wrench'},
+  {id:'cat-8',nombre:'Materiales',color:'#14b8a6',icono:'box'},
+  {id:'cat-9',nombre:'Administrativo',color:'#64748b',icono:'folder'},
+  {id:'cat-10',nombre:'Otros',color:'#94a3b8',icono:'grid'},
 ];
 const getGastoCats=()=>{ const v=DB.get('gasto_cats'); return(v&&v.length)?v:DEFAULT_GASTO_CATS; };
 const setGastoCats=v=>DB.set('gasto_cats',v);
@@ -6616,7 +6616,7 @@ function getCatColor(nombre){
 function getCatIcono(nombre){
   const cats=getGastoCats();
   const c=cats.find(c=>c.nombre===nombre);
-  return c?c.icono:'💼';
+  return c?(c.icono||'grid'):'grid';
 }
 
 let _grSel=null;
@@ -6624,21 +6624,45 @@ let _filtroGastoCat=''; let _filtroGastoMes='';
 let _catColorSel=CAT_SWATCHES[0];
 
 // ── SVG paths para categorías de gastos ──────────────────────────────────────
-function _gCatSvg(nombre){
+const _GCAT_ICON_KEYS={
+  'zap':       '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  'user':      '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  'home':      '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  'sparkle':   '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>',
+  'truck':     '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  'utensils':  '<line x1="3" y1="2" x2="3" y2="22"/><path d="M7 2v6a4 4 0 0 1-4 4"/><line x1="21" y1="15" x2="21" y2="22"/><path d="M21 2a6 6 0 0 0-6 6v3h6"/>',
+  'wrench':    '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  'box':       '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  'folder':    '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  'grid':      '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
+  'cash':      '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+  'tag':       '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+  'star':      '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  'shield':    '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  'settings':  '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+};
+function _gCatSvgByKey(key,size){
+  const sz=size||16;
+  const path=_GCAT_ICON_KEYS[key]||_GCAT_ICON_KEYS['grid'];
+  return `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+}
+function _gCatSvg(nombreOrKey){
+  // First check if it's a known icon key
+  if(_GCAT_ICON_KEYS[nombreOrKey]) return _gCatSvgByKey(nombreOrKey);
+  // Fallback: map by display name (for legacy data)
   const mp={
-    'Servicios':    '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
-    'RRHH':         '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
-    'Sueldos':      '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
-    'Arriendo':     '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
-    'Limpieza':     '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>',
-    'Logística':    '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
-    'Alimentación': '<line x1="3" y1="2" x2="3" y2="22"/><path d="M7 2v6a4 4 0 0 1-4 4"/><line x1="21" y1="15" x2="21" y2="22"/><path d="M21 2a6 6 0 0 0-6 6v3h6"/>',
-    'Mantenimiento':'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
-    'Materiales':   '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
-    'Administrativo':'<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+    'Servicios':    'zap',
+    'RRHH':         'user',
+    'Sueldos':      'user',
+    'Arriendo':     'home',
+    'Limpieza':     'sparkle',
+    'Logística':    'truck',
+    'Alimentación': 'utensils',
+    'Mantenimiento':'wrench',
+    'Materiales':   'box',
+    'Administrativo':'folder',
   };
-  const path=mp[nombre]||'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>';
-  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+  return _gCatSvgByKey(mp[nombreOrKey]||'grid');
 }
 function _gMetSvg(met){
   const m=(met||'').toLowerCase();
@@ -6731,7 +6755,7 @@ function renderGastos(){
       <div><div class="g-kpi-lbl">Total acumulado</div><div class="g-kpi-v">${fmt$(totalTotal)}</div><div class="g-kpi-s">${gastos.length} registro${gastos.length!==1?'s':''} en total</div></div>
     </div>
     <div class="g-kpi">
-      ${topCat?`<div class="g-kpi-ico" style="background:rgba(${_hexToRgb(getCatColor(topCat[0]))},.12);color:${getCatColor(topCat[0])}">${_gCatSvg(topCat[0])}</div>
+      ${topCat?`<div class="g-kpi-ico" style="background:rgba(${_hexToRgb(getCatColor(topCat[0]))},.12);color:${getCatColor(topCat[0])}">${_gCatSvgByKey(getCatIcono(topCat[0]),18)}</div>
       <div><div class="g-kpi-lbl">Mayor categoría</div><div class="g-kpi-v" style="font-size:16px;color:${getCatColor(topCat[0])}">${topCat[0]}</div><div class="g-kpi-s">${fmt$(topCat[1])} · ${totalTotal?Math.round(topCat[1]/totalTotal*100):0}% del total</div></div>`
       :`<div class="g-kpi-ico" style="background:#f1f5f9;color:#94a3b8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
       <div><div class="g-kpi-lbl">Mayor categoría</div><div class="g-kpi-v" style="font-size:15px;color:#94a3b8">Sin datos</div></div>`}
@@ -6883,45 +6907,93 @@ function modalGestCats(){
   _catColorSel=CAT_SWATCHES[0];
   renderGestCatsModal();
 }
+let _ncIconoSel='grid';
+let _editCatId=null;
+
+function _gcIconPickerHtml(selectedKey,prefix){
+  return Object.keys(_GCAT_ICON_KEYS).map(k=>`
+    <button type="button" id="${prefix}-ico-${k}" onclick="${prefix==='nc'?'selNcIcono':'selEditIcono'}('${k}')"
+      style="width:36px;height:36px;border-radius:8px;border:2px solid ${k===selectedKey?'#3b82f6':'#e2e8f0'};
+             background:${k===selectedKey?'#eff6ff':'#fff'};cursor:pointer;display:flex;align-items:center;
+             justify-content:center;color:${k===selectedKey?'#2563eb':'#6b7280'};transition:all .15s;flex-shrink:0">
+      ${_gCatSvgByKey(k,15)}
+    </button>`).join('');
+}
+
 function renderGestCatsModal(){
   const cats=getGastoCats();
+  _ncIconoSel='grid';
   showModal(`
   <div class="modal-bg" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <div class="modal-header"><h3>🏷️ Gestionar Categorías</h3><button class="close-btn" onclick="closeModal()">×</button></div>
+  <div class="modal" style="max-width:480px;width:100%">
+    <div class="modal-header">
+      <h3 style="display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        Gestionar Categorías
+      </h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
     <div class="modal-body">
-      <!-- existing -->
-      <div style="margin-bottom:18px">
+      <div style="margin-bottom:18px;display:flex;flex-direction:column;gap:6px">
         ${cats.map(c=>`
-          <div class="cat-mgmt-row">
-            <div class="cat-color-dot" style="background:${c.color}"></div>
-            <span style="font-size:18px">${c.icono||'💼'}</span>
-            <span style="flex:1;font-weight:500;font-size:14px">${c.nombre}</span>
-            <button onclick="editarCatIcono('${c.id}')" style="background:none;border:1px solid var(--gray-200);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;color:var(--gray-500)">✏️ Editar</button>
-            <button onclick="eliminarCat('${c.id}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px" onmouseover="this.style.background='var(--danger-light)'" onmouseout="this.style.background='none'">🗑</button>
+          <div class="cat-mgmt-row" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid #f1f5f9;background:#fafafa">
+            <div style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0"></div>
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(${_hexToRgb(c.color)},.12);color:${c.color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              ${_gCatSvgByKey(c.icono||'grid',15)}
+            </div>
+            <span style="flex:1;font-weight:500;font-size:13px;color:#374151">${escAttr?escAttr(c.nombre):c.nombre}</span>
+            <button onclick="editarCatIcono('${c.id}')" style="background:none;border:1px solid #e2e8f0;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;color:#6b7280;display:flex;align-items:center;gap:4px">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Editar
+            </button>
+            <button onclick="eliminarCat('${c.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px 6px;border-radius:6px;display:flex;align-items:center" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
           </div>`).join('')}
       </div>
-      <!-- add new -->
-      <div style="border-top:1px solid var(--gray-100);padding-top:16px">
-        <div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:10px">+ Agregar nueva categoría</div>
-        <div style="display:grid;grid-template-columns:60px 1fr;gap:10px;margin-bottom:10px">
-          <div>
-            <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:4px">ÍCONO</label>
-            <input id="nc-icono" value="💼" style="font-size:20px;text-align:center;width:100%">
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:4px">NOMBRE</label>
-            <input id="nc-nombre" placeholder="Ej: Seguros" onkeydown="if(event.key==='Enter')agregarCat()">
+      <div style="border-top:1px solid #f1f5f9;padding-top:16px">
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">Nueva categoría</div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px">NOMBRE</label>
+          <input id="nc-nombre" placeholder="Ej: Seguros" onkeydown="if(event.key==='Enter')agregarCat()" style="width:100%">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px">ÍCONO</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px" id="nc-ico-pick">
+            ${_gcIconPickerHtml('grid','nc')}
           </div>
         </div>
-        <label style="font-size:11px;font-weight:600;color:var(--gray-500);display:block;margin-bottom:6px">COLOR</label>
+        <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px">COLOR</label>
         <div class="cat-color-pick" id="nc-colors">
           ${CAT_SWATCHES.map(c=>`<div class="cat-color-swatch ${c===_catColorSel?'sel':''}" style="background:${c}" onclick="selCatColor('${c}')"></div>`).join('')}
         </div>
-        <button class="btn btn-primary" onclick="agregarCat()" style="margin-top:14px;width:100%">✚ Agregar categoría</button>
+        <button class="btn btn-primary" onclick="agregarCat()" style="margin-top:14px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Agregar categoría
+        </button>
       </div>
     </div>
   </div></div>`);
+}
+function selNcIcono(key){
+  _ncIconoSel=key;
+  document.querySelectorAll('[id^="nc-ico-"]').forEach(btn=>{
+    const k=btn.id.replace('nc-ico-','');
+    const sel=k===key;
+    btn.style.border=`2px solid ${sel?'#3b82f6':'#e2e8f0'}`;
+    btn.style.background=sel?'#eff6ff':'#fff';
+    btn.style.color=sel?'#2563eb':'#6b7280';
+  });
+}
+function selEditIcono(key){
+  window._editIconoSel=key;
+  document.querySelectorAll('[id^="edit-ico-"]').forEach(btn=>{
+    const k=btn.id.replace('edit-ico-','');
+    const sel=k===key;
+    btn.style.border=`2px solid ${sel?'#3b82f6':'#e2e8f0'}`;
+    btn.style.background=sel?'#eff6ff':'#fff';
+    btn.style.color=sel?'#2563eb':'#6b7280';
+  });
 }
 function selCatColor(c){
   _catColorSel=c;
@@ -6929,11 +7001,10 @@ function selCatColor(c){
 }
 function agregarCat(){
   const nombre=(document.getElementById('nc-nombre')?.value||'').trim();
-  const icono=(document.getElementById('nc-icono')?.value||'💼').trim();
   if(!nombre){ toast('Ingresa un nombre','error'); return; }
   const cats=getGastoCats();
   if(cats.find(c=>c.nombre.toLowerCase()===nombre.toLowerCase())){ toast('Ya existe esa categoría','error'); return; }
-  cats.push({id:'cat-'+uid(),nombre,color:_catColorSel,icono});
+  cats.push({id:'cat-'+uid(),nombre,color:_catColorSel,icono:_ncIconoSel||'grid'});
   setGastoCats(cats); toast('Categoría agregada'); renderGestCatsModal();
 }
 function eliminarCat(id){
@@ -6945,13 +7016,44 @@ function editarCatIcono(id){
   const cats=getGastoCats();
   const cat=cats.find(c=>c.id===id);
   if(!cat) return;
-  const nuevoIcono=prompt('Nuevo ícono (emoji):',cat.icono||'💼');
-  if(nuevoIcono===null) return;
-  const nuevoNombre=prompt('Nuevo nombre:',cat.nombre);
-  if(!nuevoNombre) return;
-  cat.icono=nuevoIcono.trim()||cat.icono;
-  cat.nombre=nuevoNombre.trim()||cat.nombre;
-  setGastoCats(cats); toast('Categoría actualizada'); renderGestCatsModal();
+  window._editIconoSel=cat.icono||'grid';
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:420px;width:100%">
+    <div class="modal-header">
+      <h3 style="display:flex;align-items:center;gap:8px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar categoría
+      </h3>
+      <button class="close-btn" onclick="modalGestCats()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px">NOMBRE</label>
+        <input id="edit-cat-nombre" value="${cat.nombre}" style="width:100%">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px">ÍCONO</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" id="edit-ico-pick">
+          ${_gcIconPickerHtml(cat.icono||'grid','edit')}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn" onclick="modalGestCats()" style="flex:1">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarEditCat('${cat.id}')" style="flex:2">Guardar cambios</button>
+      </div>
+    </div>
+  </div></div>`);
+}
+function guardarEditCat(id){
+  const cats=getGastoCats();
+  const cat=cats.find(c=>c.id===id);
+  if(!cat) return;
+  const nuevoNombre=(document.getElementById('edit-cat-nombre')?.value||'').trim();
+  if(!nuevoNombre){ toast('Ingresa un nombre','error'); return; }
+  cat.nombre=nuevoNombre;
+  cat.icono=window._editIconoSel||cat.icono||'grid';
+  setGastoCats(cats); toast('Categoría actualizada'); modalGestCats();
 }
 
 function setFiltroGastoCat(cat){
@@ -7002,7 +7104,7 @@ function renderGastosTable(gastos){
       const metCol=((g.metodo||'').toLowerCase().includes('transf'))?'#2563eb'
                   :((g.metodo||'').toLowerCase().includes('efect'))?'#16a34a':'#475569';
       html+=`<div class="g-row">
-        <div class="g-cat-ico" style="background:rgba(${rgb},.12);color:${col}">${_gCatSvg(g.categoria||'')}</div>
+        <div class="g-cat-ico" style="background:rgba(${rgb},.12);color:${col}">${_gCatSvgByKey(getCatIcono(g.categoria||''),16)}</div>
         <div class="g-info">
           <div class="g-desc">${escAttr(g.descripcion||'—')}</div>
           <div class="g-meta">
@@ -7059,7 +7161,7 @@ function abrirModalNuevoGasto(){
           ${cats.map((c,i)=>{
             const rgb=_hexToRgb(c.color);
             return `<div id="ngcat-${i}" onclick="selNgCat(${i})" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 4px;border-radius:10px;border:1.5px solid #f1f5f9;background:#fafbfd;cursor:pointer;transition:all .15s">
-              <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(${rgb},.12);color:${c.color};flex-shrink:0">${_gCatSvg(c.nombre)}</div>
+              <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(${rgb},.12);color:${c.color};flex-shrink:0">${_gCatSvgByKey(c.icono||'grid',15)}</div>
               <span style="font-size:10px;font-weight:700;color:#64748b;text-align:center;line-height:1.2">${c.nombre}</span>
             </div>`;
           }).join('')}
