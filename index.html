@@ -4600,7 +4600,7 @@ function _modalTrasladoDesdeOrden(t){
             <label class="form-label" style="margin:0">Evidencia fotográfica del estado al enviar</label>
             <button type="button" onclick="tp_showQrFotos(document.getElementById('tsl-order-id').value,'traslado')"
               style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
-              📱 QR iPhone
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> QR iPhone
             </button>
           </div>
           <div id="tsl-photos-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:2px"></div>
@@ -9500,7 +9500,7 @@ function renderTaller() {
       </div>
       <div class="form-section-title">Checklist de ingreso</div>
       <div class="checklist-group" id="checklist-ingreso-form"></div>
-      <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">Fotos de ingreso (hasta 6)<button id="btn-qr-form" type="button" onclick="tp_showQrFotos(tp_editingOrderId)" style="display:none;padding:4px 10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📱 QR iPhone</button></div>
+      <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">Fotos de ingreso (hasta 6)<button id="btn-qr-form" type="button" onclick="tp_showQrFotos(tp_editingOrderId)" style="display:none;padding:4px 10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> QR iPhone</button></div>
       <div class="photo-grid" id="photos-ingreso-grid"></div>
       <input type="file" id="ph-ingreso-inp" accept="image/*" multiple style="display:none" onchange="tp_handlePhotos('ingreso',this)">
     </div>
@@ -11264,7 +11264,7 @@ function tp_openDetail(id){
     </div>`;
   };
   const photosHtml=(arr,label,ordId)=>{
-    const header=`<div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px"><span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${label}</span>${ordId?`<button onclick="tp_showQrFotos('${ordId}')" style="display:flex;align-items:center;gap:4px;padding:3px 9px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">📱 QR iPhone</button>`:''}</div>`;
+    const header=`<div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px"><span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${label}</span>${ordId?`<button onclick="tp_showQrFotos('${ordId}')" style="display:flex;align-items:center;gap:4px;padding:3px 9px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> QR iPhone</button>`:''}</div>`;
     if(!arr?.length) return ordId?`${header}<div style="text-align:center;padding:14px 0;color:var(--text3);font-size:12px">Sin fotos aún</div>`:'';
     return `${header}<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">${arr.map(src=>`<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--border)"><img src="${src}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer" onclick="window.open('${src}','_blank')"></div>`).join('')}</div>`;
   };
@@ -11545,7 +11545,7 @@ function tp_openInspeccionModal(orderId, mode){
               Agregar fotos
               <input type="file" accept="image/*" multiple style="display:none" onchange="tp_inspAddFotos(this)">
             </label>
-            <button type="button" onclick="tp_showQrFotos('${orderId}','inspeccion')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:#eff6ff;color:#2563eb;border:1.5px solid #bfdbfe;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📱 QR iPhone</button>
+            <button type="button" onclick="tp_showQrFotos('${orderId}','inspeccion')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:#eff6ff;color:#2563eb;border:1.5px solid #bfdbfe;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> QR iPhone</button>
           </div>
         </div>
         <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observaciones</div>
