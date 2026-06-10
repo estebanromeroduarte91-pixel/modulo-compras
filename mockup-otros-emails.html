@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Otros Emails</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Manrope', -apple-system, sans-serif;
+  background: #e8eaf0;
+  padding: 40px 20px;
+}
+.page-title { text-align:center; margin-bottom: 40px; }
+.page-title h1 { font-size: 20px; font-weight: 800; color: #1a1d23; }
+.page-title p  { font-size: 13px; color: #6b7280; margin-top: 6px; }
+
+/* Tabs */
+.tabs { display:flex; justify-content:center; gap:8px; margin-bottom:36px; flex-wrap:wrap; }
+.tab-btn {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all .15s;
+}
+.tab-btn.active { background: #3656e6; color: #fff; border-color: #3656e6; }
+
+.email-panel { display: none; }
+.email-panel.active { display: block; }
+
+/* iPhone shell */
+.phone-wrap {
+  max-width: 390px;
+  margin: 0 auto;
+  background: #1a1a2e;
+  border-radius: 48px;
+  padding: 14px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.45);
+}
+.phone-screen {
+  background: #f6f7f9;
+  border-radius: 36px;
+  overflow-y: auto;
+  max-height: 820px;
+}
+.phone-screen::-webkit-scrollbar { display: none; }
+
+/* ── Shared email styles ── */
+.e-wrap { background: #f6f7f9; padding-bottom: 32px; }
+
+/* Headers */
+.e-header-blue   { background: linear-gradient(135deg,#3656e6,#2541c4); }
+.e-header-green  { background: linear-gradient(135deg,#16a34a,#15803d); }
+.e-header-indigo { background: linear-gradient(135deg,#3656e6,#2541c4); }
+
+.e-header {
+  padding: 36px 28px 32px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.e-header::before {
+  content:''; position:absolute; top:-40px; right:-40px;
+  width:180px; height:180px; background:rgba(255,255,255,.06); border-radius:50%;
+}
+.e-badge {
+  display:inline-block; background:rgba(255,255,255,.18); color:#fff;
+  font-size:11px; font-weight:700; padding:5px 14px; border-radius:20px;
+  letter-spacing:.5px; margin-bottom:14px; position:relative; z-index:1;
+}
+.e-icon-circle {
+  width:56px; height:56px; border-radius:50%;
+  background:rgba(255,255,255,.2);
+  display:flex; align-items:center; justify-content:center;
+  margin: 0 auto 14px; font-size:26px; position:relative; z-index:1;
+}
+.e-header h1 {
+  color:#fff; font-size:22px; font-weight:800; letter-spacing:-.4px;
+  margin:0 0 8px; position:relative; z-index:1;
+}
+.e-header .e-sub { color:rgba(255,255,255,.72); font-size:12px; position:relative; z-index:1; }
+
+/* Body */
+.e-body { background:#fff; padding:28px 22px; }
+.e-intro { font-size:14px; color:#374151; line-height:1.7; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #f3f4f6; }
+.e-intro strong { color:#111827; }
+
+/* Section card */
+.e-section {
+  background:#f8fafc; border-radius:14px; padding:18px 18px 14px;
+  margin-bottom:14px; border:1px solid #eef0f5;
+}
+.e-sec-head {
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #e8edf5;
+}
+.e-sec-icon {
+  width:32px; height:32px; border-radius:9px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.e-sec-title { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.7px; color:#374151; }
+
+/* Grid */
+.e-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+.e-field-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#9ca3af; margin-bottom:3px; }
+.e-field-val { font-size:14px; font-weight:700; color:#111827; line-height:1.3; }
+.e-full { grid-column:1/-1; }
+
+/* Checklist */
+.e-check-item { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:13px; color:#374151; font-weight:500; }
+.e-check-item:last-child { border-bottom:none; }
+.e-check-dot { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:11px; font-weight:800; }
+.e-dot-ok  { background:#dcfce7; color:#16a34a; }
+.e-dot-nok { background:#fee2e2; color:#dc2626; }
+
+/* WA btn */
+.e-wa { display:inline-flex; align-items:center; gap:8px; background:#25d366; color:#fff; font-size:13px; font-weight:700; padding:9px 16px; border-radius:10px; text-decoration:none; margin-top:12px; }
+
+/* Accent block */
+.e-accent-block { background:#f0f4ff; border-left:3px solid #3656e6; border-radius:0 12px 12px 0; padding:16px 20px; margin-bottom:20px; }
+.e-accent-label { font-size:10px; font-weight:700; color:#3656e6; text-transform:uppercase; letter-spacing:.7px; margin-bottom:6px; }
+.e-accent-title { color:#111827; font-size:15px; font-weight:700; }
+.e-accent-sub   { color:#6b7280; font-size:13px; margin-top:4px; }
+
+/* CTA button */
+.e-cta { display:block; background:#3656e6; color:#fff; font-size:14px; font-weight:700; padding:14px 32px; border-radius:10px; text-decoration:none; text-align:center; margin-bottom:24px; }
+
+/* Nota */
+.e-nota { background:#f0f4ff; border-left:3px solid #3656e6; border-radius:0 10px 10px 0; padding:13px 16px; margin-bottom:18px; font-size:13px; color:#374151; line-height:1.6; }
+
+/* Footer */
+.e-footer { background:#f8fafc; border-top:1px solid #e5e7eb; padding:18px 22px; text-align:center; }
+.e-footer-name { font-size:12px; font-weight:700; color:#374151; margin-bottom:4px; }
+.e-footer-sub  { font-size:11px; color:#9ca3af; }
+
+/* Photos grid */
+.e-photos { display:flex; flex-wrap:wrap; gap:6px; }
+.e-photos img { width:100px; height:100px; object-fit:cover; border-radius:8px; border:1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>✉️ Mockup — Otros emails al cliente</h1>
+  <p>Selecciona cada email para revisarlo · Aprueba antes de implementar</p>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('inspeccion')">🔍 Inspección</button>
+  <button class="tab-btn" onclick="showTab('listo')">✅ Listo para retirar</button>
+  <button class="tab-btn" onclick="showTab('seguimiento')">📩 Seguimiento</button>
+  <button class="tab-btn" onclick="showTab('aprobacion')">📋 Aprobación</button>
+</div>
+
+<!-- ══════════════════════════════ INSPECCIÓN ══════════════════════════════ -->
+<div class="email-panel active" id="tab-inspeccion">
+<div class="phone-wrap"><div class="phone-screen">
+<div class="e-wrap">
+
+  <div class="e-header e-header-blue">
+    <div class="e-badge">Orden #OT-0004</div>
+    <h1>Reporte de Inspección</h1>
+    <div class="e-sub">Steve Docs · 9 de junio de 2026</div>
+  </div>
+
+  <div class="e-body">
+    <!-- Mensaje desde config -->
+    <div class="e-intro">
+      Hola <strong>Esteban</strong>, adjuntamos el reporte de inspección de tu <strong>iPhone 8</strong> (Orden #0004) al momento de ingresar a nuestro taller.<br><br>
+      ¡Gracias por confiar en nosotros!
+    </div>
+
+    <!-- Datos orden -->
+    <div class="e-section">
+      <div class="e-sec-head">
+        <div class="e-sec-icon" style="background:#ecefff">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3656e6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <span class="e-sec-title">Datos de la orden</span>
+      </div>
+      <div class="e-grid2">
+        <div><div class="e-field-label">Equipo</div><div class="e-field-val">iPhone 8</div></div>
+        <div><div class="e-field-label">Cliente</div><div class="e-field-val">Esteban Romero</div></div>
+        <div class="e-full"><div class="e-field-label">N° serie / IMEI</div><div class="e-field-val" style="font-size:13px;font-family:monospace">358767577372323​4</div></div>
+      </div>
+    </div>
+
+    <!-- Estado del equipo (notas) -->
+    <div class="e-accent-block">
+      <div class="e-accent-label">Estado del equipo</div>
+      <div style="font-size:14px;color:#374151;line-height:1.7">Pantalla presenta microfracturas en la esquina superior derecha. La pantalla táctil responde pero con puntos muertos en zona inferior. Batería al 71% de salud. Resto del equipo en buen estado.</div>
+    </div>
+
+    <!-- Fotos -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#9ca3af;margin-bottom:10px">Fotos del equipo (3)</div>
+      <div class="e-photos">
+        <div style="width:100px;height:100px;border-radius:8px;background:#e5e7eb;border:1px solid #d1d5db;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:22px">📷</div>
+        <div style="width:100px;height:100px;border-radius:8px;background:#e5e7eb;border:1px solid #d1d5db;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:22px">📷</div>
+        <div style="width:100px;height:100px;border-radius:8px;background:#e5e7eb;border:1px solid #d1d5db;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:22px">📷</div>
+      </div>
+    </div>
+
+    <p style="font-size:13px;color:#6b7280">Cualquier consulta puedes responder directamente a este correo.</p>
+  </div>
+
+  <div class="e-footer">
+    <div class="e-footer-name">Steve Docs · Los Dominicos</div>
+    <div class="e-footer-sub">Av. Apoquindo 7850, Torre 3 Local 3 · Las Condes</div>
+    <div class="e-footer-sub" style="margin-top:4px">Reporte generado automáticamente.</div>
+  </div>
+
+</div>
+</div></div>
+</div>
+
+<!-- ══════════════════════════════ LISTO ══════════════════════════════ -->
+<div class="email-panel" id="tab-listo">
+<div class="phone-wrap"><div class="phone-screen">
+<div class="e-wrap">
+
+  <div class="e-header e-header-green">
+    <div class="e-icon-circle">✅</div>
+    <h1>Tu equipo está listo</h1>
+    <div class="e-sub">Steve Docs</div>
+  </div>
+
+  <div class="e-body">
+    <!-- Mensaje desde config -->
+    <div class="e-intro">
+      Hola <strong>*Esteban*</strong>, te informamos que tu <strong>*Orden #0004*</strong> ya se encuentra lista para ser retirada.<br><br>
+      📍 <strong>Sucursal:</strong> Los Dominicos<br>
+      🕐 <strong>Horario:</strong> Lun–Vie 9:00–18:00<br>
+      📱 <strong>Modelo:</strong> iPhone 8<br><br>
+      ¡Gracias por confiar en nosotros!
+    </div>
+
+    <!-- Detalle orden -->
+    <div class="e-section">
+      <div class="e-sec-head">
+        <div class="e-sec-icon" style="background:#ecefff">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3656e6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <span class="e-sec-title">Detalle de la orden</span>
+      </div>
+      <div class="e-grid2">
+        <div><div class="e-field-label">Equipo</div><div class="e-field-val">iPhone 8</div></div>
+        <div><div class="e-field-label">N° Orden</div><div class="e-field-val">#OT-0004</div></div>
+        <div><div class="e-field-label">Sucursal</div><div class="e-field-val">Los Dominicos</div></div>
+        <div><div class="e-field-label">Horario</div><div class="e-field-val" style="font-size:12px">Lun–Vie 9:00–18:00</div></div>
+      </div>
+    </div>
+
+    <p style="font-size:13px;color:#6b7280">¿Tienes alguna pregunta? Responde directamente a este correo.</p>
+  </div>
+
+  <div class="e-footer">
+    <div class="e-footer-name">Steve Docs · Los Dominicos</div>
+    <div class="e-footer-sub">Av. Apoquindo 7850, Torre 3 Local 3 · Las Condes</div>
+    <div class="e-footer-sub" style="margin-top:4px">Mensaje generado automáticamente.</div>
+  </div>
+
+</div>
+</div></div>
+</div>
+
+<!-- ══════════════════════════════ SEGUIMIENTO ══════════════════════════════ -->
+<div class="email-panel" id="tab-seguimiento">
+<div class="phone-wrap"><div class="phone-screen">
+<div class="e-wrap">
+
+  <div class="e-header e-header-indigo">
+    <h1 style="margin-bottom:6px">Steve Docs</h1>
+    <div class="e-sub">Servicio técnico especializado</div>
+  </div>
+
+  <div class="e-body">
+    <p style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;letter-spacing:-.3px">¡Hola, Esteban! 👋</p>
+    <p style="font-size:14px;color:#6b7280;line-height:1.65;margin-bottom:28px">Han pasado 30 días desde que retiraste tu iPhone 8 de nuestro taller, y queremos saber cómo te ha funcionado.</p>
+
+    <!-- Reparación realizada -->
+    <div class="e-accent-block" style="margin-bottom:28px">
+      <div class="e-accent-label">Reparación realizada</div>
+      <div class="e-accent-title">Cambio de pantalla</div>
+      <div class="e-accent-sub">iPhone 8</div>
+    </div>
+
+    <p style="font-size:14px;color:#374151;line-height:1.65;margin-bottom:28px">Si tienes algún inconveniente, duda o simplemente quieres contarnos cómo te fue, responde este email directamente — estamos para ayudarte.</p>
+
+    <a href="#" class="e-cta">Responder por email →</a>
+
+    <p style="font-size:14px;color:#6b7280;line-height:1.65">Si todo ha funcionado perfecto, ¡nos alegra mucho! Y si conoces a alguien que necesite reparación, no dudes en recomendarnos. 🙌</p>
+  </div>
+
+  <div class="e-footer">
+    <div style="display:flex;justify-content:center;gap:20px;margin-bottom:10px;flex-wrap:wrap">
+      <span style="font-size:11px;color:#9ca3af">📞 +56966587162</span>
+      <span style="font-size:11px;color:#9ca3af">🕐 Lun–Vie 9:00–18:00</span>
+      <span style="font-size:11px;color:#9ca3af">📍 Las Condes</span>
+    </div>
+    <div class="e-footer-name">Steve Docs · contacto@stevedocs.cl</div>
+    <div class="e-footer-sub" style="margin-top:4px">Este email fue enviado porque fuiste cliente de nuestro taller.</div>
+  </div>
+
+</div>
+</div></div>
+</div>
+
+<!-- ══════════════════════════════ APROBACIÓN ══════════════════════════════ -->
+<div class="email-panel" id="tab-aprobacion">
+<div class="phone-wrap"><div class="phone-screen">
+<div class="e-wrap">
+
+  <div class="e-header e-header-indigo">
+    <div class="e-badge">iPhone 8 · Orden #0004</div>
+    <h1>Solicitud de aprobación</h1>
+    <div class="e-sub">Steve Docs</div>
+  </div>
+
+  <div class="e-body">
+    <!-- Mensaje desde config -->
+    <div class="e-intro">
+      Hola <strong>Esteban</strong>, hemos revisado tu equipo y necesitamos tu aprobación para continuar con la reparación.<br><br>
+      Por favor revisa el detalle del presupuesto y confirma si deseas continuar.
+    </div>
+
+    <!-- Detalle presupuesto -->
+    <div class="e-section">
+      <div class="e-sec-head">
+        <div class="e-sec-icon" style="background:#ecefff">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3656e6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
+        </div>
+        <span class="e-sec-title">Detalle del trabajo</span>
+      </div>
+      <div class="e-grid2">
+        <div><div class="e-field-label">Equipo</div><div class="e-field-val">iPhone 8</div></div>
+        <div><div class="e-field-label">N° Orden</div><div class="e-field-val">#OT-0004</div></div>
+        <div class="e-full"><div class="e-field-label">Trabajo a realizar</div><div class="e-field-val">Cambio de pantalla</div></div>
+        <div class="e-full"><div class="e-field-label">Presupuesto</div><div class="e-field-val" style="font-size:20px;color:#3656e6">$45.000</div></div>
+      </div>
+    </div>
+
+    <a href="#" class="e-cta">Revisar y aprobar presupuesto →</a>
+
+    <p style="color:#9ca3af;font-size:12px;margin:0">Si el botón no funciona, copia el enlace enviado en este correo.</p>
+  </div>
+
+  <div class="e-footer">
+    <div class="e-footer-name">Steve Docs · Los Dominicos</div>
+    <div class="e-footer-sub">Mensaje generado automáticamente por el taller.</div>
+  </div>
+
+</div>
+</div></div>
+</div>
+
+<script>
+function showTab(id){
+  document.querySelectorAll('.email-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+  // Reset scroll
+  const screen = document.querySelector('#tab-'+id+' .phone-screen');
+  if(screen) screen.scrollTop = 0;
+}
+</script>
+</body>
+</html>
