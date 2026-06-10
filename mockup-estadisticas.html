@@ -67,6 +67,21 @@ body{font-family:'Manrope',sans-serif;background:#f0f2f8;color:#1a1d23}
 .prod-bar-track{width:44px;height:5px;background:#f1f5f9;border-radius:99px;overflow:hidden;flex-shrink:0}
 .prod-bar-fill{height:100%;border-radius:99px;background:#3656e6}
 
+/* ── Tooltip hover producto ── */
+.prod-row{position:relative;cursor:default}
+.prod-tooltip{
+  position:absolute;right:4px;bottom:calc(100% + 4px);
+  background:#1a1d23;color:#fff;font-size:11px;font-weight:700;
+  padding:4px 9px;border-radius:7px;white-space:nowrap;
+  pointer-events:none;opacity:0;transition:opacity .15s;
+  z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.18);
+}
+.prod-tooltip::after{
+  content:'';position:absolute;right:12px;top:100%;
+  border:5px solid transparent;border-top-color:#1a1d23;
+}
+.prod-row:hover .prod-tooltip{opacity:1}
+
 /* ── Gráfico barras verticales ── */
 .vchart{display:flex;gap:5px;align-items:flex-end;height:68px}
 .vbar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -249,30 +264,35 @@ body{font-family:'Manrope',sans-serif;background:#f0f2f8;color:#1a1d23}
           <span class="prod-name">Pantalla iPhone 15</span>
           <span class="prod-count">14 uds.</span>
           <div class="prod-bar-track"><div class="prod-bar-fill" style="width:100%"></div></div>
+          <div class="prod-tooltip">$490.000 en ventas</div>
         </div>
         <div class="prod-row">
           <div class="prod-rank">2</div>
           <span class="prod-name">Batería iPhone 13</span>
           <span class="prod-count">9 uds.</span>
           <div class="prod-bar-track"><div class="prod-bar-fill" style="width:64%"></div></div>
+          <div class="prod-tooltip">$207.000 en ventas</div>
         </div>
         <div class="prod-row">
           <div class="prod-rank">3</div>
           <span class="prod-name">Pantalla Samsung S23</span>
           <span class="prod-count">6 uds.</span>
           <div class="prod-bar-track"><div class="prod-bar-fill" style="width:43%"></div></div>
+          <div class="prod-tooltip">$138.000 en ventas</div>
         </div>
         <div class="prod-row">
           <div class="prod-rank">4</div>
           <span class="prod-name">Conector de carga</span>
           <span class="prod-count">5 uds.</span>
           <div class="prod-bar-track"><div class="prod-bar-fill" style="width:36%"></div></div>
+          <div class="prod-tooltip">$72.500 en ventas</div>
         </div>
         <div class="prod-row">
           <div class="prod-rank">5</div>
           <span class="prod-name">Micrófono iPhone</span>
           <span class="prod-count">3 uds.</span>
           <div class="prod-bar-track"><div class="prod-bar-fill" style="width:21%"></div></div>
+          <div class="prod-tooltip">$43.500 en ventas</div>
         </div>
       </div>
     </div>

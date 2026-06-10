@@ -8025,152 +8025,353 @@ function guardarVentaMes(){
 }
 
 function renderEstadisticas(){
-  const gastos=getGastos(); const ocs=getOCs();
-  document.getElementById('topbar-actions').innerHTML='';
+  // ── Estado persistente del módulo ──
+  if(!window._stTab) window._stTab='mes';
+  if(!window._stFrom) window._stFrom='';
+  if(!window._stTo)   window._stTo='';
 
-  const mesActual=today().slice(0,7);
-  const mesLabel=new Date(mesActual+'-01').toLocaleString('es-CL',{month:'long',year:'numeric'});
+  // ── Topbar: tabs + rango personalizado ──
+  const tabs=[{id:'7d',label:'7 días'},{id:'30d',label:'30 días'},{id:'mes',label:'Este mes'},{id:'año',label:'Este año'}];
+  document.getElementById('topbar-actions').innerHTML=`
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <div style="display:flex;gap:3px;background:#f1f5f9;border-radius:8px;padding:3px">
+        ${tabs.map(t=>`<button onclick="_stSetTab('${t.id}')" id="st-tab-${t.id}" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;background:${window._stTab===t.id?'#fff':'transparent'};color:${window._stTab===t.id?'#1a1d23':'#6b7280'};box-shadow:${window._stTab===t.id?'0 1px 4px rgba(0,0,0,.1)':'none'}">${t.label}</button>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="display:flex;align-items:center;gap:4px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:4px 8px;cursor:pointer" onclick="this.querySelector('input').showPicker()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="date" id="st-from" value="${window._stFrom}" onchange="_stSetCustom()" style="border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;color:#374151;outline:none;cursor:pointer;width:90px">
+        </div>
+        <span style="font-size:11px;color:#d1d5db;font-weight:600">→</span>
+        <div style="display:flex;align-items:center;gap:4px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:4px 8px;cursor:pointer" onclick="this.querySelector('input').showPicker()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="date" id="st-to" value="${window._stTo}" onchange="_stSetCustom()" style="border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;color:#374151;outline:none;cursor:pointer;width:90px">
+        </div>
+      </div>
+    </div>`;
 
-  // Gastos por categoría
+  _stBuild();
+}
+
+function _stGetRange(){
+  // Si hay rango personalizado activo, usarlo
+  if(window._stTab==='custom'&&window._stFrom&&window._stTo) return {from:window._stFrom,to:window._stTo};
+  const t=today();
+  if(window._stTab==='7d'){
+    const d=new Date(t); d.setDate(d.getDate()-6);
+    return {from:d.toISOString().slice(0,10),to:t};
+  }
+  if(window._stTab==='30d'){
+    const d=new Date(t); d.setDate(d.getDate()-29);
+    return {from:d.toISOString().slice(0,10),to:t};
+  }
+  if(window._stTab==='mes'){
+    return {from:t.slice(0,7)+'-01',to:t};
+  }
+  if(window._stTab==='año'){
+    return {from:t.slice(0,4)+'-01-01',to:t};
+  }
+  return {from:t.slice(0,7)+'-01',to:t};
+}
+
+function _stSetTab(tab){
+  window._stTab=tab;
+  // Limpiar custom range si se elige un tab predefinido
+  window._stFrom=''; window._stTo='';
+  renderEstadisticas();
+}
+
+function _stSetCustom(){
+  const f=document.getElementById('st-from')?.value||'';
+  const to=document.getElementById('st-to')?.value||'';
+  if(!f||!to) return;
+  window._stTab='custom';
+  window._stFrom=f; window._stTo=to;
+  // Desactivar tabs visuales
+  ['7d','30d','mes','año'].forEach(id=>{
+    const el=document.getElementById('st-tab-'+id);
+    if(el){el.style.background='transparent';el.style.color='#6b7280';el.style.boxShadow='none';}
+  });
+  _stBuild();
+}
+
+function _stToggleD(type){
+  const panel=document.getElementById('st-desglose-'+type);
+  const arrow=document.getElementById('st-arr-'+type);
+  const btn=document.getElementById('st-btn-'+type);
+  if(!panel) return;
+  const open=panel.style.display==='block';
+  panel.style.display=open?'none':'block';
+  if(arrow) arrow.style.transform=open?'rotate(0deg)':'rotate(180deg)';
+  if(btn) btn.querySelector('span').textContent=open?`Ver desglose por ${type==='gastos'?'categoría':'proveedor'}`:`Ocultar desglose`;
+}
+
+function _stBuild(){
+  const {from,to}=_stGetRange();
+  const inRange=f=>f&&f>=from&&f<=to;
+
+  const ventas=getVentas().filter(v=>v.estado!=='anulada'&&inRange(v.fecha));
+  const gastos=getGastos().filter(g=>inRange(g.fecha));
+  const ocs=getOCs().filter(o=>['recibida','confirmada'].includes(o.estado)&&inRange(o.fecha));
+  const orders=tp_orders.filter(o=>o.status==='Entregado'&&inRange(o.fecha));
+  const branches=tp_branches;
+
+  // ── KPIs ──
+  const totalVentas=ventas.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const totalGastos=gastos.reduce((s,g)=>s+(+g.monto||0),0);
+  const totalCompras=ocs.reduce((s,o)=>s+(+o.total||0),0);
+  const utilidad=totalVentas-totalGastos-totalCompras;
+  const ordenesOk=orders.length;
+
+  // ── Ventas por sucursal ──
+  const bSales=branches.map(b=>{
+    const bv=ventas.filter(v=>v.branchId===b.id);
+    return {nombre:b.nombre||b.name||'—',total:bv.reduce((s,v)=>s+(+v.total_iva||0),0)};
+  }).filter(b=>b.total>0).sort((a,b)=>b.total-a.total);
+  const sinSuc=ventas.filter(v=>!v.branchId||!branches.find(b=>b.id===v.branchId));
+  if(sinSuc.length) bSales.push({nombre:'Sin sucursal',total:sinSuc.reduce((s,v)=>s+(+v.total_iva||0),0)});
+  const maxBSales=Math.max(...bSales.map(b=>b.total),1);
+
+  // ── Utilidad por sucursal ──
+  const bUtil=branches.map(b=>{
+    const bv=ventas.filter(v=>v.branchId===b.id).reduce((s,v)=>s+(+v.total_iva||0),0);
+    const bg=gastos.filter(g=>g.branchId===b.id).reduce((s,g)=>s+(+g.monto||0),0);
+    const bc=ocs.filter(o=>o.branchId===b.id).reduce((s,o)=>s+(+o.total||0),0);
+    return {nombre:b.nombre||b.name||'—',util:bv-bg-bc};
+  }).filter(b=>b.util!==0).sort((a,b)=>b.util-a.util);
+
+  // ── Productos más vendidos (por ingresos) ──
+  const prodMap={};
+  ventas.forEach(v=>(v.items||[]).forEach(it=>{
+    const k=it.producto_nombre||it.nombre||'—';
+    if(!prodMap[k]) prodMap[k]={nombre:k,qty:0,revenue:0};
+    prodMap[k].qty+=(+it.cantidad||+it.qty||1);
+    prodMap[k].revenue+=(+it.subtotal||((+it.precio_iva||0)*(+it.cantidad||1)));
+  }));
+  // Agregar repuestos de órdenes de taller
+  orders.forEach(o=>(o.repuestos||[]).forEach(r=>{
+    const k=r.name||r.nombre||'—';
+    if(!prodMap[k]) prodMap[k]={nombre:k,qty:0,revenue:0};
+    prodMap[k].qty+=(+r.qty||1);
+    prodMap[k].revenue+=(+r.precio||0)*(+r.qty||1);
+  }));
+  const topProds=Object.values(prodMap).sort((a,b)=>b.qty-a.qty).slice(0,5);
+  const maxQty=Math.max(...topProds.map(p=>p.qty),1);
+
+  // ── Gastos por categoría ──
   const catMap={};
   gastos.forEach(g=>{ const c=g.categoria||'Sin categoría'; catMap[c]=(catMap[c]||0)+(+g.monto||0); });
   const catSorted=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
-  const totalGastos=catSorted.reduce((s,[,v])=>s+v,0);
 
-  // Gastos por proveedor (OCs recibidas/confirmadas)
+  // ── Compras por proveedor ──
   const provMap={};
-  ocs.filter(o=>['recibida','confirmada'].includes(o.estado)).forEach(o=>{
-    const p=o.proveedor_nombre||'Sin proveedor';
-    provMap[p]=(provMap[p]||0)+(+o.total||0);
-  });
+  ocs.forEach(o=>{ const p=o.proveedor_nombre||'Sin proveedor'; provMap[p]=(provMap[p]||0)+(+o.total||0); });
   const provSorted=Object.entries(provMap).sort((a,b)=>b[1]-a[1]);
-  const totalProvs=provSorted.reduce((s,[,v])=>s+v,0);
 
-  // Últimos 6 meses
-  const meses=[];
+  // ── Últimos 6 meses (gastos, compras, órdenes) ──
+  const meses6=[];
   for(let i=5;i>=0;i--){
     const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
     const key=d.toISOString().slice(0,7);
-    const label=d.toLocaleString('es-CL',{month:'short',year:'2-digit'});
-    const gTotal=gastos.filter(g=>g.fecha&&g.fecha.startsWith(key)).reduce((s,g)=>s+(+g.monto||0),0);
-    const cTotal=ocs.filter(o=>['recibida','confirmada'].includes(o.estado)&&o.fecha&&o.fecha.startsWith(key)).reduce((s,o)=>s+(+o.total||0),0);
-    meses.push({key,label,gastos:gTotal,compras:cTotal});
+    const lbl=d.toLocaleString('es-CL',{month:'short'});
+    const isCur=key===today().slice(0,7);
+    const gT=getGastos().filter(g=>g.fecha&&g.fecha.startsWith(key)).reduce((s,g)=>s+(+g.monto||0),0);
+    const cT=getOCs().filter(o=>['recibida','confirmada'].includes(o.estado)&&o.fecha&&o.fecha.startsWith(key)).reduce((s,o)=>s+(+o.total||0),0);
+    const oT=tp_orders.filter(o=>o.status==='Entregado'&&o.fecha&&o.fecha.startsWith(key)).length;
+    meses6.push({key,lbl,isCur,gastos:gT,compras:cT,ordenes:oT});
   }
-  const maxG=Math.max(...meses.map(m=>m.gastos),1);
-  const maxC=Math.max(...meses.map(m=>m.compras),1);
+  const maxMG=Math.max(...meses6.map(m=>m.gastos),1);
+  const maxMC=Math.max(...meses6.map(m=>m.compras),1);
+  const maxMO=Math.max(...meses6.map(m=>m.ordenes),1);
 
-  // Resultado del mes actual — ventas reales
-  const ventasMes=getVentas().filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesActual)).reduce((s,v)=>s+(+v.total_iva||0),0);
-  const gastosMes=gastos.filter(g=>g.fecha&&g.fecha.startsWith(mesActual)).reduce((s,g)=>s+(+g.monto||0),0);
-  const comprasMes=ocs.filter(o=>['recibida','confirmada'].includes(o.estado)&&o.fecha&&o.fecha.startsWith(mesActual)).reduce((s,o)=>s+(+o.total||0),0);
-  const resultado=ventasMes-gastosMes-comprasMes;
-  const esUtilidad=resultado>=0;
-  const colorRes=esUtilidad?'#10b981':'#ef4444';
+  // ── Render ──
+  const card=`background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:14px 16px`;
+  const ct=`font-size:12px;font-weight:700;color:#111827;margin-bottom:2px`;
+  const cs=`font-size:10px;color:#9ca3af;margin-bottom:10px`;
+
+  const vchart=(bars,color)=>`
+    <div style="display:flex;gap:4px;align-items:flex-end;height:64px">
+      ${bars.map(b=>`
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end">
+          <div title="${b.tip}" style="width:100%;background:${color};opacity:${b.cur?1:.5};height:${b.h}px;border-radius:3px 3px 0 0;min-height:2px"></div>
+          <span style="font-size:9px;color:${b.cur?'#3656e6':'#9ca3af'};font-weight:${b.cur?700:600};white-space:nowrap">${b.lbl}</span>
+        </div>`).join('')}
+    </div>`;
+
+  const monthRows=(arr,valFn,unit='')=>arr.slice().reverse().slice(0,3).map(m=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0;border-bottom:1px solid #f3f4f6">
+      <span style="color:${m.isCur?'#111827':'#6b7280'};font-weight:${m.isCur?700:400}">${m.lbl}${m.isCur?' <span style="font-size:9px;color:#3656e6">(actual)</span>':''}</span>
+      <strong style="color:#111827">${unit?valFn(m)+' '+unit:fmt$(valFn(m))}</strong>
+    </div>`).join('');
+
+  const desglosePanel=(type,sorted,total,colorClass)=>{
+    if(!sorted.length) return '<div style="font-size:11px;color:#9ca3af;text-align:center;padding:8px 0">Sin datos</div>';
+    return sorted.slice(0,5).map(([name,val])=>{
+      const pct=total>0?Math.round(val/total*100):0;
+      const barColor=type==='gastos'?'#ef4444':'#3656e6';
+      const bgBadge=type==='gastos'?'#fef2f2':'#eff6ff';
+      const txtBadge=type==='gastos'?'#dc2626':'#2563eb';
+      return `<div style="margin-bottom:7px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <span style="font-size:11px;color:#374151;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escAttr(name)}</span>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;margin-left:6px">
+            <span style="font-size:10px;font-weight:700;color:${txtBadge};background:${bgBadge};padding:1px 5px;border-radius:99px">${pct}%</span>
+            <span style="font-size:11px;font-weight:700;color:#111827">${fmt$(val)}</span>
+          </div>
+        </div>
+        <div style="height:4px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+          <div style="height:100%;background:${barColor};width:${pct}%;border-radius:99px"></div>
+        </div>
+      </div>`;
+    }).join('');
+  };
+
+  const arrowSvg=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 
   document.getElementById('page-content').innerHTML=`
-  <!-- Resultado del mes -->
-  <div class="card" style="margin-bottom:20px;border:2px solid ${colorRes}">
-    <div class="card-body" style="padding:20px 24px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:20px">
-        <div>
-          <div style="font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--gray-400);text-transform:uppercase;margin-bottom:6px">Resultado del mes · ${mesLabel}</div>
-          <div style="font-size:30px;font-weight:800;color:${colorRes}">${esUtilidad?'✅ Utilidad':'❌ Pérdida'}: ${fmt$(Math.abs(resultado))}</div>
-          <div style="font-size:12px;color:var(--gray-400);margin-top:6px">
-            ${fmt$(ventasMes)} ventas − ${fmt$(gastosMes)} gastos − ${fmt$(comprasMes)} compras = ${fmt$(resultado)}
-          </div>
-        </div>
-        <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
-          <div style="text-align:center">
-            <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px;font-weight:600">💰 VENTAS</div>
-            <div style="font-size:20px;font-weight:700;color:#10b981">${fmt$(ventasMes)}</div>
-          </div>
-          <div style="text-align:center">
-            <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px;font-weight:600">📋 GASTOS</div>
-            <div style="font-size:20px;font-weight:700;color:var(--danger)">${fmt$(gastosMes)}</div>
-          </div>
-          <div style="text-align:center">
-            <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px;font-weight:600">📦 COMPRAS</div>
-            <div style="font-size:20px;font-weight:700;color:#f59e0b">${fmt$(comprasMes)}</div>
-          </div>
-        </div>
+  <style>
+    .st-kpi{display:flex;flex-direction:column;gap:2px}
+    .st-kpi-lbl{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px}
+    .st-kpi-val{font-size:22px;font-weight:800;color:#111827;line-height:1.1}
+    .st-kpi-sub{font-size:11px;color:#6b7280;margin-top:2px}
+    .st-prod-row{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid #f3f4f6;position:relative;cursor:default}
+    .st-prod-row:last-child{border-bottom:none}
+    .st-prod-tooltip{position:absolute;right:4px;bottom:calc(100% + 4px);background:#1a1d23;color:#fff;font-size:11px;font-weight:700;padding:4px 9px;border-radius:7px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+    .st-prod-tooltip::after{content:'';position:absolute;right:12px;top:100%;border:5px solid transparent;border-top-color:#1a1d23}
+    .st-prod-row:hover .st-prod-tooltip{opacity:1}
+  </style>
+
+  <!-- Fila 1: KPIs -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+    <div style="${card}">
+      <div class="st-kpi">
+        <span class="st-kpi-lbl">Ventas totales</span>
+        <span class="st-kpi-val" style="color:#111827">${fmt$(totalVentas)}</span>
+        <span class="st-kpi-sub">${ventas.length} venta${ventas.length!==1?'s':''} en el período</span>
+      </div>
+    </div>
+    <div style="${card}">
+      <div class="st-kpi">
+        <span class="st-kpi-lbl">Utilidad neta</span>
+        <span class="st-kpi-val" style="color:${utilidad>=0?'#10b981':'#ef4444'}">${fmt$(utilidad)}</span>
+        <span class="st-kpi-sub">Ventas − Gastos − Compras</span>
+      </div>
+    </div>
+    <div style="${card}">
+      <div class="st-kpi">
+        <span class="st-kpi-lbl">Órdenes completadas</span>
+        <span class="st-kpi-val" style="color:#f59e0b">${ordenesOk}</span>
+        <span class="st-kpi-sub">Reparaciones entregadas</span>
       </div>
     </div>
   </div>
 
-  <!-- Gastos por mes + Compras por mes -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
-    <div class="card">
-      <div class="card-header"><h3>📋 Gastos por mes</h3></div>
-      <div class="card-body">
-        <div style="display:flex;gap:8px;align-items:flex-end;height:130px;padding-bottom:22px;border-bottom:2px solid var(--gray-100);position:relative">
-          ${meses.map(m=>`
-            <div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;position:relative">
-              <div title="${fmt$(m.gastos)}" style="width:68%;background:var(--primary);opacity:${m.key===mesActual?1:.7};height:${m.gastos?Math.max(4,Math.round(m.gastos/maxG*110))+'px':'2px'};border-radius:4px 4px 0 0"></div>
-              <span style="font-size:10px;color:var(--gray-400);position:absolute;bottom:-18px;white-space:nowrap">${m.label}</span>
-            </div>`).join('')}
-        </div>
-        <div style="margin-top:22px">
-          ${meses.slice().reverse().slice(0,3).map(m=>`
-            <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--gray-100)">
-              <span style="color:var(--gray-500)">${m.label}${m.key===mesActual?' <span style="font-size:10px;color:var(--primary)">(actual)</span>':''}</span>
-              <strong>${fmt$(m.gastos)}</strong>
-            </div>`).join('')}
-        </div>
-      </div>
+  <!-- Fila 2: Sucursales + Productos -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+
+    <!-- Ventas por sucursal -->
+    <div style="${card}">
+      <div style="${ct}">Ventas por sucursal</div>
+      <div style="${cs}">Por ingresos en el período</div>
+      ${bSales.length?bSales.map(b=>`
+        <div style="margin-bottom:7px">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px">
+            <span style="color:#374151;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escAttr(b.nombre)}</span>
+            <span style="font-weight:700;color:#111827;flex-shrink:0;margin-left:6px">${fmt$(b.total)}</span>
+          </div>
+          <div style="height:4px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+            <div style="height:100%;background:#3656e6;width:${Math.round(b.total/maxBSales*100)}%;border-radius:99px"></div>
+          </div>
+        </div>`).join('')
+      :'<div style="font-size:11px;color:#9ca3af;text-align:center;padding:12px 0">Sin ventas en el período</div>'}
     </div>
-    <div class="card">
-      <div class="card-header"><h3>📦 Compras por mes</h3></div>
-      <div class="card-body">
-        <div style="display:flex;gap:8px;align-items:flex-end;height:130px;padding-bottom:22px;border-bottom:2px solid var(--gray-100);position:relative">
-          ${meses.map(m=>`
-            <div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;position:relative">
-              <div title="${fmt$(m.compras)}" style="width:68%;background:#f59e0b;opacity:${m.key===mesActual?1:.7};height:${m.compras?Math.max(4,Math.round(m.compras/maxC*110))+'px':'2px'};border-radius:4px 4px 0 0"></div>
-              <span style="font-size:10px;color:var(--gray-400);position:absolute;bottom:-18px;white-space:nowrap">${m.label}</span>
-            </div>`).join('')}
-        </div>
-        <div style="margin-top:22px">
-          ${meses.slice().reverse().slice(0,3).map(m=>`
-            <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--gray-100)">
-              <span style="color:var(--gray-500)">${m.label}${m.key===mesActual?' <span style="font-size:10px;color:#f59e0b">(actual)</span>':''}</span>
-              <strong>${fmt$(m.compras)}</strong>
-            </div>`).join('')}
-        </div>
-      </div>
+
+    <!-- Utilidad por sucursal -->
+    <div style="${card}">
+      <div style="${ct}">Utilidad por sucursal</div>
+      <div style="${cs}">Ventas − Gastos − Compras asignados</div>
+      ${bUtil.length?bUtil.map(b=>{
+        const color=b.util>=0?'#10b981':'#ef4444';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 0;border-bottom:1px solid #f3f4f6">
+          <span style="color:#374151;font-weight:600">${escAttr(b.nombre)}</span>
+          <span style="font-weight:700;color:${color}">${fmt$(b.util)}</span>
+        </div>`;
+      }).join('')
+      :'<div style="font-size:11px;color:#9ca3af;text-align:center;padding:12px 0">Sin datos de sucursales</div>'}
     </div>
+
+    <!-- Productos más vendidos -->
+    <div style="${card}">
+      <div style="${ct}">Productos más vendidos</div>
+      <div style="${cs}">Por unidades — hover para ver ingresos</div>
+      ${topProds.length?topProds.map((p,i)=>`
+        <div class="st-prod-row">
+          <div style="width:18px;height:18px;border-radius:50%;background:${i===0?'#fef9c3':'#ecefff'};color:${i===0?'#b45309':'#3656e6'};font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+          <span style="flex:1;font-size:11px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escAttr(p.nombre)}</span>
+          <span style="font-size:10px;color:#6b7280;flex-shrink:0;margin-right:3px">${p.qty} uds.</span>
+          <div style="width:36px;height:4px;background:#f1f5f9;border-radius:99px;overflow:hidden;flex-shrink:0">
+            <div style="height:100%;background:#3656e6;width:${Math.round(p.qty/maxQty*100)}%;border-radius:99px"></div>
+          </div>
+          <div class="st-prod-tooltip">${fmt$(p.revenue)} en ventas</div>
+        </div>`).join('')
+      :'<div style="font-size:11px;color:#9ca3af;text-align:center;padding:12px 0">Sin ventas en el período</div>'}
+    </div>
+
   </div>
 
-  <!-- Categoría + Proveedor -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
-    <div class="card">
-      <div class="card-header"><h3>Gastos por Categoría</h3></div>
-      <div class="card-body">
-        ${catSorted.length?catSorted.map(([cat,val])=>`
-          <div style="margin-bottom:12px">
-            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
-              <span>${cat}</span><strong>${fmt$(val)} (${Math.round(val/totalGastos*100)}%)</strong>
-            </div>
-            <div style="background:var(--gray-100);border-radius:99px;height:8px;overflow:hidden">
-              <div style="background:var(--primary);width:${Math.round(val/totalGastos*100)}%;height:100%;border-radius:99px"></div>
-            </div>
-          </div>`).join('')
-        :'<p style="color:var(--gray-400);text-align:center;padding:20px">Sin datos</p>'}
+  <!-- Fila 3: Gastos + Compras + Órdenes -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+
+    <!-- Gastos por mes -->
+    <div style="${card}">
+      <div style="${ct}">Gastos por mes</div>
+      <div style="${cs}">Últimos 6 meses</div>
+      ${vchart(meses6.map(m=>({h:Math.max(2,Math.round(m.gastos/maxMG*60)),lbl:m.lbl,cur:m.isCur,tip:fmt$(m.gastos)})),'#ef4444')}
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
+        ${monthRows(meses6,m=>m.gastos)}
+      </div>
+      <button id="st-btn-gastos" onclick="_stToggleD('gastos')" style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:8px;padding:6px 8px;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;color:#dc2626;transition:all .15s">
+          <span>Ver desglose por categoría</span>
+          <span id="st-arr-gastos" style="display:inline-flex;transition:transform .2s">${arrowSvg}</span>
+        </button>
+      <div id="st-desglose-gastos" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
+        <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Por categoría</div>
+        ${desglosePanel('gastos',catSorted,totalGastos)}
       </div>
     </div>
-    <div class="card">
-      <div class="card-header"><h3>Compras por Proveedor</h3></div>
-      <div class="card-body">
-        ${provSorted.length?provSorted.map(([prov,val])=>`
-          <div style="margin-bottom:12px">
-            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
-              <span>${prov}</span><strong>${fmt$(val)} (${Math.round(val/totalProvs*100)}%)</strong>
-            </div>
-            <div style="background:var(--gray-100);border-radius:99px;height:8px;overflow:hidden">
-              <div style="background:#10b981;width:${Math.round(val/totalProvs*100)}%;height:100%;border-radius:99px"></div>
-            </div>
-          </div>`).join('')
-        :'<p style="color:var(--gray-400);text-align:center;padding:20px">Sin órdenes recibidas</p>'}
+
+    <!-- Compras por mes -->
+    <div style="${card}">
+      <div style="${ct}">Compras por mes</div>
+      <div style="${cs}">Órdenes de compra recibidas</div>
+      ${vchart(meses6.map(m=>({h:Math.max(2,Math.round(m.compras/maxMC*60)),lbl:m.lbl,cur:m.isCur,tip:fmt$(m.compras)})),'#3656e6')}
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
+        ${monthRows(meses6,m=>m.compras)}
+      </div>
+      <button id="st-btn-compras" onclick="_stToggleD('compras')" style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:8px;padding:6px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;color:#2563eb;transition:all .15s">
+          <span>Ver desglose por proveedor</span>
+          <span id="st-arr-compras" style="display:inline-flex;transition:transform .2s">${arrowSvg}</span>
+        </button>
+      <div id="st-desglose-compras" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
+        <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Por proveedor</div>
+        ${desglosePanel('compras',provSorted,totalCompras)}
       </div>
     </div>
+
+    <!-- Órdenes completadas por mes -->
+    <div style="${card}">
+      <div style="${ct}">Órdenes completadas</div>
+      <div style="${cs}">Reparaciones entregadas por mes</div>
+      ${vchart(meses6.map(m=>({h:Math.max(2,Math.round(m.ordenes/maxMO*60)),lbl:m.lbl,cur:m.isCur,tip:m.ordenes+' órd.'})),'#f59e0b')}
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
+        ${monthRows(meses6,m=>m.ordenes,'órd.')}
+      </div>
+      <div style="margin-top:8px;padding:8px;background:#fffbeb;border-radius:7px;border:1px solid #fde68a">
+        <div style="font-size:10px;font-weight:700;color:#b45309;margin-bottom:2px">TICKET PROMEDIO</div>
+        <div style="font-size:16px;font-weight:800;color:#92400e">${orders.length?fmt$(Math.round(orders.reduce((s,o)=>s+(+o.total||0),0)/orders.length)):'—'}</div>
+      </div>
+    </div>
+
   </div>`;
 }
 
