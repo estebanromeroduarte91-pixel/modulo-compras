@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup Gastos V2</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Manrope',sans-serif;background:#f0f2f8;color:#0f172a;font-size:14px}
+.shell{display:flex;min-height:100vh}
+.sidebar{width:220px;background:#fff;border-right:1px solid #e2e8f0;padding:20px 0;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:52px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:800}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-ghost{background:transparent;color:#64748b;border:1.5px solid #e2e8f0}
+.btn-ghost:hover{background:#f8fafc;border-color:#cbd5e1}
+.btn-new{background:#0f172a;color:#fff;padding:8px 18px}
+.btn-new:hover{background:#1e293b;transform:translateY(-1px);box-shadow:0 4px 14px rgba(15,23,42,.2)}
+.page{padding:24px 28px;display:flex;flex-direction:column;gap:20px}
+
+/* KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:#fff;border-radius:14px;padding:16px 18px;border:1px solid #e2e8f0;display:flex;align-items:center;gap:14px;transition:box-shadow .15s}
+.kpi:hover{box-shadow:0 2px 16px rgba(0,0,0,.07)}
+.kpi-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-lbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+.kpi-v{font-size:20px;font-weight:800;color:#0f172a}
+.kpi-s{font-size:11px;color:#94a3b8;margin-top:2px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);padding:20px}
+.modal{width:100%;max-width:500px;max-height:90vh;background:#fff;border-radius:18px;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.18)}
+.modal-head{padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-size:16px;font-weight:800}
+.modal-sub{font-size:11px;color:#94a3b8;margin-top:1px}
+.modal-close{width:32px;height:32px;border-radius:8px;border:none;background:#f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;transition:all .15s}
+.modal-close:hover{background:#e2e8f0}
+.modal-body{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.modal-foot{padding:14px 24px;border-top:1px solid #f1f5f9;flex-shrink:0}
+
+/* Monto */
+.monto-big{display:flex;align-items:center;gap:4px;padding:12px 16px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;transition:all .15s}
+.monto-big:focus-within{border-color:#3656e6;background:#fff;box-shadow:0 0 0 3px rgba(54,86,230,.08)}
+.monto-prefix{font-size:22px;font-weight:700;color:#94a3b8}
+.monto-input{flex:1;border:none;background:none;font-family:inherit;font-size:28px;font-weight:800;color:#0f172a;outline:none;min-width:0}
+.monto-input::placeholder{color:#e2e8f0}
+
+/* Categorías */
+.dfield-label{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.cat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.dcat{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px;border-radius:10px;border:1.5px solid #f1f5f9;background:#fafbfd;cursor:pointer;transition:all .15s}
+.dcat:hover{border-color:#c7d2fe;background:#eef2ff}
+.dcat.sel{border-color:var(--c,#3656e6);background:var(--bg,#eef2ff);box-shadow:0 0 0 3px color-mix(in srgb,var(--c,#3656e6) 12%,transparent)}
+.dcat-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg,#eef2ff)}
+.dcat-lbl{font-size:10px;font-weight:700;color:#64748b;text-align:center;line-height:1.2}
+.dcat.sel .dcat-lbl{color:var(--c,#3656e6)}
+
+/* Form */
+.dfield{display:flex;flex-direction:column;gap:6px}
+.dinput{padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:inherit;font-size:14px;color:#0f172a;background:#fff;outline:none;transition:border-color .15s;width:100%}
+.dinput:focus{border-color:#3656e6;box-shadow:0 0 0 3px rgba(54,86,230,.08)}
+.dinput::placeholder{color:#cbd5e1}
+.drow2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-confirm{width:100%;padding:13px;background:#0f172a;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-confirm:hover{background:#1e293b;box-shadow:0 4px 16px rgba(15,23,42,.2)}
+
+/* Lista */
+.list-card{background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden}
+.list-topbar{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;gap:10px}
+.list-title{font-size:14px;font-weight:700}
+.search-wrap{display:flex;align-items:center;gap:6px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 11px}
+.search-wrap input{border:none;background:none;outline:none;font-family:inherit;font-size:12px;color:#0f172a;width:150px}
+.search-wrap input::placeholder{color:#94a3b8}
+.sel-filter{padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:12px;color:#374151;background:#fff;cursor:pointer;outline:none}
+.pills{display:flex;gap:6px;padding:10px 20px;border-bottom:1px solid #f8fafc;flex-wrap:wrap}
+.pill{padding:4px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid #f1f5f9;background:#f8fafc;color:#64748b;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
+.pill:hover{border-color:#cbd5e1}
+.pill.on{background:#0f172a;color:#fff;border-color:#0f172a}
+.pill-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pill.on .pill-dot{opacity:.5}
+.date-label{padding:7px 20px;background:#f8fafc;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between}
+.date-total{color:#374151}
+.gasto-row{display:flex;align-items:center;gap:13px;padding:13px 20px;border-bottom:1px solid #f8fafc;transition:background .1s;cursor:default}
+.gasto-row:last-child{border-bottom:none}
+.gasto-row:hover{background:#fafbfd}
+.gasto-row:hover .row-del{opacity:1}
+.cat-circle{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.gasto-info{flex:1;min-width:0}
+.gasto-desc{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gasto-meta{font-size:11px;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:6px}
+.method-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px}
+.gasto-amount{font-size:14px;font-weight:800;white-space:nowrap;margin-left:8px}
+.row-del{opacity:0;transition:opacity .15s}
+.del-btn{width:28px;height:28px;border-radius:7px;border:none;background:#fef2f2;color:#dc2626;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.del-btn:hover{background:#fee2e2}
+
+/* Nav */
+.nav-logo{padding:14px 18px;border-bottom:1px solid #f1f5f9}
+.nav-logo-t{font-size:14px;font-weight:800}
+.nav-logo-s{font-size:11px;color:#94a3b8}
+.nav-sec{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;padding:12px 20px 4px}
+.nav-i{display:flex;align-items:center;gap:9px;padding:8px 14px;font-size:13px;font-weight:500;color:#64748b;cursor:pointer;border-radius:9px;margin:0 8px 1px;transition:all .15s}
+.nav-i:hover{background:#f8fafc;color:#0f172a}
+.nav-i.on{background:#f1f5f9;color:#0f172a;font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- SVG sprite -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></symbol>
+  <symbol id="i-utensils" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="2" x2="3" y2="22"/><path d="M7 2v6a4 4 0 0 1-4 4"/><line x1="21" y1="15" x2="21" y2="22"/><path d="M21 2a6 6 0 0 0-6 6v3h6"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
+  <symbol id="i-cash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
+  <symbol id="i-transfer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></symbol>
+  <symbol id="i-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+</svg>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="nav-logo">
+      <div class="nav-logo-t">ERP Compras</div>
+      <div class="nav-logo-s">Módulo de Abastecimiento</div>
+    </div>
+    <div class="nav-sec">Operación</div>
+    <div class="nav-i"><svg width="15" height="15"><use href="#i-trend"/></svg>Dashboard</div>
+    <div class="nav-i"><svg width="15" height="15"><use href="#i-zap"/></svg>Ventas</div>
+    <div class="nav-i"><svg width="15" height="15"><use href="#i-wrench"/></svg>Taller</div>
+    <div class="nav-i"><svg width="15" height="15"><use href="#i-user"/></svg>Contactos</div>
+    <div class="nav-i"><svg width="15" height="15"><use href="#i-box"/></svg>Inventario</div>
+    <div class="nav-sec">Administración</div>
+    <div class="nav-i on"><svg width="15" height="15"><use href="#i-cash"/></svg>Gastos</div>
+    <div class="nav-i"><svg width="15" height="15"><use href="#i-trend"/></svg>Estadísticas</div>
+    <div class="nav-i"><svg width="15" height="15"><use href="#i-grid"/></svg>Configuración</div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">Gastos</div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost"><svg width="13" height="13"><use href="#i-tag"/></svg>Categorías</button>
+        <button class="btn btn-ghost"><svg width="13" height="13"><use href="#i-dl"/></svg>Exportar</button>
+        <button class="btn btn-new" onclick="document.getElementById('modal').style.display='flex'">
+          <svg width="14" height="14"><use href="#i-plus"/></svg>Nuevo gasto
+        </button>
+      </div>
+    </div>
+
+    <div class="page">
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-ico" style="background:#fff8ed;color:#b45309"><svg width="20" height="20"><use href="#i-cash"/></svg></div>
+          <div>
+            <div class="kpi-lbl">Este mes</div>
+            <div class="kpi-v">$0</div>
+            <div class="kpi-s">0 registros · junio</div>
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-ico" style="background:#f0f9ff;color:#0284c7"><svg width="20" height="20"><use href="#i-folder"/></svg></div>
+          <div>
+            <div class="kpi-lbl">Total acumulado</div>
+            <div class="kpi-v">$650.000</div>
+            <div class="kpi-s">3 registros en total</div>
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-ico" style="background:#f3f0ff;color:#6d28d9"><svg width="20" height="20"><use href="#i-user"/></svg></div>
+          <div>
+            <div class="kpi-lbl">Mayor categoría</div>
+            <div class="kpi-v" style="font-size:17px;color:#6d28d9">Sueldos</div>
+            <div class="kpi-s">$600.000 · 92% del total</div>
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-ico" style="background:#f0fdf4;color:#16a34a"><svg width="20" height="20"><use href="#i-cal"/></svg></div>
+          <div>
+            <div class="kpi-lbl">Último registro</div>
+            <div class="kpi-v" style="font-size:17px">28 mayo</div>
+            <div class="kpi-s">Sueldo Esteban · $100K</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista -->
+      <div class="list-card">
+        <div class="list-topbar">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="list-title">Historial</div>
+            <span style="font-size:11px;color:#94a3b8;background:#f1f5f9;padding:2px 8px;border-radius:99px;font-weight:600">3 registros</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="search-wrap">
+              <svg width="13" height="13" style="color:#94a3b8;flex-shrink:0"><use href="#i-search"/></svg>
+              <input type="text" placeholder="Buscar gasto…">
+            </div>
+            <select class="sel-filter">
+              <option>Todos los meses</option>
+              <option>Mayo 2026</option>
+            </select>
+          </div>
+        </div>
+        <div class="pills">
+          <div class="pill on">Todos</div>
+          <div class="pill"><span class="pill-dot" style="background:#6d28d9"></span>Sueldos <span style="opacity:.6;font-weight:500">$600K</span></div>
+          <div class="pill"><span class="pill-dot" style="background:#b45309"></span>Servicios <span style="opacity:.6;font-weight:500">$50K</span></div>
+        </div>
+
+        <div class="date-label"><span>Miércoles 28 mayo 2026</span><span class="date-total">$500.000</span></div>
+        <div class="gasto-row">
+          <div class="cat-circle" style="background:#f3f0ff;color:#6d28d9"><svg width="17" height="17"><use href="#i-user"/></svg></div>
+          <div class="gasto-info">
+            <div class="gasto-desc">Peter</div>
+            <div class="gasto-meta">
+              <span style="font-weight:600;color:#6d28d9">Sueldos</span>
+              <span>·</span>
+              <span class="method-badge" style="background:#eff6ff;color:#2563eb"><svg width="10" height="10"><use href="#i-transfer"/></svg>Transferencia</span>
+            </div>
+          </div>
+          <div class="gasto-amount">$500.000</div>
+          <div class="row-del"><button class="del-btn"><svg width="13" height="13"><use href="#i-trash"/></svg></button></div>
+        </div>
+
+        <div class="date-label"><span>Martes 27 mayo 2026</span><span class="date-total">$150.000</span></div>
+        <div class="gasto-row">
+          <div class="cat-circle" style="background:#fff8ed;color:#b45309"><svg width="17" height="17"><use href="#i-zap"/></svg></div>
+          <div class="gasto-info">
+            <div class="gasto-desc">Luz</div>
+            <div class="gasto-meta">
+              <span style="font-weight:600;color:#b45309">Servicios</span>
+              <span>·</span>
+              <span class="method-badge" style="background:#f0fdf4;color:#16a34a"><svg width="10" height="10"><use href="#i-cash"/></svg>Efectivo</span>
+            </div>
+          </div>
+          <div class="gasto-amount">$50.000</div>
+          <div class="row-del"><button class="del-btn"><svg width="13" height="13"><use href="#i-trash"/></svg></button></div>
+        </div>
+        <div class="gasto-row">
+          <div class="cat-circle" style="background:#f3f0ff;color:#6d28d9"><svg width="17" height="17"><use href="#i-user"/></svg></div>
+          <div class="gasto-info">
+            <div class="gasto-desc">Sueldo Esteban</div>
+            <div class="gasto-meta">
+              <span style="font-weight:600;color:#6d28d9">Sueldos</span>
+              <span>·</span>
+              <span class="method-badge" style="background:#eff6ff;color:#2563eb"><svg width="10" height="10"><use href="#i-transfer"/></svg>Transferencia</span>
+            </div>
+          </div>
+          <div class="gasto-amount">$100.000</div>
+          <div class="row-del"><button class="del-btn"><svg width="13" height="13"><use href="#i-trash"/></svg></button></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" style="display:flex" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Nuevo gasto</div>
+        <div class="modal-sub">Completa los campos y confirma</div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('modal').style.display='none'">
+        <svg width="14" height="14"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <div>
+        <div class="dfield-label">¿Cuánto?</div>
+        <div class="monto-big">
+          <span class="monto-prefix">$</span>
+          <input class="monto-input" type="number" placeholder="0">
+        </div>
+      </div>
+
+      <div>
+        <div class="dfield-label">Categoría</div>
+        <div class="cat-grid">
+          <div class="dcat" style="--c:#b45309;--bg:#fff8ed" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#b45309"><use href="#i-zap"/></svg></div>
+            <span class="dcat-lbl">Servicios</span>
+          </div>
+          <div class="dcat sel" style="--c:#6d28d9;--bg:#f3f0ff" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#6d28d9"><use href="#i-user"/></svg></div>
+            <span class="dcat-lbl">Sueldos</span>
+          </div>
+          <div class="dcat" style="--c:#0284c7;--bg:#f0f9ff" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#0284c7"><use href="#i-home"/></svg></div>
+            <span class="dcat-lbl">Arriendo</span>
+          </div>
+          <div class="dcat" style="--c:#0891b2;--bg:#ecfeff" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#0891b2"><use href="#i-sparkle"/></svg></div>
+            <span class="dcat-lbl">Limpieza</span>
+          </div>
+          <div class="dcat" style="--c:#c2410c;--bg:#fff7ed" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#c2410c"><use href="#i-truck"/></svg></div>
+            <span class="dcat-lbl">Logística</span>
+          </div>
+          <div class="dcat" style="--c:#16a34a;--bg:#f0fdf4" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#16a34a"><use href="#i-utensils"/></svg></div>
+            <span class="dcat-lbl">Aliment.</span>
+          </div>
+          <div class="dcat" style="--c:#3656e6;--bg:#eef2ff" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#3656e6"><use href="#i-wrench"/></svg></div>
+            <span class="dcat-lbl">Mantenc.</span>
+          </div>
+          <div class="dcat" style="--c:#e11d48;--bg:#fff1f2" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#e11d48"><use href="#i-box"/></svg></div>
+            <span class="dcat-lbl">Materiales</span>
+          </div>
+          <div class="dcat" style="--c:#0f766e;--bg:#f0fdfa" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#0f766e"><use href="#i-folder"/></svg></div>
+            <span class="dcat-lbl">Adm.</span>
+          </div>
+          <div class="dcat" style="--c:#475569;--bg:#f1f5f9" onclick="selCat(this)">
+            <div class="dcat-ico"><svg width="16" height="16" style="color:#475569"><use href="#i-grid"/></svg></div>
+            <span class="dcat-lbl">Otros</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dfield">
+        <div class="dfield-label">Descripción</div>
+        <input class="dinput" type="text" placeholder="Ej: Sueldo mayo — Pedro García…">
+      </div>
+
+      <div class="drow2">
+        <div class="dfield">
+          <div class="dfield-label">Método de pago</div>
+          <select class="dinput">
+            <option>Efectivo</option>
+            <option>Transferencia</option>
+            <option>Débito</option>
+            <option>Crédito</option>
+          </select>
+        </div>
+        <div class="dfield">
+          <div class="dfield-label">Fecha</div>
+          <input class="dinput" type="date" value="2026-06-10">
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn-confirm">
+        <svg width="15" height="15" style="margin-right:6px;vertical-align:middle"><use href="#i-check"/></svg>
+        Confirmar gasto
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function selCat(el){
+  document.querySelectorAll('.dcat').forEach(d=>d.classList.remove('sel'));
+  el.classList.add('sel');
+}
+</script>
+</body>
+</html>

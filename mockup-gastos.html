@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Módulo Gastos Premium</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Manrope',sans-serif;background:#f0f2f8;color:#0f172a;font-size:14px}
+
+/* ── Layout ── */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:220px;background:#fff;border-right:1px solid #e2e8f0;padding:20px 0;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:52px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0}
+.page{padding:20px 24px;overflow-y:auto}
+
+/* ── Topbar ── */
+.topbar-title{font-size:16px;font-weight:800;color:#0f172a}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.btn-sm{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-outline{background:#fff;color:#374151;border:1.5px solid #e2e8f0}
+.btn-outline:hover{border-color:#cbd5e1;background:#f8fafc}
+.btn-primary{background:#3656e6;color:#fff}
+.btn-primary:hover{background:#2d46c4}
+
+/* ── KPI row ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+
+.kpi-card{background:#fff;border-radius:14px;padding:18px 20px;border:1px solid #e2e8f0;position:relative;overflow:hidden;transition:box-shadow .2s}
+.kpi-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.07)}
+.kpi-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0}
+.kpi-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:16px}
+.kpi-label{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kpi-val{font-size:24px;font-weight:800;color:#0f172a;line-height:1}
+.kpi-sub{font-size:11px;color:#94a3b8;margin-top:5px}
+.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 6px;border-radius:99px;margin-top:6px}
+.delta-up{background:#f0fdf4;color:#16a34a}
+.delta-down{background:#fef2f2;color:#dc2626}
+.delta-neu{background:#f8fafc;color:#64748b}
+
+/* ── Main grid ── */
+.main-grid{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+
+/* ── Registro rápido ── */
+.quick-card{background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden}
+.quick-header{padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between}
+.section-title{font-size:14px;font-weight:700;color:#0f172a}
+.section-sub{font-size:11px;color:#94a3b8;margin-top:1px}
+
+/* Categorías chips */
+.cats{display:flex;flex-wrap:wrap;gap:6px;padding:14px 20px 0}
+.cat-chip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;border-radius:10px;cursor:pointer;border:1.5px solid transparent;background:#f8fafc;transition:all .15s;min-width:64px}
+.cat-chip:hover{border-color:#c7d2fe;background:#eef2ff}
+.cat-chip.active{border-color:#3656e6;background:#eef2ff;box-shadow:0 0 0 3px rgba(54,86,230,.1)}
+.cat-icon{font-size:18px;line-height:1}
+.cat-name{font-size:10px;font-weight:700;color:#64748b;white-space:nowrap}
+.cat-chip.active .cat-name{color:#3656e6}
+
+/* Form row */
+.quick-form{display:grid;grid-template-columns:1fr 130px 130px 130px auto;gap:10px;padding:14px 20px 18px;align-items:end}
+.field label{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;display:block}
+.field input,.field select{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;color:#0f172a;background:#fff;outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus{border-color:#3656e6;box-shadow:0 0 0 3px rgba(54,86,230,.08)}
+.btn-add{display:flex;align-items:center;gap:6px;padding:9px 18px;background:#3656e6;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;height:40px;align-self:end}
+.btn-add:hover{background:#2d46c4;transform:translateY(-1px);box-shadow:0 4px 12px rgba(54,86,230,.3)}
+.cat-selected-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:#eef2ff;color:#3656e6;border-radius:99px;font-size:11px;font-weight:700;margin:0 20px 4px}
+
+/* ── Sidebar card ── */
+.side-card{background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:16px}
+.side-card-header{padding:14px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
+.side-card-body{padding:14px 16px}
+
+/* Gráfico dona (SVG placeholder) */
+.donut-wrap{display:flex;align-items:center;gap:16px;padding:4px 0}
+.donut-legend{flex:1;display:flex;flex-direction:column;gap:6px}
+.legend-row{display:flex;align-items:center;gap:6px;font-size:11px}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.legend-name{flex:1;color:#64748b;font-weight:500}
+.legend-pct{font-weight:700;color:#0f172a}
+
+/* ── Historial ── */
+.hist-card{background:#fff;border-radius:16px;border:1px solid #e2e8f0;margin-top:16px;overflow:hidden}
+.hist-header{padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hist-filters{display:flex;align-items:center;gap:8px}
+.search-box{display:flex;align-items:center;gap:6px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:12px;color:#94a3b8}
+.search-box input{border:none;background:none;outline:none;font-family:inherit;font-size:12px;color:#0f172a;width:140px}
+.filter-select{padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:12px;color:#374151;background:#fff;cursor:pointer;outline:none}
+
+/* Category pills */
+.cat-pills{display:flex;gap:6px;padding:10px 20px;flex-wrap:wrap;border-bottom:1px solid #f1f5f9}
+.cat-pill{padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid transparent;background:#f1f5f9;color:#64748b;transition:all .15s}
+.cat-pill.active{background:#0f172a;color:#fff;border-color:#0f172a}
+.cat-pill:not(.active):hover{border-color:#cbd5e1}
+
+/* Table */
+.hist-table{width:100%;border-collapse:collapse}
+.hist-table th{padding:10px 20px;text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #f1f5f9}
+.hist-table td{padding:13px 20px;border-bottom:1px solid #f8fafc;vertical-align:middle}
+.hist-table tr:last-child td{border-bottom:none}
+.hist-table tr:hover td{background:#fafbfd}
+.amount-cell{font-weight:800;color:#0f172a;text-align:right;font-size:14px}
+.cat-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:600}
+.date-cell{font-size:12px;color:#64748b;white-space:nowrap}
+.desc-cell{font-weight:600;color:#0f172a}
+.method-cell{font-size:12px;color:#64748b;display:flex;align-items:center;gap:4px}
+.method-dot{width:6px;height:6px;border-radius:50%;background:#94a3b8;flex-shrink:0}
+.row-actions{display:flex;align-items:center;gap:4px;opacity:0;transition:opacity .15s}
+.hist-table tr:hover .row-actions{opacity:1}
+.icon-btn{width:28px;height:28px;border-radius:7px;border:none;background:#f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.icon-btn:hover{background:#fee2e2;color:#dc2626}
+
+/* ── Sidebar nav (decorativo) ── */
+.nav-logo{padding:0 16px 16px;border-bottom:1px solid #f1f5f9;margin-bottom:8px}
+.nav-logo-text{font-size:15px;font-weight:800;color:#0f172a}
+.nav-logo-sub{font-size:11px;color:#94a3b8}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:13px;font-weight:500;color:#64748b;cursor:pointer;border-radius:8px;margin:0 8px 1px;transition:all .15s}
+.nav-item:hover{background:#f8fafc;color:#0f172a}
+.nav-item.active{background:#eef2ff;color:#3656e6;font-weight:700}
+.nav-section{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;padding:10px 24px 4px}
+
+/* ── Colors ── */
+.c-red{background:#fef2f2;color:#dc2626}
+.c-blue{background:#eff6ff;color:#2563eb}
+.c-green{background:#f0fdf4;color:#16a34a}
+.c-amber{background:#fffbeb;color:#b45309}
+.c-purple{background:#faf5ff;color:#7c3aed}
+.c-slate{background:#f8fafc;color:#475569}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Sidebar decorativo -->
+  <div class="sidebar">
+    <div class="nav-logo" style="padding:16px 16px">
+      <div class="nav-logo-text">ERP Compras</div>
+      <div class="nav-logo-sub">Módulo de Abastecimiento</div>
+    </div>
+    <div class="nav-section">Operación</div>
+    <div class="nav-item">📊 Dashboard</div>
+    <div class="nav-item">🛒 Ventas</div>
+    <div class="nav-item">🔧 Taller</div>
+    <div class="nav-item">👥 Contactos</div>
+    <div class="nav-item">📦 Inventario</div>
+    <div class="nav-section">Administración</div>
+    <div class="nav-item active">💸 Gastos</div>
+    <div class="nav-item">📈 Estadísticas</div>
+    <div class="nav-item">⚙️ Configuración</div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Gastos</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-sm btn-outline">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <button class="btn-sm btn-outline" style="color:#f59e0b;border-color:#fde68a;background:#fffbeb">
+          🏷️ Categorías
+        </button>
+      </div>
+    </div>
+
+    <!-- Page -->
+    <div class="page">
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-accent" style="background:#f59e0b"></div>
+          <div class="kpi-icon" style="background:#fffbeb">💸</div>
+          <div class="kpi-label">Este mes</div>
+          <div class="kpi-val">$0</div>
+          <div class="kpi-sub">0 registros en junio</div>
+          <div class="kpi-delta delta-neu">— Sin cambios</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-accent" style="background:#3656e6"></div>
+          <div class="kpi-icon" style="background:#eef2ff">📋</div>
+          <div class="kpi-label">Total acumulado</div>
+          <div class="kpi-val">$650.000</div>
+          <div class="kpi-sub">Todos los períodos</div>
+          <div class="kpi-delta delta-down">↑ +$100.000 vs anterior</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-accent" style="background:#10b981"></div>
+          <div class="kpi-icon" style="background:#f0fdf4">🗂️</div>
+          <div class="kpi-label">Registros totales</div>
+          <div class="kpi-val" style="color:#10b981">3</div>
+          <div class="kpi-sub">Últimos 3 meses</div>
+          <div class="kpi-delta delta-up">↑ Activo</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-accent" style="background:#8b5cf6"></div>
+          <div class="kpi-icon" style="background:#faf5ff">📌</div>
+          <div class="kpi-label">Mayor categoría</div>
+          <div class="kpi-val" style="font-size:18px;color:#7c3aed">Sueldos</div>
+          <div class="kpi-sub">$600.000 · 92% del total</div>
+          <div class="kpi-delta" style="background:#faf5ff;color:#7c3aed">2 registros</div>
+        </div>
+      </div>
+
+      <!-- Grid principal -->
+      <div class="main-grid">
+
+        <!-- Columna izquierda -->
+        <div>
+
+          <!-- Registro rápido -->
+          <div class="quick-card">
+            <div class="quick-header">
+              <div>
+                <div class="section-title">⚡ Registro rápido</div>
+                <div class="section-sub">Selecciona categoría → completa y agrega</div>
+              </div>
+            </div>
+
+            <!-- Categorías -->
+            <div class="cats">
+              <div class="cat-chip">
+                <span class="cat-icon">⚡</span>
+                <span class="cat-name">Servicios</span>
+              </div>
+              <div class="cat-chip active">
+                <span class="cat-icon">👷</span>
+                <span class="cat-name">Sueldos</span>
+              </div>
+              <div class="cat-chip">
+                <span class="cat-icon">🏠</span>
+                <span class="cat-name">Arriendo</span>
+              </div>
+              <div class="cat-chip">
+                <span class="cat-icon">🧹</span>
+                <span class="cat-name">Limpieza</span>
+              </div>
+              <div class="cat-chip">
+                <span class="cat-icon">🚚</span>
+                <span class="cat-name">Logística</span>
+              </div>
+              <div class="cat-chip">
+                <span class="cat-icon">🍽️</span>
+                <span class="cat-name">Alimentación</span>
+              </div>
+              <div class="cat-chip">
+                <span class="cat-icon">🔧</span>
+                <span class="cat-name">Mantención</span>
+              </div>
+              <div class="cat-chip">
+                <span class="cat-icon">📦</span>
+                <span class="cat-name">Materiales</span>
+              </div>
+              <div class="cat-chip">
+                <span class="cat-icon">🗂️</span>
+                <span class="cat-name">Adm.</span>
+              </div>
+              <div class="cat-chip">
+                <span class="cat-icon">➕</span>
+                <span class="cat-name">Otros</span>
+              </div>
+            </div>
+
+            <!-- Badge categoría activa -->
+            <div style="padding:10px 20px 0;display:flex;align-items:center;gap:6px">
+              <span style="font-size:11px;color:#64748b">Registrando en:</span>
+              <span class="cat-selected-badge" style="margin:0">👷 Sueldos</span>
+            </div>
+
+            <!-- Form -->
+            <div class="quick-form">
+              <div class="field">
+                <label>Descripción</label>
+                <input type="text" placeholder="Ej: Sueldo mayo — Pedro García…" style="width:100%">
+              </div>
+              <div class="field">
+                <label>Monto ($)</label>
+                <input type="number" placeholder="0" style="width:100%">
+              </div>
+              <div class="field">
+                <label>Método</label>
+                <select style="width:100%">
+                  <option>Efectivo</option>
+                  <option>Transferencia</option>
+                  <option>Débito</option>
+                  <option>Crédito</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Fecha</label>
+                <input type="date" value="2026-06-10" style="width:100%">
+              </div>
+              <button class="btn-add">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Agregar
+              </button>
+            </div>
+          </div>
+
+          <!-- Historial -->
+          <div class="hist-card">
+            <div class="hist-header">
+              <div class="section-title">Historial de gastos</div>
+              <div class="hist-filters">
+                <div class="search-box">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" placeholder="Buscar gasto…">
+                </div>
+                <select class="filter-select">
+                  <option>Todos los meses</option>
+                  <option>Junio 2026</option>
+                  <option>Mayo 2026</option>
+                  <option>Abril 2026</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Pills filtro -->
+            <div class="cat-pills">
+              <div class="cat-pill active">Todas</div>
+              <div class="cat-pill">👷 Sueldos <strong style="margin-left:3px">$600.000</strong></div>
+              <div class="cat-pill">⚡ Servicios <strong style="margin-left:3px">$50.000</strong></div>
+            </div>
+
+            <!-- Tabla -->
+            <table class="hist-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Descripción</th>
+                  <th>Categoría</th>
+                  <th>Método</th>
+                  <th style="text-align:right">Monto</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="date-cell">28-05-2026</td>
+                  <td class="desc-cell">Peter</td>
+                  <td><span class="cat-tag c-purple">👷 Sueldos</span></td>
+                  <td class="method-cell"><div class="method-dot" style="background:#3b82f6"></div>Transferencia</td>
+                  <td class="amount-cell">$500.000</td>
+                  <td><div class="row-actions"><button class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td class="date-cell">27-05-2026</td>
+                  <td class="desc-cell">Luz</td>
+                  <td><span class="cat-tag c-amber">⚡ Servicios</span></td>
+                  <td class="method-cell"><div class="method-dot" style="background:#22c55e"></div>Efectivo</td>
+                  <td class="amount-cell">$50.000</td>
+                  <td><div class="row-actions"><button class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div></td>
+                </tr>
+                <tr>
+                  <td class="date-cell">27-05-2026</td>
+                  <td class="desc-cell">Sueldo Esteban</td>
+                  <td><span class="cat-tag c-purple">👷 Sueldos</span></td>
+                  <td class="method-cell"><div class="method-dot" style="background:#3b82f6"></div>Transferencia</td>
+                  <td class="amount-cell">$100.000</td>
+                  <td><div class="row-actions"><button class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div><!-- /col izq -->
+
+        <!-- Columna derecha: sidebar cards -->
+        <div>
+
+          <!-- Distribución por categoría -->
+          <div class="side-card">
+            <div class="side-card-header">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a">Distribución</div>
+                <div style="font-size:11px;color:#94a3b8">Por categoría — todo el período</div>
+              </div>
+            </div>
+            <div class="side-card-body">
+              <div class="donut-wrap">
+                <!-- SVG dona simple -->
+                <svg width="80" height="80" viewBox="0 0 80 80">
+                  <!-- Base ring -->
+                  <circle cx="40" cy="40" r="28" fill="none" stroke="#f1f5f9" stroke-width="14"/>
+                  <!-- Sueldos 92% ~ 175° -->
+                  <circle cx="40" cy="40" r="28" fill="none" stroke="#7c3aed" stroke-width="14"
+                    stroke-dasharray="161 14" stroke-dashoffset="44" stroke-linecap="round"/>
+                  <!-- Servicios 8% -->
+                  <circle cx="40" cy="40" r="28" fill="none" stroke="#f59e0b" stroke-width="14"
+                    stroke-dasharray="14 161" stroke-dashoffset="-117" stroke-linecap="round"/>
+                  <text x="40" y="44" text-anchor="middle" font-size="11" font-weight="800" fill="#0f172a" font-family="Manrope,sans-serif">$650K</text>
+                </svg>
+                <div class="donut-legend">
+                  <div class="legend-row">
+                    <div class="legend-dot" style="background:#7c3aed"></div>
+                    <span class="legend-name">Sueldos</span>
+                    <span class="legend-pct">92%</span>
+                  </div>
+                  <div class="legend-row">
+                    <div class="legend-dot" style="background:#f59e0b"></div>
+                    <span class="legend-name">Servicios</span>
+                    <span class="legend-pct">8%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Barras por categoría -->
+              <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+                    <span style="color:#374151;font-weight:600">👷 Sueldos</span>
+                    <span style="font-weight:700;color:#0f172a">$600.000</span>
+                  </div>
+                  <div style="height:5px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+                    <div style="height:100%;width:92%;background:#7c3aed;border-radius:99px"></div>
+                  </div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+                    <span style="color:#374151;font-weight:600">⚡ Servicios</span>
+                    <span style="font-weight:700;color:#0f172a">$50.000</span>
+                  </div>
+                  <div style="height:5px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+                    <div style="height:100%;width:8%;background:#f59e0b;border-radius:99px"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Últimos 4 meses -->
+          <div class="side-card">
+            <div class="side-card-header">
+              <div style="font-size:13px;font-weight:700;color:#0f172a">Tendencia mensual</div>
+            </div>
+            <div class="side-card-body" style="padding-top:10px">
+              <!-- Mini chart -->
+              <div style="display:flex;gap:6px;align-items:flex-end;height:70px;margin-bottom:10px">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end">
+                  <div style="width:100%;height:22px;background:#e2e8f0;border-radius:4px 4px 0 0;opacity:.6"></div>
+                  <span style="font-size:9px;color:#94a3b8">Mar</span>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end">
+                  <div style="width:100%;height:16px;background:#e2e8f0;border-radius:4px 4px 0 0;opacity:.7"></div>
+                  <span style="font-size:9px;color:#94a3b8">Abr</span>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end">
+                  <div style="width:100%;height:62px;background:#ef4444;border-radius:4px 4px 0 0;opacity:.8"></div>
+                  <span style="font-size:9px;color:#94a3b8">May</span>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end">
+                  <div style="width:100%;height:3px;background:#ef4444;border-radius:4px 4px 0 0"></div>
+                  <span style="font-size:9px;color:#3656e6;font-weight:700">Jun</span>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #f8fafc">
+                  <span style="color:#374151;font-weight:600">Jun <span style="font-size:9px;color:#3656e6">(actual)</span></span>
+                  <strong>$0</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #f8fafc">
+                  <span style="color:#64748b">Mayo</span>
+                  <strong>$650.000</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0">
+                  <span style="color:#64748b">Abril</span>
+                  <strong>$0</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Métodos de pago -->
+          <div class="side-card">
+            <div class="side-card-header">
+              <div style="font-size:13px;font-weight:700;color:#0f172a">Métodos de pago</div>
+            </div>
+            <div class="side-card-body" style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:32px;height:32px;border-radius:9px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🏦</div>
+                <div style="flex:1">
+                  <div style="font-size:12px;font-weight:600;color:#0f172a">Transferencia</div>
+                  <div style="height:4px;background:#f1f5f9;border-radius:99px;margin-top:4px;overflow:hidden"><div style="height:100%;width:92%;background:#3b82f6;border-radius:99px"></div></div>
+                </div>
+                <span style="font-size:12px;font-weight:700;color:#0f172a;flex-shrink:0">$600K</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:32px;height:32px;border-radius:9px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💵</div>
+                <div style="flex:1">
+                  <div style="font-size:12px;font-weight:600;color:#0f172a">Efectivo</div>
+                  <div style="height:4px;background:#f1f5f9;border-radius:99px;margin-top:4px;overflow:hidden"><div style="height:100%;width:8%;background:#22c55e;border-radius:99px"></div></div>
+                </div>
+                <span style="font-size:12px;font-weight:700;color:#0f172a;flex-shrink:0">$50K</span>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /col der -->
+      </div><!-- /main-grid -->
+    </div><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+</body>
+</html>
