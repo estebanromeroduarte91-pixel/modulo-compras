@@ -236,7 +236,7 @@ body {
   <div class="e-body">
     <!-- Mensaje desde config -->
     <div class="e-intro">
-      Hola <strong>*Esteban*</strong>, te informamos que tu <strong>*Orden #0004*</strong> ya se encuentra lista para ser retirada.<br><br>
+      Hola <strong>Esteban</strong>, te informamos que tu <strong>Orden #0004</strong> ya se encuentra lista para ser retirada.<br><br>
       📍 <strong>Sucursal:</strong> Los Dominicos<br>
       🕐 <strong>Horario:</strong> Lun–Vie 9:00–18:00<br>
       📱 <strong>Modelo:</strong> iPhone 8<br><br>
@@ -332,23 +332,63 @@ body {
       Por favor revisa el detalle del presupuesto y confirma si deseas continuar.
     </div>
 
-    <!-- Detalle presupuesto -->
-    <div class="e-section">
+    <!-- Detalle equipo -->
+    <div class="e-section" style="margin-bottom:10px">
       <div class="e-sec-head">
         <div class="e-sec-icon" style="background:#ecefff">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3656e6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3656e6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
         </div>
-        <span class="e-sec-title">Detalle del trabajo</span>
+        <span class="e-sec-title">Datos de la orden</span>
       </div>
       <div class="e-grid2">
+        <div><div class="e-field-label">Cliente</div><div class="e-field-val">Esteban Romero</div></div>
         <div><div class="e-field-label">Equipo</div><div class="e-field-val">iPhone 8</div></div>
         <div><div class="e-field-label">N° Orden</div><div class="e-field-val">#OT-0004</div></div>
-        <div class="e-full"><div class="e-field-label">Trabajo a realizar</div><div class="e-field-val">Cambio de pantalla</div></div>
-        <div class="e-full"><div class="e-field-label">Presupuesto</div><div class="e-field-val" style="font-size:20px;color:#3656e6">$45.000</div></div>
       </div>
     </div>
 
-    <a href="#" class="e-cta">Revisar y aprobar presupuesto →</a>
+    <!-- Productos / presupuesto -->
+    <div class="e-section">
+      <div class="e-sec-head">
+        <div class="e-sec-icon" style="background:#fffbeb">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        </div>
+        <span class="e-sec-title">Presupuesto a aprobar</span>
+      </div>
+      <!-- Fila producto -->
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:4px">
+        <tr style="border-bottom:1px solid #f1f5f9">
+          <td style="padding:10px 0">
+            <div style="font-size:14px;font-weight:700;color:#111827">Pantalla iPhone 8 Original</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px">x1 unidad</div>
+          </td>
+          <td style="text-align:right;padding:10px 0;white-space:nowrap">
+            <div style="font-size:14px;font-weight:700;color:#111827">$35.000</div>
+          </td>
+        </tr>
+        <tr style="border-bottom:1px solid #f1f5f9">
+          <td style="padding:10px 0">
+            <div style="font-size:14px;font-weight:700;color:#111827">Mano de obra instalación</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px">x1 unidad</div>
+          </td>
+          <td style="text-align:right;padding:10px 0;white-space:nowrap">
+            <div style="font-size:14px;font-weight:700;color:#111827">$10.000</div>
+          </td>
+        </tr>
+        <!-- Total -->
+        <tr>
+          <td style="padding:12px 0 4px">
+            <div style="font-size:13px;font-weight:700;color:#374151">Total</div>
+          </td>
+          <td style="text-align:right;padding:12px 0 4px">
+            <div style="font-size:22px;font-weight:800;color:#3656e6">$45.000</div>
+          </td>
+        </tr>
+      </table>
+      <p style="font-size:11px;color:#9ca3af;margin:0">Precios incluyen IVA</p>
+    </div>
+
+    <a href="#" class="e-cta">Aprobar presupuesto</a>
 
     <p style="color:#9ca3af;font-size:12px;margin:0">Si el botón no funciona, copia el enlace enviado en este correo.</p>
   </div>
