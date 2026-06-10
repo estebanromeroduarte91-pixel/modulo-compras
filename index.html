@@ -838,6 +838,82 @@ select{cursor:pointer}
 // ─────────────────────────────────────────────
 const _SB_URL = 'https://nfcdqdbhrsjhbnbtqewl.supabase.co';
 const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mY2RxZGJocnNqaGJuYnRxZXdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MjU0NDksImV4cCI6MjA5NTQwMTQ0OX0.crMaV1oIodW1fTa2oTmYr2rk8hVLJbQPqUFHe6oFAV8';
+
+// ─── CORRECCIÓN ORTOGRÁFICA (LanguageTool) ───────────────────────────────────
+async function ltCorrect(taId, btnId) {
+  const ta = document.getElementById(taId);
+  const btn = document.getElementById(btnId);
+  if (!ta || !btn) return;
+  const text = ta.value.trim();
+  if (!text) { toast('Escribe algo primero', 'error'); return; }
+
+  // Estado: cargando
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:lt-spin .7s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Corrigiendo...`;
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('https://api.languagetool.org/v2/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `text=${encodeURIComponent(text)}&language=es&enabledOnly=false`
+    });
+    const data = await res.json();
+    const matches = (data.matches || []).filter(m => m.replacements?.length > 0);
+
+    if (!matches.length) {
+      btn.innerHTML = '✅ Sin errores';
+      btn.style.color = '#16a34a';
+      btn.style.borderColor = '#86efac';
+      btn.style.background = '#f0fdf4';
+      setTimeout(() => { btn.innerHTML = originalHtml; btn.style.color=''; btn.style.borderColor=''; btn.style.background=''; btn.disabled=false; }, 2500);
+      return;
+    }
+
+    // Aplicar correcciones de atrás hacia adelante para no desplazar índices
+    let corrected = text;
+    const sorted = [...matches].sort((a,b) => b.offset - a.offset);
+    for (const m of sorted) {
+      const rep = m.replacements[0].value;
+      corrected = corrected.slice(0, m.offset) + rep + corrected.slice(m.offset + m.length);
+    }
+    ta.value = corrected;
+
+    // Flash verde en el textarea
+    ta.style.borderColor = '#16a34a';
+    btn.innerHTML = `✅ Corregido (${matches.length} ${matches.length===1?'corrección':'correcciones'})`;
+    btn.style.color = '#16a34a';
+    btn.style.borderColor = '#86efac';
+    btn.style.background = '#f0fdf4';
+    setTimeout(() => {
+      ta.style.borderColor = '';
+      btn.innerHTML = originalHtml;
+      btn.style.color=''; btn.style.borderColor=''; btn.style.background='';
+      btn.disabled = false;
+    }, 3000);
+  } catch(e) {
+    btn.innerHTML = '⚠️ Error de conexión';
+    setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2500);
+  }
+}
+// CSS spin para el botón de carga
+(function(){
+  const s = document.createElement('style');
+  s.textContent = `@keyframes lt-spin { to { transform: rotate(360deg); } }`;
+  document.head.appendChild(s);
+})();
+
+// Helper: retorna HTML del botón corregir para un textarea dado
+function ltBtn(taId) {
+  const btnId = 'lt-btn-' + taId;
+  return `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:7px">
+    <span style="font-size:11px;color:var(--text3)">Texto que verá el cliente</span>
+    <button id="${btnId}" onclick="ltCorrect('${taId}','${btnId}')" style="display:inline-flex;align-items:center;gap:5px;background:#f5f6ff;border:1.5px solid #c7d0fa;color:#3656e6;font-family:inherit;font-size:11px;font-weight:700;padding:4px 10px;border-radius:7px;cursor:pointer;transition:all .15s">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+      ✨ Corregir ortografía
+    </button>
+  </div>`;
+}
 const _sb = supabase.createClient(_SB_URL, _SB_KEY);
 let _empresaId = null;
 let _currentRole = 'admin';      // admin | tecnico | vendedor | cargoId
@@ -9286,7 +9362,7 @@ function renderTaller() {
       </div>
       <div class="form-section-title">Trabajo a realizar</div>
       <div class="form-grid">
-        <div class="form-group span2"><label class="form-label">Descripción del trabajo *</label><textarea class="form-input" id="f-trabajo" placeholder="Ej: Cambio de pantalla, reparación de conector de carga..." oninput="autoCapFirst(this)"></textarea></div>
+        <div class="form-group span2"><label class="form-label">Descripción del trabajo *</label><textarea class="form-input" id="f-trabajo" placeholder="Ej: Cambio de pantalla, reparación de conector de carga..." oninput="autoCapFirst(this)"></textarea>${ltBtn('f-trabajo')}</div>
         <div class="form-group"><label class="form-label">Técnico asignado</label><select class="form-input" id="f-tecnico"><option value="">— Sin asignar —</option></select></div>
         <div class="form-group"><label class="form-label">Presupuesto estimado ($)</label><input type="number" class="form-input" id="f-presup" placeholder="0"></div>
         <div class="form-group"><label class="form-label">Costo real ($)</label><input type="number" class="form-input" id="f-costo" placeholder="0"></div>
@@ -11333,6 +11409,7 @@ function tp_openInspeccionModal(orderId, mode){
         </div>
         <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observaciones</div>
         <textarea id="insp-notas-input" class="form-input" rows="4" placeholder="Describe el estado del equipo: golpes, rayones, piezas rotas, evidencia de agua, intervenciones previas..." style="width:100%;resize:vertical;font-size:13px;line-height:1.6">${insp.notas||''}</textarea>
+        ${ltBtn('insp-notas-input')}
         <div style="margin-top:16px">
           <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Enviar reporte al cliente</div>
           <div style="display:flex;gap:8px">
@@ -11885,6 +11962,7 @@ function tp_renderMensajesSettings(tab){
           <span style="font-size:13px;font-weight:600;color:var(--text)">Mensaje WhatsApp</span>
         </div>
         <textarea id="${waId}" class="form-input" rows="7" style="font-size:13px;line-height:1.7;font-family:inherit;resize:vertical">${tpls[s.waKey]||''}</textarea>
+        ${ltBtn(waId)}
         <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
           <button onclick="tp_resetMsgTemplate('${s.waKey}','${waId}')" style="padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">Restaurar por defecto</button>
           <button onclick="tp_saveMsgTemplate('${s.waKey}','${waId}')" class="btn btn-primary btn-sm">Guardar</button>
@@ -11901,6 +11979,7 @@ function tp_renderMensajesSettings(tab){
           <div style="display:flex;flex-wrap:wrap;gap:6px">${varRow(emId)}</div>
         </div>
         <textarea id="${emId}" class="form-input" rows="7" style="font-size:13px;line-height:1.7;font-family:inherit;resize:vertical">${tpls[s.emailKey]||''}</textarea>
+        ${ltBtn(emId)}
         <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
           <button onclick="tp_resetMsgTemplate('${s.emailKey}','${emId}')" style="padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">Restaurar por defecto</button>
           <button onclick="tp_saveMsgTemplate('${s.emailKey}','${emId}')" class="btn btn-primary btn-sm">Guardar</button>

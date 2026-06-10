@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Botón Corrección Ortográfica</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Manrope', -apple-system, sans-serif;
+  background: #f0f2f8;
+  padding: 40px 24px;
+  color: #1a1d23;
+}
+.page-title { text-align: center; margin-bottom: 36px; }
+.page-title h1 { font-size: 20px; font-weight: 800; }
+.page-title p  { font-size: 13px; color: #6b7280; margin-top: 6px; }
+
+.section-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .7px; color: #9ca3af; margin-bottom: 20px;
+  padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,.07);
+  padding: 24px;
+  max-width: 680px;
+  margin: 0 auto 28px;
+}
+
+.card-title {
+  font-size: 13px; font-weight: 700; color: #374151;
+  margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+}
+.card-subtitle {
+  font-size: 12px; color: #9ca3af; margin-bottom: 16px;
+}
+
+/* Badge de ubicación */
+.location-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #ecefff; color: #3656e6;
+  font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+}
+
+/* Textarea wrapper */
+.field-wrap { position: relative; }
+
+label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: #374151; margin-bottom: 6px;
+}
+
+textarea {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  font-family: inherit; font-size: 14px; color: #111827;
+  line-height: 1.65; resize: vertical; min-height: 90px;
+  background: #fafafa; transition: border-color .15s;
+  outline: none;
+}
+textarea:focus { border-color: #3656e6; background: #fff; }
+
+/* ── BOTÓN CORREGIR — variante flotante (arriba derecha del textarea) ── */
+.btn-corregir-float {
+  position: absolute;
+  top: 8px; right: 8px;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  color: #6b7280;
+  font-family: inherit; font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 8px;
+  cursor: pointer; transition: all .15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  z-index: 2;
+}
+.btn-corregir-float:hover {
+  border-color: #3656e6; color: #3656e6;
+  box-shadow: 0 2px 8px rgba(54,86,230,.12);
+}
+
+/* ── BOTÓN CORREGIR — variante debajo del campo ── */
+.field-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px;
+}
+.field-hint { font-size: 11px; color: #9ca3af; }
+
+.btn-corregir-below {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #f5f6ff; border: 1.5px solid #c7d0fa;
+  color: #3656e6; font-family: inherit;
+  font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 7px;
+  cursor: pointer; transition: all .15s;
+}
+.btn-corregir-below:hover {
+  background: #ecefff; border-color: #3656e6;
+}
+
+/* ── BOTÓN CORREGIR — variante inline en el label ── */
+.label-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.btn-corregir-label {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none;
+  color: #9ca3af; font-family: inherit;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: color .15s;
+  padding: 0;
+}
+.btn-corregir-label:hover { color: #3656e6; }
+
+/* Estado: corrección aplicada */
+.corrected-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #f0fdf4; color: #16a34a;
+  font-size: 11px; font-weight: 700;
+  padding: 3px 8px; border-radius: 6px;
+  margin-left: 8px;
+  opacity: 0; transition: opacity .3s;
+}
+.corrected-badge.show { opacity: 1; }
+
+/* Divider */
+.divider {
+  max-width: 680px; margin: 0 auto 24px;
+  border: none; border-top: 1px solid #e5e7eb;
+}
+
+/* Opciones comparación */
+.options-row {
+  display: flex; gap: 16px; max-width: 680px; margin: 0 auto 32px;
+  flex-wrap: wrap;
+}
+.option-card {
+  flex: 1; min-width: 200px; background: #fff;
+  border-radius: 14px; padding: 18px 20px;
+  border: 2px solid #e5e7eb; cursor: pointer;
+  transition: all .15s;
+}
+.option-card.recommended { border-color: #3656e6; }
+.option-card:hover { border-color: #3656e6; box-shadow: 0 4px 16px rgba(54,86,230,.1); }
+.option-name { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+.option-desc { font-size: 12px; color: #6b7280; line-height: 1.5; }
+.rec-tag { display:inline-block; background:#ecefff; color:#3656e6; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; margin-bottom:8px; }
+
+/* Campos donde aparecería */
+.field-list { max-width: 680px; margin: 0 auto 28px; }
+.field-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid #f3f4f6;
+}
+.field-item:last-child { border-bottom: none; }
+.field-dot { width: 8px; height: 8px; border-radius: 50%; background: #3656e6; flex-shrink: 0; margin-top: 5px; }
+.field-name { font-size: 13px; font-weight: 700; color: #111827; }
+.field-where { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+/* Anim estrella */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { display: inline-block; animation: spin .7s linear infinite; }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>✨ Mockup — Botón Corrección Ortográfica</h1>
+  <p>3 variantes del botón · Elige la que más te guste antes de implementar</p>
+</div>
+
+<!-- Campos donde aparecería -->
+<div class="field-list">
+  <div class="section-label">¿En qué campos aparecería el botón?</div>
+  <div class="field-item">
+    <div class="field-dot"></div>
+    <div>
+      <div class="field-name">Estado del equipo — Inspección</div>
+      <div class="field-where">Módulo Taller → abrir orden → pestaña Inspección → textarea de notas</div>
+    </div>
+  </div>
+  <div class="field-item">
+    <div class="field-dot"></div>
+    <div>
+      <div class="field-name">Mensaje WhatsApp — Listo para retirar</div>
+      <div class="field-where">Configuración → Taller → templates de mensajes</div>
+    </div>
+  </div>
+  <div class="field-item">
+    <div class="field-dot"></div>
+    <div>
+      <div class="field-name">Mensaje Email — Listo para retirar</div>
+      <div class="field-where">Configuración → Taller → templates de mensajes</div>
+    </div>
+  </div>
+  <div class="field-item">
+    <div class="field-dot"></div>
+    <div>
+      <div class="field-name">Falla reportada / Observaciones de la orden</div>
+      <div class="field-where">Modal de nueva orden / editar orden</div>
+    </div>
+  </div>
+  <div class="field-item">
+    <div class="field-dot" style="background:#e5e7eb"></div>
+    <div>
+      <div class="field-name" style="color:#9ca3af">Campos cortos (nombre, modelo, RUT...)</div>
+      <div class="field-where">Sin botón — no aplica para datos técnicos</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- VARIANTES -->
+<div class="section-label" style="max-width:680px;margin:0 auto 20px">3 variantes del botón — elige tu favorita</div>
+
+<!-- VARIANTE 1 — Flotante dentro del textarea -->
+<div class="card">
+  <div class="card-title">
+    <span>Variante 1</span>
+    <span class="location-badge">Flotante dentro del campo</span>
+  </div>
+  <div class="card-subtitle">El botón aparece en la esquina superior derecha del textarea, sobre el texto.</div>
+
+  <div class="field-wrap">
+    <label>Estado del equipo</label>
+    <button class="btn-corregir-float" onclick="corregir('v1')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+      Corregir
+      <span class="corrected-badge" id="badge-v1">✓ Listo</span>
+    </button>
+    <textarea id="ta-v1" placeholder="Ej: el equipo tiene la pantalla quebrada y la bateria esta mala">el equipo tiene la pantalla quebrada y la bateria esta mala, ademas el boton de encendido no funciona bien</textarea>
+  </div>
+</div>
+
+<!-- VARIANTE 2 — Debajo del campo -->
+<div class="card">
+  <div class="card-title">
+    <span>Variante 2</span>
+    <span class="location-badge">Debajo del campo</span>
+  </div>
+  <div class="card-subtitle">El botón aparece alineado a la derecha, debajo del textarea, con hint de ayuda.</div>
+
+  <label>Estado del equipo</label>
+  <textarea id="ta-v2" placeholder="Descripción del estado del equipo...">el equipo tiene la pantalla quebrada y la bateria esta mala, ademas el boton de encendido no funciona bien</textarea>
+  <div class="field-footer">
+    <span class="field-hint">Texto que verá el cliente en el email</span>
+    <button class="btn-corregir-below" onclick="corregir('v2')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+      <span id="btn-v2-text">✨ Corregir ortografía</span>
+    </button>
+  </div>
+</div>
+
+<!-- VARIANTE 3 — En el label -->
+<div class="card">
+  <div class="card-title">
+    <span>Variante 3</span>
+    <span class="location-badge">En el label, mínimo</span>
+  </div>
+  <div class="card-subtitle">Discreto: aparece como un link pequeño junto al label del campo. No ocupa espacio extra.</div>
+
+  <div class="label-row">
+    <label style="margin:0">Estado del equipo</label>
+    <button class="btn-corregir-label" onclick="corregir('v3')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+      <span id="btn-v3-text">✨ Corregir</span>
+    </button>
+  </div>
+  <textarea id="ta-v3" placeholder="Descripción del estado del equipo...">el equipo tiene la pantalla quebrada y la bateria esta mala, ademas el boton de encendido no funciona bien</textarea>
+</div>
+
+<script>
+// Simulación de corrección (en producción llamaría a LanguageTool API)
+const textoCorregido = 'El equipo tiene la pantalla quebrada y la batería está mala. Además, el botón de encendido no funciona bien.';
+
+function corregir(variante) {
+  const ta = document.getElementById('ta-' + variante);
+
+  if (variante === 'v1') {
+    const btn = document.querySelector('.btn-corregir-float');
+    const badge = document.getElementById('badge-v1');
+    btn.innerHTML = '<span class="spinning">⚙</span> Corrigiendo...';
+    btn.style.pointerEvents = 'none';
+    setTimeout(() => {
+      ta.value = textoCorregido;
+      ta.style.borderColor = '#16a34a';
+      btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg> Corregir <span class="corrected-badge show" id="badge-v1">✓ Listo</span>`;
+      btn.style.borderColor = '#16a34a';
+      btn.style.color = '#16a34a';
+      btn.style.pointerEvents = 'auto';
+      setTimeout(() => { ta.style.borderColor = ''; btn.style.borderColor = ''; btn.style.color = ''; }, 2500);
+    }, 1000);
+  }
+
+  if (variante === 'v2') {
+    const btn = document.getElementById('btn-v2-text');
+    btn.textContent = '⚙ Corrigiendo...';
+    setTimeout(() => {
+      ta.value = textoCorregido;
+      ta.style.borderColor = '#16a34a';
+      btn.textContent = '✅ Corregido';
+      setTimeout(() => { ta.style.borderColor = ''; btn.textContent = '✨ Corregir ortografía'; }, 2500);
+    }, 1000);
+  }
+
+  if (variante === 'v3') {
+    const btn = document.getElementById('btn-v3-text');
+    btn.textContent = '⚙ Corrigiendo...';
+    setTimeout(() => {
+      ta.value = textoCorregido;
+      ta.style.borderColor = '#16a34a';
+      btn.textContent = '✅ Corregido';
+      setTimeout(() => { ta.style.borderColor = ''; btn.textContent = '✨ Corregir'; }, 2500);
+    }, 1000);
+  }
+}
+</script>
+</body>
+</html>
