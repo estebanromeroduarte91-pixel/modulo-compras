@@ -8038,15 +8038,15 @@ function renderEstadisticas(){
         ${tabs.map(t=>`<button onclick="_stSetTab('${t.id}')" id="st-tab-${t.id}" style="padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;background:${window._stTab===t.id?'#fff':'transparent'};color:${window._stTab===t.id?'#1a1d23':'#6b7280'};box-shadow:${window._stTab===t.id?'0 1px 4px rgba(0,0,0,.1)':'none'}">${t.label}</button>`).join('')}
       </div>
       <div style="display:flex;align-items:center;gap:6px">
-        <div style="display:flex;align-items:center;gap:4px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:4px 8px;cursor:pointer" onclick="this.querySelector('input').showPicker()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <input type="date" id="st-from" value="${window._stFrom}" onchange="_stSetCustom()" style="border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;color:#374151;outline:none;cursor:pointer;width:90px">
-        </div>
+        <label style="display:flex;align-items:center;gap:5px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:5px 9px;cursor:pointer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="date" id="st-from" value="${window._stFrom}" onchange="_stSetCustom()" style="border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;color:#374151;outline:none;cursor:pointer;width:110px;min-width:0">
+        </label>
         <span style="font-size:11px;color:#d1d5db;font-weight:600">→</span>
-        <div style="display:flex;align-items:center;gap:4px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:4px 8px;cursor:pointer" onclick="this.querySelector('input').showPicker()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <input type="date" id="st-to" value="${window._stTo}" onchange="_stSetCustom()" style="border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;color:#374151;outline:none;cursor:pointer;width:90px">
-        </div>
+        <label style="display:flex;align-items:center;gap:5px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:5px 9px;cursor:pointer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="date" id="st-to" value="${window._stTo}" onchange="_stSetCustom()" style="border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;color:#374151;outline:none;cursor:pointer;width:110px;min-width:0">
+        </label>
       </div>
     </div>`;
 
@@ -8185,12 +8185,12 @@ function _stBuild(){
   const maxMO=Math.max(...meses6.map(m=>m.ordenes),1);
 
   // ── Render ──
-  const card=`background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:14px 16px`;
-  const ct=`font-size:12px;font-weight:700;color:#111827;margin-bottom:2px`;
-  const cs=`font-size:10px;color:#9ca3af;margin-bottom:10px`;
+  const card=`background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:18px 20px`;
+  const ct=`font-size:13px;font-weight:700;color:#111827;margin-bottom:3px`;
+  const cs=`font-size:11px;color:#9ca3af;margin-bottom:12px`;
 
   const vchart=(bars,color)=>`
-    <div style="display:flex;gap:4px;align-items:flex-end;height:64px">
+    <div style="display:flex;gap:5px;align-items:flex-end;height:80px">
       ${bars.map(b=>`
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end">
           <div title="${b.tip}" style="width:100%;background:${color};opacity:${b.cur?1:.5};height:${b.h}px;border-radius:3px 3px 0 0;min-height:2px"></div>
@@ -8230,16 +8230,18 @@ function _stBuild(){
 
   document.getElementById('page-content').innerHTML=`
   <style>
-    .st-kpi{display:flex;flex-direction:column;gap:2px}
+    #page-content:has(.st-wrap){padding:14px!important}
+    .st-kpi{display:flex;flex-direction:column;gap:3px}
     .st-kpi-lbl{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px}
-    .st-kpi-val{font-size:22px;font-weight:800;color:#111827;line-height:1.1}
-    .st-kpi-sub{font-size:11px;color:#6b7280;margin-top:2px}
-    .st-prod-row{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid #f3f4f6;position:relative;cursor:default}
+    .st-kpi-val{font-size:26px;font-weight:800;color:#111827;line-height:1.1}
+    .st-kpi-sub{font-size:11px;color:#6b7280;margin-top:3px}
+    .st-prod-row{display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid #f3f4f6;position:relative;cursor:default}
     .st-prod-row:last-child{border-bottom:none}
     .st-prod-tooltip{position:absolute;right:4px;bottom:calc(100% + 4px);background:#1a1d23;color:#fff;font-size:11px;font-weight:700;padding:4px 9px;border-radius:7px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.18)}
     .st-prod-tooltip::after{content:'';position:absolute;right:12px;top:100%;border:5px solid transparent;border-top-color:#1a1d23}
     .st-prod-row:hover .st-prod-tooltip{opacity:1}
   </style>
+  <div class="st-wrap">
 
   <!-- Fila 1: KPIs -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
@@ -8326,7 +8328,7 @@ function _stBuild(){
     <div style="${card}">
       <div style="${ct}">Gastos por mes</div>
       <div style="${cs}">Últimos 6 meses</div>
-      ${vchart(meses6.map(m=>({h:Math.max(2,Math.round(m.gastos/maxMG*60)),lbl:m.lbl,cur:m.isCur,tip:fmt$(m.gastos)})),'#ef4444')}
+      ${vchart(meses6.map(m=>({h:Math.max(2,Math.round(m.gastos/maxMG*72)),lbl:m.lbl,cur:m.isCur,tip:fmt$(m.gastos)})),'#ef4444')}
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
         ${monthRows(meses6,m=>m.gastos)}
       </div>
@@ -8344,7 +8346,7 @@ function _stBuild(){
     <div style="${card}">
       <div style="${ct}">Compras por mes</div>
       <div style="${cs}">Órdenes de compra recibidas</div>
-      ${vchart(meses6.map(m=>({h:Math.max(2,Math.round(m.compras/maxMC*60)),lbl:m.lbl,cur:m.isCur,tip:fmt$(m.compras)})),'#3656e6')}
+      ${vchart(meses6.map(m=>({h:Math.max(2,Math.round(m.compras/maxMC*72)),lbl:m.lbl,cur:m.isCur,tip:fmt$(m.compras)})),'#3656e6')}
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
         ${monthRows(meses6,m=>m.compras)}
       </div>
@@ -8362,7 +8364,7 @@ function _stBuild(){
     <div style="${card}">
       <div style="${ct}">Órdenes completadas</div>
       <div style="${cs}">Reparaciones entregadas por mes</div>
-      ${vchart(meses6.map(m=>({h:Math.max(2,Math.round(m.ordenes/maxMO*60)),lbl:m.lbl,cur:m.isCur,tip:m.ordenes+' órd.'})),'#f59e0b')}
+      ${vchart(meses6.map(m=>({h:Math.max(2,Math.round(m.ordenes/maxMO*72)),lbl:m.lbl,cur:m.isCur,tip:m.ordenes+' órd.'})),'#f59e0b')}
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
         ${monthRows(meses6,m=>m.ordenes,'órd.')}
       </div>
@@ -8372,6 +8374,7 @@ function _stBuild(){
       </div>
     </div>
 
+  </div>
   </div>`;
 }
 
