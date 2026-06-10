@@ -839,7 +839,59 @@ select{cursor:pointer}
 const _SB_URL = 'https://nfcdqdbhrsjhbnbtqewl.supabase.co';
 const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mY2RxZGJocnNqaGJuYnRxZXdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MjU0NDksImV4cCI6MjA5NTQwMTQ0OX0.crMaV1oIodW1fTa2oTmYr2rk8hVLJbQPqUFHe6oFAV8';
 
-// ─── CORRECCIÓN ORTOGRÁFICA (LanguageTool) ───────────────────────────────────
+// ─── CORRECCIÓN ORTOGRÁFICA (LanguageTool + reglas de comas en español) ──────
+
+// Reglas de comas: palabras/frases que deben ir seguidas de coma al inicio de oración o tras punto
+const _LT_COMA_RULES = [
+  // Conectores adversativos
+  /\b(Sin embargo)(\s+)/gi,
+  /\b(No obstante)(\s+)/gi,
+  /\b(Aun así)(\s+)/gi,
+  /\b(A pesar de ello)(\s+)/gi,
+  /\b(De todas formas)(\s+)/gi,
+  /\b(De todos modos)(\s+)/gi,
+  // Conectores aditivos / conclusivos
+  /\b(Además)(\s+)/gi,
+  /\b(Asimismo)(\s+)/gi,
+  /\b(Por lo tanto)(\s+)/gi,
+  /\b(Por ende)(\s+)/gi,
+  /\b(En consecuencia)(\s+)/gi,
+  /\b(Por consiguiente)(\s+)/gi,
+  /\b(En conclusión)(\s+)/gi,
+  /\b(En definitiva)(\s+)/gi,
+  /\b(En resumen)(\s+)/gi,
+  // Conectores explicativos / ejemplificadores
+  /\b(Es decir)(\s+)/gi,
+  /\b(O sea)(\s+)/gi,
+  /\b(Por ejemplo)(\s+)/gi,
+  /\b(Esto es)(\s+)/gi,
+  // Conectores condicionales / temporales al inicio
+  /\b(Por otro lado)(\s+)/gi,
+  /\b(Por otra parte)(\s+)/gi,
+  /\b(En cambio)(\s+)/gi,
+  /\b(En primer lugar)(\s+)/gi,
+  /\b(En segundo lugar)(\s+)/gi,
+  /\b(Finalmente)(\s+)/gi,
+  /\b(Por último)(\s+)/gi,
+  /\b(En efecto)(\s+)/gi,
+];
+
+function _ltAplicarComas(text) {
+  let t = text;
+  for (const rule of _LT_COMA_RULES) {
+    // Solo agregar coma si no hay ya una coma o punto y coma después
+    t = t.replace(rule, (match, p1, p2) => {
+      // Verificar que justo después no haya ya una coma
+      return p2.startsWith(',') ? match : p1 + ',' + p2;
+    });
+  }
+  // Asegurar punto final si no termina en puntuación
+  t = t.replace(/([^.!?\n])(\s*)$/, '$1.');
+  // Capitalizar primera letra de cada oración (tras punto/exclamación/interrogación + espacio)
+  t = t.replace(/(^|[.!?]\s+)([a-záéíóúñü])/g, (m, p1, p2) => p1 + p2.toUpperCase());
+  return t;
+}
+
 async function ltCorrect(taId, btnId) {
   const ta = document.getElementById(taId);
   const btn = document.getElementById(btnId);
@@ -847,7 +899,6 @@ async function ltCorrect(taId, btnId) {
   const text = ta.value.trim();
   if (!text) { toast('Escribe algo primero', 'error'); return; }
 
-  // Estado: cargando
   const originalHtml = btn.innerHTML;
   btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:lt-spin .7s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Corrigiendo...`;
   btn.disabled = true;
@@ -856,39 +907,38 @@ async function ltCorrect(taId, btnId) {
     const res = await fetch('https://api.languagetool.org/v2/check', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `text=${encodeURIComponent(text)}&language=es&enabledOnly=false`
+      body: `text=${encodeURIComponent(text)}&language=es&level=picky&enabledOnly=false`
     });
     const data = await res.json();
     const matches = (data.matches || []).filter(m => m.replacements?.length > 0);
 
-    if (!matches.length) {
+    // 1. Aplicar correcciones de LanguageTool (tildes, ortografía, gramática)
+    let corrected = text;
+    const sorted = [...matches].sort((a, b) => b.offset - a.offset);
+    for (const m of sorted) {
+      corrected = corrected.slice(0, m.offset) + m.replacements[0].value + corrected.slice(m.offset + m.length);
+    }
+
+    // 2. Aplicar reglas de comas + punto final + capitalización
+    corrected = _ltAplicarComas(corrected);
+
+    const totalFixes = matches.length + (corrected !== text ? 1 : 0);
+
+    if (corrected === text) {
       btn.innerHTML = '✅ Sin errores';
-      btn.style.color = '#16a34a';
-      btn.style.borderColor = '#86efac';
-      btn.style.background = '#f0fdf4';
-      setTimeout(() => { btn.innerHTML = originalHtml; btn.style.color=''; btn.style.borderColor=''; btn.style.background=''; btn.disabled=false; }, 2500);
+      btn.style.cssText += ';color:#16a34a;border-color:#86efac;background:#f0fdf4';
+      setTimeout(() => { btn.innerHTML = originalHtml; btn.removeAttribute('style'); btn.disabled = false; }, 2500);
       return;
     }
 
-    // Aplicar correcciones de atrás hacia adelante para no desplazar índices
-    let corrected = text;
-    const sorted = [...matches].sort((a,b) => b.offset - a.offset);
-    for (const m of sorted) {
-      const rep = m.replacements[0].value;
-      corrected = corrected.slice(0, m.offset) + rep + corrected.slice(m.offset + m.length);
-    }
     ta.value = corrected;
-
-    // Flash verde en el textarea
     ta.style.borderColor = '#16a34a';
-    btn.innerHTML = `✅ Corregido (${matches.length} ${matches.length===1?'corrección':'correcciones'})`;
-    btn.style.color = '#16a34a';
-    btn.style.borderColor = '#86efac';
-    btn.style.background = '#f0fdf4';
+    btn.innerHTML = `✅ ${matches.length} corrección${matches.length!==1?'es':''}`;
+    btn.style.cssText += ';color:#16a34a;border-color:#86efac;background:#f0fdf4';
     setTimeout(() => {
       ta.style.borderColor = '';
       btn.innerHTML = originalHtml;
-      btn.style.color=''; btn.style.borderColor=''; btn.style.background='';
+      btn.removeAttribute('style');
       btn.disabled = false;
     }, 3000);
   } catch(e) {
