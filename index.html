@@ -900,29 +900,56 @@ async function ltCorrect(taId, btnId) {
   if (!text) { toast('Escribe algo primero', 'error'); return; }
 
   const originalHtml = btn.innerHTML;
-  btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:lt-spin .7s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Corrigiendo...`;
+  const spinSvg = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:lt-spin .7s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+  btn.innerHTML = `${spinSvg} Corrigiendo...`;
   btn.disabled = true;
 
+  const groqKey = localStorage.getItem('erp_groq_key') || '';
+
   try {
-    const res = await fetch('https://api.languagetool.org/v2/check', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `text=${encodeURIComponent(text)}&language=es&level=picky&enabledOnly=false`
-    });
-    const data = await res.json();
-    const matches = (data.matches || []).filter(m => m.replacements?.length > 0);
-
-    // 1. Aplicar correcciones de LanguageTool (tildes, ortografía, gramática)
     let corrected = text;
-    const sorted = [...matches].sort((a, b) => b.offset - a.offset);
-    for (const m of sorted) {
-      corrected = corrected.slice(0, m.offset) + m.replacements[0].value + corrected.slice(m.offset + m.length);
+
+    if (groqKey) {
+      // ── Corrección con IA (Groq) ─────────────────────────────────────────
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${groqKey}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          temperature: 0,
+          messages: [
+            {
+              role: 'system',
+              content: 'Eres un corrector de textos en español. Corrige ortografía, tildes, puntuación y comas del texto que te envíe. Mantén el mismo significado y tono. Devuelve SOLO el texto corregido, sin explicaciones, sin comillas, sin prefijos.'
+            },
+            { role: 'user', content: text }
+          ]
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Groq error ${res.status}`);
+      }
+      const data = await res.json();
+      corrected = data.choices?.[0]?.message?.content?.trim() || text;
+    } else {
+      // ── Fallback: LanguageTool + reglas de comas ─────────────────────────
+      const res = await fetch('https://api.languagetool.org/v2/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `text=${encodeURIComponent(text)}&language=es&level=picky&enabledOnly=false`
+      });
+      const data = await res.json();
+      const matches = (data.matches || []).filter(m => m.replacements?.length > 0);
+      const sorted = [...matches].sort((a, b) => b.offset - a.offset);
+      for (const m of sorted) {
+        corrected = corrected.slice(0, m.offset) + m.replacements[0].value + corrected.slice(m.offset + m.length);
+      }
+      corrected = _ltAplicarComas(corrected);
     }
-
-    // 2. Aplicar reglas de comas + punto final + capitalización
-    corrected = _ltAplicarComas(corrected);
-
-    const totalFixes = matches.length + (corrected !== text ? 1 : 0);
 
     if (corrected === text) {
       btn.innerHTML = '✅ Sin errores';
@@ -933,7 +960,7 @@ async function ltCorrect(taId, btnId) {
 
     ta.value = corrected;
     ta.style.borderColor = '#16a34a';
-    btn.innerHTML = `✅ ${matches.length} corrección${matches.length!==1?'es':''}`;
+    btn.innerHTML = `✅ Corregido`;
     btn.style.cssText += ';color:#16a34a;border-color:#86efac;background:#f0fdf4';
     setTimeout(() => {
       ta.style.borderColor = '';
@@ -941,9 +968,11 @@ async function ltCorrect(taId, btnId) {
       btn.removeAttribute('style');
       btn.disabled = false;
     }, 3000);
+
   } catch(e) {
-    btn.innerHTML = '⚠️ Error de conexión';
-    setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2500);
+    console.error('ltCorrect error:', e);
+    btn.innerHTML = `⚠️ ${e.message?.slice(0,40) || 'Error'}`;
+    setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 3000);
   }
 }
 // CSS spin para el botón de carga
@@ -1953,6 +1982,18 @@ function renderConfigGlobal(){
                 <input id="smtp-resend-key" type="password"
                   placeholder="${localStorage.getItem('erp_resend_key')?'✓ Clave guardada — pega nueva para cambiar':'re_xxxxxxxxxxxxxxxxxxxx'}"
                   style="width:100%;padding:8px 12px;border:1px solid #bae6fd;border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;background:#fff;outline:none;color:#0c4a6e">
+              </div>
+            </div>
+          </div>
+          <div style="grid-column:span 12">
+            <div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:10px;padding:14px 18px;display:flex;align-items:flex-start;gap:12px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+              <div style="flex:1">
+                <div style="font-size:12.5px;font-weight:700;color:#5b21b6;margin-bottom:4px">Groq API Key — Corrección ortográfica con IA</div>
+                <div style="font-size:12px;color:#6d28d9;margin-bottom:10px;line-height:1.5">Permite corregir automáticamente ortografía, tildes <strong>y comas</strong> usando IA. Gratis en <a href="https://console.groq.com" target="_blank" style="color:#5b21b6;font-weight:700">console.groq.com</a> — sin tarjeta de crédito.</div>
+                <input id="smtp-groq-key" type="password"
+                  placeholder="${localStorage.getItem('erp_groq_key')?'✓ Clave guardada — pega nueva para cambiar':'gsk_xxxxxxxxxxxxxxxxxxxx'}"
+                  style="width:100%;padding:8px 12px;border:1px solid #c4b5fd;border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;background:#fff;outline:none;color:#3b0764">
               </div>
             </div>
           </div>
@@ -12068,8 +12109,10 @@ function tp_saveSmtp(){
   const prev=DB.get('tp_smtp_config')||{};
   const pwInput=(document.getElementById('smtp-password')?.value||'').trim();
   const resendInput=(document.getElementById('smtp-resend-key')?.value||'').trim();
-  // Guardar Resend key en localStorage propio (no sincroniza a Supabase para no perderlo)
+  const groqInput=(document.getElementById('smtp-groq-key')?.value||'').trim();
+  // Guardar keys en localStorage propio (no sincroniza a Supabase)
   if(resendInput) localStorage.setItem('erp_resend_key', resendInput);
+  if(groqInput) localStorage.setItem('erp_groq_key', groqInput);
   const cfg={
     host,
     port:parseInt(document.getElementById('smtp-port')?.value)||587,
@@ -12082,6 +12125,7 @@ function tp_saveSmtp(){
   DB.set('tp_smtp_config',cfg);
   document.getElementById('smtp-password').value='';
   if(document.getElementById('smtp-resend-key')) document.getElementById('smtp-resend-key').value='';
+  if(document.getElementById('smtp-groq-key')) document.getElementById('smtp-groq-key').value='';
   toast('Configuración guardada ✓','success');
 }
 
