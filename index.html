@@ -2550,6 +2550,131 @@ function _renderDashboardGlobal(){
   },60);
 }
 
+// ── Buscador de clientes en Ventas ───────────────────────
+let _vtaCliSel=null;
+function _vtaCliSearch(q){
+  q=(q||'').trim();
+  const clr=document.getElementById('vta-cli-clear');
+  if(clr) clr.style.display=q?'block':'none';
+  if(!q){ _vtaCliDropHide(); return; }
+  const clientes=getClientes();
+  const ventas=getVentas();
+  const ql=q.toLowerCase();
+  const matches=clientes.filter(c=>{
+    const nombre=(c.nombre||'').toLowerCase();
+    const rut=(c.rut||'').toLowerCase().replace(/[.\-]/g,'');
+    const rutQ=ql.replace(/[.\-]/g,'');
+    return nombre.includes(ql)||rut.includes(rutQ);
+  }).slice(0,6);
+  const drop=document.getElementById('vta-cli-drop');
+  if(!drop) return;
+  if(!matches.length){
+    drop.innerHTML=`<div style="padding:16px 14px;text-align:center;color:#94a3b8;font-size:12px">Sin resultados para "${escAttr(q)}"</div>`;
+    drop.style.display='block'; return;
+  }
+  const ini=n=>(n||'?').split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase();
+  const bgColors=['#eff6ff','#f0fdf4','#fff7ed','#f5f3ff','#fef2f2','#f0f9ff'];
+  const txColors=['#2563eb','#16a34a','#ea580c','#7c3aed','#dc2626','#0284c7'];
+  drop.innerHTML=`
+    <div style="padding:8px 14px 4px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px">Resultados</div>
+    ${matches.map((c,i)=>{
+      const nv=ventas.filter(v=>v.estado!=='anulada'&&(v.clienteId===c.id||(v.cliente||'').toLowerCase()===(c.nombre||'').toLowerCase())).length;
+      const bg=bgColors[i%bgColors.length];
+      const tx=txColors[i%txColors.length];
+      return `<div onclick="_vtaCliSelect('${c.id}')"
+        style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:background .12s"
+        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:50%;background:${bg};color:${tx};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${ini(c.nombre)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#0f172a">${escAttr(c.nombre||'—')}</div>
+          <div style="font-size:11px;color:#64748b">${c.rut?'RUT '+c.rut+' · ':''}${c.email||'Sin email'}</div>
+        </div>
+        <div style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#f1f5f9;color:#475569;flex-shrink:0">${nv} venta${nv!==1?'s':''}</div>
+      </div>`;
+    }).join('')}
+    <div style="border-top:1px solid #f1f5f9"></div>
+    <div onclick="nav('clientes')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;font-size:12px;font-weight:600;color:#2563eb;cursor:pointer" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+      Ver todos los contactos
+    </div>`;
+  drop.style.display='block';
+}
+function _vtaCliDropHide(){
+  const d=document.getElementById('vta-cli-drop');
+  if(d) d.style.display='none';
+}
+function _vtaCliSelect(clienteId){
+  const clientes=getClientes();
+  const c=clientes.find(x=>x.id===clienteId);
+  if(!c) return;
+  _vtaCliSel=c;
+  // Rellenar input
+  const inp=document.getElementById('vta-cli-search');
+  if(inp){ inp.value=c.nombre||''; inp.style.borderColor='#2563eb'; inp.style.background='#fff'; inp.style.width='260px'; }
+  const clr=document.getElementById('vta-cli-clear');
+  if(clr) clr.style.display='block';
+  _vtaCliDropHide();
+  // Filtrar tabla por este cliente
+  _vtaFiltrarPorCliente(c);
+  // Renderizar ficha
+  _vtaCliRenderPanel(c);
+}
+function _vtaFiltrarPorCliente(c){
+  const ventas=getVentas().filter(v=>v.estado!=='anulada'&&(v.clienteId===c.id||(v.cliente||'').toLowerCase()===(c.nombre||'').toLowerCase()));
+  const isGlobal=!_currentBranchContext&&!tp_currentBranchId;
+  const el=document.getElementById('vta-table');
+  if(el) el.innerHTML=renderVentasTable(ventas.slice().reverse().slice(0,200), isGlobal&&!_vtaSucursal);
+}
+function _vtaCliRenderPanel(c){
+  const panel=document.getElementById('vta-cli-panel');
+  if(!panel) return;
+  const ventas=getVentas().filter(v=>v.estado!=='anulada'&&(v.clienteId===c.id||(v.cliente||'').toLowerCase()===(c.nombre||'').toLowerCase()));
+  const total=ventas.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const ticket=ventas.length?Math.round(total/ventas.length):0;
+  const sorted=ventas.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const ultima=sorted[0]?.fecha?fmtDate(sorted[0].fecha):'—';
+  const ini=(c.nombre||'?').split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase();
+  panel.style.display='block';
+  panel.innerHTML=`
+  <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden">
+    <div style="padding:14px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #f1f5f9">
+      <div style="width:40px;height:40px;border-radius:50%;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${ini}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:800;color:#0f172a">${escAttr(c.nombre||'—')}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:1px">${[c.rut?'RUT '+c.rut:'',c.email||'',c.telefono||''].filter(Boolean).join(' · ')||'Sin datos adicionales'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button onclick="nav('clientes')" style="padding:5px 12px;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;font-size:11px;font-weight:600;color:#374151;cursor:pointer;font-family:inherit">Ver perfil completo →</button>
+        <button onclick="_vtaCliClear()" style="padding:5px 8px;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;cursor:pointer;color:#94a3b8;line-height:0" title="Cerrar ficha">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr)">
+      ${[['Total comprado',fmt$(total),'#2563eb'],['Nro. de ventas',ventas.length,'#0f172a'],['Ticket promedio',ticket>0?fmt$(ticket):'—','#0f172a'],['Última compra',ultima,'#0f172a']].map(([lbl,val,col],i)=>`
+      <div style="padding:11px 16px;${i<3?'border-right:1px solid #f1f5f9':''}">
+        <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">${lbl}</div>
+        <div style="font-size:14px;font-weight:800;color:${col}">${val}</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+function _vtaCliClear(){
+  _vtaCliSel=null;
+  const inp=document.getElementById('vta-cli-search');
+  if(inp){ inp.value=''; inp.style.borderColor='#e2e8f0'; inp.style.background='#f8fafc'; inp.style.width='220px'; }
+  const clr=document.getElementById('vta-cli-clear');
+  if(clr) clr.style.display='none';
+  _vtaCliDropHide();
+  const panel=document.getElementById('vta-cli-panel');
+  if(panel) panel.style.display='none';
+  // Restaurar tabla
+  filtrarVentas('');
+}
+function _vtaDescargarBoleta(ventaId){
+  toast('Descarga de boleta PDF disponible próximamente','info');
+}
+
 // ── Tooltip métodos de pago ──────────────────────────────
 function _dbMetTip(e,label,color,sucJson,total){
   let suc={};try{suc=JSON.parse(sucJson);}catch(ex){}
@@ -2653,9 +2778,22 @@ function renderVentas(){
     _renderPOS();
   } else {
     document.getElementById('topbar-actions').innerHTML=`
+      <div id="vta-cli-search-wrap" style="position:relative">
+        <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="vta-cli-search" type="text" placeholder="Buscar cliente, RUT…" autocomplete="off"
+          oninput="_vtaCliSearch(this.value)"
+          onkeydown="if(event.key==='Escape'){_vtaCliClear();}"
+          style="height:34px;width:220px;border-radius:8px;border:1.5px solid #e2e8f0;padding:0 28px 0 32px;font-size:13px;font-family:inherit;color:#0f172a;background:#f8fafc;outline:none;transition:all .2s"
+          onfocus="this.style.borderColor='#2563eb';this.style.background='#fff';this.style.width='260px'"
+          onblur="if(!this.value){this.style.borderColor='#e2e8f0';this.style.background='#f8fafc';this.style.width='220px'};setTimeout(_vtaCliDropHide,200)">
+        <button id="vta-cli-clear" onclick="_vtaCliClear()" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:2px;line-height:0">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div id="vta-cli-drop" style="display:none;position:absolute;top:calc(100% + 6px);left:0;width:320px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:9999;overflow:hidden"></div>
+      </div>
       <button class="btn btn-secondary" onclick="modalImportarVentas()" style="display:flex;align-items:center;gap:6px"><i class="ti ti-file-spreadsheet" style="font-size:15px"></i> Importar historial</button>
       ${getVentas().some(v=>v.origen==='importado')?`<button class="btn btn-secondary" onclick="limpiarVentasImportadas()" style="display:flex;align-items:center;gap:6px;color:#dc2626;border-color:#fca5a5"><i class="ti ti-trash" style="font-size:15px"></i> Limpiar importadas</button>`:''}
-      <button class="btn btn-primary" onclick="navVentas('pos')">🛒 Ir al POS</button>`;
+      <button class="btn btn-primary" onclick="navVentas('pos')" style="display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Ir al POS</button>`;
     _renderHistorial();
   }
 }
@@ -3703,6 +3841,9 @@ function _renderHistorialReal(){
     </div>
   </div>
 
+  <!-- Ficha cliente (se muestra al seleccionar desde buscador) -->
+  <div id="vta-cli-panel" style="display:none;margin-bottom:14px"></div>
+
   <!-- Tabla de ventas -->
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--gray-100);flex-wrap:wrap;gap:10px">
@@ -3729,7 +3870,16 @@ function renderVentasTable(ventas, showSuc=false){
   const hayMas=sorted.length>_vtaTablePage;
   return `<table><thead><tr><th>Folio</th><th>Fecha</th><th>Cliente</th>${showSuc?'<th>Sucursal</th>':''}<th>Ítems</th><th>Total</th><th>Pago</th><th>Estado</th><th>Acciones</th></tr></thead>
   <tbody>${visible.map(v=>`<tr style="cursor:pointer" onclick="verVenta('${v.id}')">
-    <td><strong style="color:var(--primary)">${v.numero}</strong></td>
+    <td>
+      <div style="display:flex;align-items:center;gap:7px">
+        <strong style="color:var(--primary)">${v.numero}</strong>
+        <button onclick="event.stopPropagation();_vtaDescargarBoleta('${v.id}')" title="Descargar boleta PDF"
+          style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:2px;line-height:0;border-radius:5px;transition:color .15s"
+          onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#94a3b8'">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+      </div>
+    </td>
     <td>${fmtDate(v.fecha)}</td>
     <td>${v.cliente||'—'}</td>
     ${showSuc?`<td><span style="font-size:11px;padding:2px 8px;background:var(--gray-100);border-radius:10px;color:var(--gray-600)">${v.branchNombre||'—'}</span></td>`:''}

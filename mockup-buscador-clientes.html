@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Buscador Clientes</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Manrope',sans-serif;background:#f0f2f7;color:#1a1d23;font-size:14px;padding:32px}
+h2{font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px}
+
+/* ── Topbar simulado ── */
+.topbar{background:#fff;border-bottom:1px solid #e8ecf2;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;border-radius:12px 12px 0 0}
+.topbar-title{font-size:16px;font-weight:800;color:#0f172a}
+.topbar-right{display:flex;align-items:center;gap:8px}
+
+/* ── Search box ── */
+.search-wrap{position:relative}
+.search-input{
+  height:34px;width:240px;border-radius:8px;border:1.5px solid #e2e8f0;
+  padding:0 12px 0 34px;font-size:13px;font-family:inherit;color:#0f172a;
+  background:#f8fafc;outline:none;transition:all .2s;
+}
+.search-input:focus{border-color:#2563eb;background:#fff;width:280px;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+.search-input::placeholder{color:#94a3b8}
+.search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none}
+.search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;display:flex;align-items:center;padding:2px}
+
+/* ── Dropdown ── */
+.search-drop{
+  position:absolute;top:calc(100% + 6px);left:0;width:340px;
+  background:#fff;border-radius:12px;border:1px solid #e2e8f0;
+  box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:100;overflow:hidden
+}
+.drop-section-lbl{
+  font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;
+  letter-spacing:.6px;padding:10px 14px 6px
+}
+.drop-row{
+  display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:background .12s
+}
+.drop-row:hover{background:#f8fafc}
+.drop-row.active{background:#eff6ff}
+.drop-avatar{
+  width:32px;height:32px;border-radius:50%;background:#eff6ff;color:#2563eb;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0
+}
+.drop-name{font-size:13px;font-weight:700;color:#0f172a}
+.drop-sub{font-size:11px;color:#64748b;margin-top:1px}
+.drop-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#f1f5f9;color:#475569;flex-shrink:0}
+.drop-empty{padding:20px 14px;text-align:center;color:#94a3b8;font-size:12px}
+.drop-footer{padding:8px 14px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;color:#2563eb;cursor:pointer}
+.drop-footer:hover{background:#f8fafc}
+.drop-divider{height:1px;background:#f1f5f9;margin:0 14px}
+
+/* ── Cliente ficha modal (click en resultado) ── */
+.cliente-panel{
+  background:#fff;border-radius:12px;border:1px solid #e2e8f0;
+  box-shadow:0 4px 20px rgba(0,0,0,.08);margin-top:16px;overflow:hidden
+}
+.cp-header{padding:18px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #f1f5f9}
+.cp-avatar{width:44px;height:44px;border-radius:50%;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0}
+.cp-name{font-size:16px;font-weight:800;color:#0f172a}
+.cp-meta{font-size:12px;color:#64748b;margin-top:2px}
+.cp-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid #f1f5f9}
+.cp-kpi{padding:12px 16px;border-right:1px solid #f1f5f9}
+.cp-kpi:last-child{border:none}
+.cp-kpi-lbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.cp-kpi-val{font-size:15px;font-weight:800;color:#0f172a}
+.cp-ventas{padding:14px 16px}
+.cp-ventas-title{font-size:12px;font-weight:700;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.cv-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f8fafc}
+.cv-row:last-child{border:none}
+.cv-folio{font-size:11px;font-weight:700;color:#2563eb}
+.cv-fecha{font-size:11px;color:#94a3b8}
+.cv-desc{font-size:12px;font-weight:600;color:#374151;flex:1}
+.cv-total{font-size:12px;font-weight:800;color:#0f172a}
+.cv-estado{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.est-pagada{background:#dcfce7;color:#15803d}
+.est-pend{background:#fef3c7;color:#d97706}
+
+.section{max-width:700px;margin:0 auto 40px}
+
+/* botones topbar */
+.btn-top{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid #e2e8f0;background:#fff;color:#374151}
+.btn-top-primary{background:#0f172a;color:#fff;border-color:#0f172a}
+</style>
+</head>
+<body>
+
+<div class="section">
+  <h2>Estado normal — buscador en topbar</h2>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-title">Ventas — Resumen</div>
+    <div class="topbar-right">
+
+      <!-- BUSCADOR -->
+      <div class="search-wrap">
+        <span class="search-ico">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input class="search-input" placeholder="Buscar cliente, RUT…" />
+      </div>
+
+      <button class="btn-top">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Importar historial
+      </button>
+      <button class="btn-top btn-top-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Ir al POS
+      </button>
+    </div>
+  </div>
+
+  <!-- DROPDOWN con resultados -->
+  <div style="position:relative;display:inline-block;margin-left:420px">
+    <div class="search-drop" style="position:relative;top:0;left:0;margin-top:0">
+      <div class="drop-section-lbl">Resultados para "Isabel"</div>
+
+      <div class="drop-row active">
+        <div class="drop-avatar">IB</div>
+        <div>
+          <div class="drop-name">Isabel Barros Fuentes</div>
+          <div class="drop-sub">RUT 12.345.678-9 · isabel@email.com</div>
+        </div>
+        <div class="drop-badge">8 ventas</div>
+      </div>
+
+      <div class="drop-row">
+        <div class="drop-avatar" style="background:#f0fdf4;color:#16a34a">IC</div>
+        <div>
+          <div class="drop-name">Isidora Campos</div>
+          <div class="drop-sub">RUT 9.876.543-2 · Sin email</div>
+        </div>
+        <div class="drop-badge">3 ventas</div>
+      </div>
+
+      <div class="drop-row">
+        <div class="drop-avatar" style="background:#fff7ed;color:#ea580c">IR</div>
+        <div>
+          <div class="drop-name">Ignacio Rodríguez</div>
+          <div class="drop-sub">RUT 15.432.100-K</div>
+        </div>
+        <div class="drop-badge">1 venta</div>
+      </div>
+
+      <div class="drop-divider"></div>
+      <div class="drop-footer">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        Ver todos los contactos
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FICHA CLIENTE (al hacer click) ── -->
+<div class="section">
+  <h2>Al hacer click en un resultado — ficha del cliente</h2>
+
+  <div class="topbar" style="border-radius:12px 12px 0 0">
+    <div class="topbar-title">Ventas — Resumen</div>
+    <div class="topbar-right">
+      <div class="search-wrap">
+        <span class="search-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        <input class="search-input" value="Isabel Barros" style="border-color:#2563eb;background:#fff;width:220px"/>
+        <button class="search-clear"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <button class="btn-top"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar historial</button>
+      <button class="btn-top btn-top-primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Ir al POS</button>
+    </div>
+  </div>
+
+  <!-- PANEL CLIENTE -->
+  <div class="cliente-panel">
+    <!-- Header -->
+    <div class="cp-header">
+      <div class="cp-avatar">IB</div>
+      <div style="flex:1">
+        <div class="cp-name">Isabel Barros Fuentes</div>
+        <div class="cp-meta">RUT 12.345.678-9 · isabel@email.com · +56 9 8765 4321</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button style="padding:5px 12px;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;font-size:11px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Editar
+        </button>
+        <button style="padding:5px 12px;border-radius:7px;border:none;background:#0f172a;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">
+          Ver perfil completo →
+        </button>
+      </div>
+    </div>
+    <!-- KPIs -->
+    <div class="cp-kpis">
+      <div class="cp-kpi">
+        <div class="cp-kpi-lbl">Total comprado</div>
+        <div class="cp-kpi-val" style="color:#2563eb">$1.842.300</div>
+      </div>
+      <div class="cp-kpi">
+        <div class="cp-kpi-lbl">Nro. de ventas</div>
+        <div class="cp-kpi-val">8</div>
+      </div>
+      <div class="cp-kpi">
+        <div class="cp-kpi-lbl">Ticket promedio</div>
+        <div class="cp-kpi-val">$230.288</div>
+      </div>
+      <div class="cp-kpi">
+        <div class="cp-kpi-lbl">Última compra</div>
+        <div class="cp-kpi-val" style="font-size:12px">04 jun 2026</div>
+      </div>
+    </div>
+    <!-- Últimas ventas -->
+    <div class="cp-ventas">
+      <div class="cp-ventas-title">Últimas ventas</div>
+      <div class="cv-row">
+        <div class="cv-folio">VTA-03044</div>
+        <div class="cv-fecha">04-06-2026</div>
+        <div class="cv-desc">Pantalla iPhone 14 · Servicio diagnóstico</div>
+        <div class="cv-total">$489.980</div>
+        <div class="cv-estado est-pagada">Pagada</div>
+      </div>
+      <div class="cv-row">
+        <div class="cv-folio">VTA-02891</div>
+        <div class="cv-fecha">12-05-2026</div>
+        <div class="cv-desc">Batería reemplazo</div>
+        <div class="cv-total">$89.900</div>
+        <div class="cv-estado est-pagada">Pagada</div>
+      </div>
+      <div class="cv-row">
+        <div class="cv-folio">VTA-02744</div>
+        <div class="cv-fecha">28-04-2026</div>
+        <div class="cv-desc">Conector USB-C · Carcasa</div>
+        <div class="cv-total">$124.000</div>
+        <div class="cv-estado est-pend">Pendiente</div>
+      </div>
+      <div style="margin-top:8px;text-align:right">
+        <button style="font-size:11px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;font-family:inherit">Ver todas las ventas →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
