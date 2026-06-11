@@ -1345,6 +1345,20 @@ const METODOS_PAGO_DEFAULT=[
 ];
 const getMetodosPago=()=>DB.get('metodos_pago')||METODOS_PAGO_DEFAULT;
 const setMetodosPago=v=>DB.set('metodos_pago',v);
+// Devuelve el label legible de un método de pago dado su id/key
+function getMpLabel(id){
+  if(!id) return '—';
+  const mps=getMetodosPago();
+  const found=mps.find(m=>m.id===id||m.id===(id||'').toLowerCase()||(m.label||'').toLowerCase()===(id||'').toLowerCase());
+  if(found) return found.label||id;
+  return id.charAt(0).toUpperCase()+id.slice(1);
+}
+function getMpIcon(id){
+  if(!id) return '';
+  const mps=getMetodosPago();
+  const found=mps.find(m=>m.id===id||m.id===(id||'').toLowerCase());
+  return found?.icon||'';
+}
 const getKits = ()=> DB.get('kits')||[];
 const setKits = v=> DB.set('kits',v);
 const getTraslados = ()=>{ try{ return JSON.parse(DB.get('traslados')||'[]'); }catch(e){ return []; } };
@@ -2114,7 +2128,7 @@ function _renderDashboardLocal(){
           <td><strong style="color:var(--primary)">${v.numero}</strong></td>
           <td>${v.cliente||'—'}</td>
           <td><strong>${fmt$(v.total_iva||0)}</strong></td>
-          <td style="font-size:12px;color:var(--gray-500)">${{efectivo:'💵',transferencia:'🏦',tarjeta:'💳'}[v.metodo_pago]||''} ${v.metodo_pago||'—'}</td>
+          <td style="font-size:12px;color:var(--gray-500)">${getMpIcon(v.metodo_pago)} ${getMpLabel(v.metodo_pago)}</td>
         </tr>`).join('')}</tbody></table>`
         :'<div class="table-empty">No hay ventas aún</div>'}
       </div>
@@ -3703,7 +3717,8 @@ function _renderHistorialReal(){
   const utilHist=_vtaUtilHistCache;
 
   // Desglose por método de pago (período)
-  const metodoInfo={efectivo:{icon:'💵',label:'Efectivo'},transfer:{icon:'🏦',label:'Transferencia'},transferencia:{icon:'🏦',label:'Transferencia'},tarjeta:{icon:'💳',label:'Tarjeta'},debito:{icon:'💳',label:'Débito'},credito:{icon:'💳',label:'Crédito'}};
+  // metodoInfo ahora usa getMetodosPago() para soportar métodos personalizados
+  const metodoInfo={}; getMetodosPago().forEach(m=>{ metodoInfo[m.id]={icon:m.icon||'💰',label:m.label||m.id}; });
   const metodosMap={};
   periodo.forEach(v=>{
     const k=v.metodo_pago||'otro';
@@ -3815,7 +3830,7 @@ function _renderHistorialReal(){
         ? `<div style="font-size:13px;color:var(--gray-400);text-align:center;padding:12px 0">Sin ventas en este período</div>`
         : metodosSorted.map(([k,{total,count}])=>{
             const pct=totalPer>0?Math.round(total/totalPer*100):0;
-            const info=metodoInfo[k]||{icon:'💰',label:k};
+            const info=metodoInfo[k]||{icon:getMpIcon(k)||'💰',label:getMpLabel(k)};
             return `<div style="margin-bottom:12px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
                 <span style="font-size:13px;font-weight:600;color:var(--gray-700)">${info.icon} ${info.label}</span>
@@ -3892,7 +3907,7 @@ function renderVentasTable(ventas, showSuc=false){
     ${showSuc?`<td><span style="font-size:11px;padding:2px 8px;background:var(--gray-100);border-radius:10px;color:var(--gray-600)">${v.branchNombre||'—'}</span></td>`:''}
     <td style="text-align:center">${(v.items||[]).length}</td>
     <td><strong>${fmt$(v.total_iva||0)}</strong><div style="font-size:11px;color:var(--gray-400)">Neto: ${fmt$(v.total||0)}</div></td>
-    <td><span style="font-size:12px;color:var(--gray-500)">${{efectivo:'💵 Efectivo',transfer:'🏦 Trans.',tarjeta:'💳 Tarjeta',transferencia:'🏦 Trans.'}[v.metodo_pago]||v.metodo_pago||'—'}</span></td>
+    <td><span style="font-size:12px;color:var(--gray-500)">${getMpIcon(v.metodo_pago)} ${getMpLabel(v.metodo_pago)}</span></td>
     <td>${estadoBadge[v.estado]||v.estado}</td>
     <td onclick="event.stopPropagation()">
       <div style="display:flex;gap:6px">
@@ -4241,7 +4256,7 @@ function verVenta(id){
     </div>
     <div class="modal-body">
       <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--gray-100)">
-        <div><div style="font-size:11px;color:var(--gray-400)">MÉTODO PAGO</div><div style="font-weight:600">${{efectivo:'💵 Efectivo',transferencia:'🏦 Transferencia',tarjeta:'💳 Tarjeta'}[v.metodo_pago]||v.metodo_pago}</div></div>
+        <div><div style="font-size:11px;color:var(--gray-400)">MÉTODO PAGO</div><div style="font-weight:600">${getMpIcon(v.metodo_pago)} ${getMpLabel(v.metodo_pago)}</div></div>
         <div><div style="font-size:11px;color:var(--gray-400)">FECHA</div><div style="font-weight:600">${fmtDate(v.fecha)}</div></div>
         <div><div style="font-size:11px;color:var(--gray-400)">NETO</div><div style="font-weight:600">${fmt$(v.total||0)}</div></div>
         <div><div style="font-size:11px;color:var(--gray-400)">IVA 19%</div><div style="font-weight:600">${fmt$(Math.round((v.total||0)*IVA))}</div></div>
