@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup Dashboard v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Manrope',sans-serif;background:#f0f2f7;color:#1a1d23;font-size:14px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* sidebar */
+.sidebar{width:220px;background:#0f172a;flex-shrink:0;display:flex;flex-direction:column}
+.sb-logo{padding:18px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.sb-logo-box{width:32px;height:32px;background:#1e40af;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.sb-logo-title{font-size:15px;font-weight:800;color:#fff}
+.sb-logo-sub{font-size:11px;color:#64748b;margin-top:1px}
+.sb-sec{padding:16px 12px 5px;font-size:10px;font-weight:700;color:#475569;letter-spacing:.8px;text-transform:uppercase}
+.sb-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;margin:1px 4px;font-size:13px;font-weight:500;color:#94a3b8;cursor:pointer}
+.sb-item.active{background:#1e40af;color:#fff}
+.sb-item svg{flex-shrink:0;opacity:.75}
+.sb-item.active svg{opacity:1}
+.sb-foot{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px}
+.sb-av{width:32px;height:32px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.sb-foot-name{font-size:13px;font-weight:600;color:#e2e8f0}
+.sb-foot-role{font-size:11px;color:#64748b}
+
+/* main */
+.main{flex:1;overflow-y:auto;background:#f0f2f7}
+.topbar{background:#fff;border-bottom:1px solid #e8ecf2;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar-title{font-size:16px;font-weight:800;color:#0f172a}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.ind-pill{background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;padding:3px 11px;font-size:11px;font-weight:600;color:#64748b;display:flex;align-items:center;gap:5px}
+.ind-pill b{color:#0f172a}
+.ptabs{display:flex;gap:2px;background:#f1f5f9;border-radius:8px;padding:3px}
+.ptab{padding:3px 11px;border-radius:6px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;border:none;background:none;font-family:inherit}
+.ptab.active{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+.content{padding:18px 24px}
+
+/* cards */
+.card{background:#fff;border-radius:12px;border:1px solid #e8ecf2;padding:16px 18px}
+
+/* KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border-radius:12px;border:1px solid #e8ecf2;padding:14px 16px;position:relative;overflow:hidden}
+.kpi-acc{position:absolute;top:0;left:0;width:100%;height:3px;border-radius:12px 12px 0 0}
+.kpi-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.kpi-lbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.kpi-val{font-size:19px;font-weight:800;color:#0f172a;line-height:1}
+.kpi-sub{font-size:11px;color:#94a3b8;margin-top:4px}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;margin-top:4px}
+.up{background:#dcfce7;color:#15803d}
+.dn{background:#fee2e2;color:#dc2626}
+.neu{background:#f1f5f9;color:#64748b}
+
+/* grid layout rows */
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.row-3-1{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px}
+
+/* chart */
+.chart-wrap{position:relative}
+.chart-bars{display:flex;align-items:flex-end;gap:5px;height:110px}
+.bgrp{display:flex;gap:2px;align-items:flex-end;flex:1}
+.bar{border-radius:3px 3px 0 0;flex:1;transition:opacity .2s;cursor:pointer}
+.bar:hover{opacity:.75}
+.xlabs{display:flex;gap:5px;margin-top:5px}
+.xlabs span{flex:1;text-align:center;font-size:10px;color:#94a3b8;font-weight:600}
+.leg{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.leg-i{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#64748b}
+.leg-d{width:8px;height:8px;border-radius:50%}
+
+/* met pay donut area */
+.met-list{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.met-row{display:flex;align-items:center;gap:8px}
+.met-lbl{font-size:12px;font-weight:600;color:#374151;flex:1}
+.met-bar-wrap{width:70px;height:5px;background:#f1f5f9;border-radius:99px;overflow:hidden}
+.met-bar-fill{height:100%;border-radius:99px}
+.met-val{font-size:12px;font-weight:700;color:#0f172a;width:68px;text-align:right}
+.met-pct{font-size:10px;font-weight:600;color:#94a3b8;width:28px;text-align:right}
+
+/* ordenes sucursal */
+.ord-suc{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.ord-row{background:#f8fafc;border-radius:8px;padding:10px 12px;border:1px solid #f1f5f9}
+.ord-suc-name{font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.ord-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.ord-stat{text-align:center}
+.ord-stat-v{font-size:16px;font-weight:800;color:#0f172a}
+.ord-stat-l{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+
+/* gastos/compras barras */
+.simple-bar-list{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.sbl-row{display:flex;align-items:center;gap:8px}
+.sbl-lbl{font-size:11px;font-weight:600;color:#64748b;width:28px;flex-shrink:0;text-align:right}
+.sbl-track{flex:1;height:18px;background:#f1f5f9;border-radius:5px;overflow:hidden;position:relative}
+.sbl-fill{height:100%;border-radius:5px;display:flex;align-items:center;padding-left:8px}
+.sbl-fill span{font-size:10px;font-weight:700;color:#fff;white-space:nowrap}
+.sbl-total{font-size:11px;font-weight:700;color:#0f172a;width:72px;text-align:right;flex-shrink:0}
+
+/* ventas suc table */
+.vsuc-table{width:100%;border-collapse:collapse;margin-top:6px}
+.vsuc-table th{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;padding:0 8px 8px;text-align:right}
+.vsuc-table th:first-child{text-align:left}
+.vsuc-table td{font-size:12px;font-weight:600;color:#374151;padding:7px 8px;border-top:1px solid #f8fafc;text-align:right}
+.vsuc-table td:first-child{text-align:left;font-weight:700;color:#0f172a}
+.vsuc-table tr.total td{font-weight:800;color:#0f172a;font-size:13px;border-top:2px solid #e2e8f0}
+.suc-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-box"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+    <div><div class="sb-logo-title">ERP Compras</div><div class="sb-logo-sub">Módulo de Abastecimiento</div></div>
+  </div>
+  <div class="sb-sec">Operación</div>
+  <div class="sb-item active"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</div>
+  <div class="sb-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Ventas</div>
+  <div class="sb-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Taller</div>
+  <div class="sb-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Contactos</div>
+  <div class="sb-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>Inventario</div>
+  <div class="sb-sec">Administración</div>
+  <div class="sb-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Estadísticas</div>
+  <div class="sb-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>Gastos</div>
+  <div class="sb-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configuración</div>
+  <div class="sb-foot">
+    <div class="sb-av">ER</div>
+    <div><div class="sb-foot-name">Esteban Romero</div><div class="sb-foot-role">Super-admin</div></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">Dashboard</div>
+    <div class="topbar-right">
+      <div class="ind-pill"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> UF <b>38.456</b></div>
+      <div class="ind-pill">USD <b>$953</b></div>
+      <div class="ptabs">
+        <button class="ptab">Hoy</button>
+        <button class="ptab active">Este mes</button>
+        <button class="ptab">Este año</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── KPIs ── -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-acc" style="background:#3b82f6"></div>
+        <div class="kpi-ico" style="background:#eff6ff;color:#2563eb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <div class="kpi-lbl">Ventas totales</div>
+        <div class="kpi-val">$1.220.820</div>
+        <div class="badge dn"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>−86% vs mayo</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-acc" style="background:#10b981"></div>
+        <div class="kpi-ico" style="background:#f0fdf4;color:#16a34a"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+        <div class="kpi-lbl">Utilidad bruta</div>
+        <div class="kpi-val">$387.240</div>
+        <div class="badge neu">Margen 31.7%</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-acc" style="background:#f97316"></div>
+        <div class="kpi-ico" style="background:#fff7ed;color:#ea580c"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg></div>
+        <div class="kpi-lbl">Gastos del mes</div>
+        <div class="kpi-val">$243.500</div>
+        <div class="badge dn">+12% vs mayo</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-acc" style="background:#8b5cf6"></div>
+        <div class="kpi-ico" style="background:#f5f3ff;color:#7c3aed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+        <div class="kpi-lbl">Compras del mes</div>
+        <div class="kpi-val">$143.600</div>
+        <div class="badge up">3 OCs activas</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-acc" style="background:#0f172a"></div>
+        <div class="kpi-ico" style="background:#f1f5f9;color:#475569"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+        <div class="kpi-lbl">OTs completadas</div>
+        <div class="kpi-val">12</div>
+        <div class="kpi-sub">4 abiertas actualmente</div>
+      </div>
+    </div>
+
+    <!-- ── ROW 1: Ventas por sucursal + Métodos de pago ── -->
+    <div class="row-3-1" style="grid-template-columns:3fr 2fr">
+
+      <!-- Ventas por sucursal (gráfico pequeño + tabla) -->
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <div style="font-size:14px;font-weight:800;color:#0f172a">Ventas por sucursal</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:1px">Últimos 6 meses</div>
+          </div>
+          <div class="leg">
+            <div class="leg-i"><div class="leg-d" style="background:#2563eb"></div>La Dehesa</div>
+            <div class="leg-i"><div class="leg-d" style="background:#0f172a"></div>Los Dominicos</div>
+          </div>
+        </div>
+        <!-- gráfico compacto -->
+        <div class="chart-bars" style="height:90px">
+          <div class="bgrp"><div class="bar" style="height:34%;background:#2563eb"></div><div class="bar" style="height:100%;background:#0f172a"></div></div>
+          <div class="bgrp"><div class="bar" style="height:48%;background:#2563eb"></div><div class="bar" style="height:76%;background:#0f172a"></div></div>
+          <div class="bgrp"><div class="bar" style="height:37%;background:#2563eb"></div><div class="bar" style="height:83%;background:#0f172a"></div></div>
+          <div class="bgrp"><div class="bar" style="height:26%;background:#2563eb"></div><div class="bar" style="height:80%;background:#0f172a"></div></div>
+          <div class="bgrp"><div class="bar" style="height:43%;background:#2563eb"></div><div class="bar" style="height:57%;background:#0f172a"></div></div>
+          <div class="bgrp"><div class="bar" style="height:8%;background:#2563eb"></div><div class="bar" style="height:10%;background:#0f172a"></div></div>
+        </div>
+        <div class="xlabs"><span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span><span>May</span><span>Jun</span></div>
+        <!-- tabla mes actual -->
+        <table class="vsuc-table" style="margin-top:12px">
+          <thead>
+            <tr>
+              <th>Sucursal</th>
+              <th>Ventas</th>
+              <th>OTs</th>
+              <th>Ticket prom.</th>
+              <th>Margen</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="suc-dot" style="background:#2563eb"></span>La Dehesa</td>
+              <td>$499.960</td>
+              <td>4</td>
+              <td>$124.990</td>
+              <td style="color:#16a34a">33%</td>
+            </tr>
+            <tr>
+              <td><span class="suc-dot" style="background:#0f172a"></span>Los Dominicos</td>
+              <td>$720.860</td>
+              <td>8</td>
+              <td>$90.108</td>
+              <td style="color:#16a34a">30%</td>
+            </tr>
+            <tr class="total">
+              <td>Total</td>
+              <td>$1.220.820</td>
+              <td>12</td>
+              <td>$101.735</td>
+              <td style="color:#16a34a">31.7%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Métodos de pago -->
+      <div class="card">
+        <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:2px">Métodos de pago</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:12px">Junio · todas las sucursales</div>
+
+        <!-- donut visual simplificado -->
+        <div style="display:flex;justify-content:center;margin-bottom:14px">
+          <div style="position:relative;width:110px;height:110px">
+            <svg viewBox="0 0 36 36" width="110" height="110" style="transform:rotate(-90deg)">
+              <!-- Efectivo 18% -->
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f1f5f9" stroke-width="3.5"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#2563eb" stroke-width="3.5"
+                stroke-dasharray="47 53" stroke-dashoffset="0"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#0f172a" stroke-width="3.5"
+                stroke-dasharray="30 70" stroke-dashoffset="-47"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#10b981" stroke-width="3.5"
+                stroke-dasharray="15 85" stroke-dashoffset="-77"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.5"
+                stroke-dasharray="8 92" stroke-dashoffset="-92"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="font-size:16px;font-weight:800;color:#0f172a">$1.2M</div>
+              <div style="font-size:9px;font-weight:600;color:#94a3b8">TOTAL</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="met-list">
+          <div class="met-row">
+            <div style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex-shrink:0"></div>
+            <div class="met-lbl">Tarjeta débito</div>
+            <div class="met-bar-wrap"><div class="met-bar-fill" style="width:100%;background:#2563eb"></div></div>
+            <div class="met-val">$574.000</div>
+            <div class="met-pct">47%</div>
+          </div>
+          <div class="met-row">
+            <div style="width:8px;height:8px;border-radius:50%;background:#0f172a;flex-shrink:0"></div>
+            <div class="met-lbl">Transferencia</div>
+            <div class="met-bar-wrap"><div class="met-bar-fill" style="width:64%;background:#0f172a"></div></div>
+            <div class="met-val">$366.250</div>
+            <div class="met-pct">30%</div>
+          </div>
+          <div class="met-row">
+            <div style="width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0"></div>
+            <div class="met-lbl">Efectivo</div>
+            <div class="met-bar-wrap"><div class="met-bar-fill" style="width:32%;background:#10b981"></div></div>
+            <div class="met-val">$183.120</div>
+            <div class="met-pct">15%</div>
+          </div>
+          <div class="met-row">
+            <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;flex-shrink:0"></div>
+            <div class="met-lbl">Tarjeta crédito</div>
+            <div class="met-bar-wrap"><div class="met-bar-fill" style="width:17%;background:#f59e0b"></div></div>
+            <div class="met-val">$97.450</div>
+            <div class="met-pct">8%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ROW 2: OTs por sucursal + Gastos por mes + Compras por mes ── -->
+    <div class="row-3">
+
+      <!-- OTs completadas por sucursal -->
+      <div class="card">
+        <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:2px">Órdenes completadas</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px">Últimos 6 meses · por sucursal</div>
+
+        <!-- mini chart OTs -->
+        <div class="chart-bars" style="height:80px">
+          <div class="bgrp"><div class="bar" style="height:50%;background:#2563eb;opacity:.9"></div><div class="bar" style="height:100%;background:#0f172a;opacity:.9"></div></div>
+          <div class="bgrp"><div class="bar" style="height:75%;background:#2563eb;opacity:.9"></div><div class="bar" style="height:87%;background:#0f172a;opacity:.9"></div></div>
+          <div class="bgrp"><div class="bar" style="height:62%;background:#2563eb;opacity:.9"></div><div class="bar" style="height:100%;background:#0f172a;opacity:.9"></div></div>
+          <div class="bgrp"><div class="bar" style="height:37%;background:#2563eb;opacity:.9"></div><div class="bar" style="height:62%;background:#0f172a;opacity:.9"></div></div>
+          <div class="bgrp"><div class="bar" style="height:50%;background:#2563eb;opacity:.9"></div><div class="bar" style="height:75%;background:#0f172a;opacity:.9"></div></div>
+          <div class="bgrp"><div class="bar" style="height:25%;background:#2563eb;opacity:.9"></div><div class="bar" style="height:50%;background:#0f172a;opacity:.9"></div></div>
+        </div>
+        <div class="xlabs"><span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span><span>May</span><span>Jun</span></div>
+
+        <div class="ord-suc" style="margin-top:12px">
+          <div class="ord-row">
+            <div class="ord-suc-name"><span class="suc-dot" style="background:#2563eb"></span>La Dehesa</div>
+            <div class="ord-stats">
+              <div class="ord-stat"><div class="ord-stat-v">4</div><div class="ord-stat-l">Completadas</div></div>
+              <div class="ord-stat"><div class="ord-stat-v" style="color:#f97316">0</div><div class="ord-stat-l">En proceso</div></div>
+              <div class="ord-stat"><div class="ord-stat-v">$124.990</div><div class="ord-stat-l">Ticket prom.</div></div>
+            </div>
+          </div>
+          <div class="ord-row">
+            <div class="ord-suc-name"><span class="suc-dot" style="background:#0f172a"></span>Los Dominicos</div>
+            <div class="ord-stats">
+              <div class="ord-stat"><div class="ord-stat-v">8</div><div class="ord-stat-l">Completadas</div></div>
+              <div class="ord-stat"><div class="ord-stat-v" style="color:#f97316">4</div><div class="ord-stat-l">En proceso</div></div>
+              <div class="ord-stat"><div class="ord-stat-v">$90.108</div><div class="ord-stat-l">Ticket prom.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gastos por mes -->
+      <div class="card">
+        <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:2px">Gastos por mes</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px">Últimos 6 meses</div>
+
+        <div class="simple-bar-list">
+          <div class="sbl-row">
+            <div class="sbl-lbl">Ene</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:72%;background:#f97316"><span>$289.400</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl">Feb</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:85%;background:#f97316"><span>$341.200</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl">Mar</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:61%;background:#f97316"><span>$244.800</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl">Abr</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:54%;background:#f97316"><span>$216.500</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl">May</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:100%;background:#f97316"><span>$400.000</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl" style="color:#ef4444;font-weight:800">Jun</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:61%;background:#ef4444"><span>$243.500</span></div></div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;font-weight:600;color:#94a3b8">Promedio mensual</span>
+          <span style="font-size:13px;font-weight:800;color:#f97316">$289.233</span>
+        </div>
+      </div>
+
+      <!-- Compras por mes -->
+      <div class="card">
+        <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:2px">Compras por mes</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px">Últimos 6 meses · órdenes de compra</div>
+
+        <div class="simple-bar-list">
+          <div class="sbl-row">
+            <div class="sbl-lbl">Ene</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:68%;background:#8b5cf6"><span>$204.000</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl">Feb</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:100%;background:#8b5cf6"><span>$300.000</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl">Mar</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:57%;background:#8b5cf6"><span>$171.000</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl">Abr</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:43%;background:#8b5cf6"><span>$129.000</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl">May</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:82%;background:#8b5cf6"><span>$246.000</span></div></div>
+          </div>
+          <div class="sbl-row">
+            <div class="sbl-lbl" style="color:#7c3aed;font-weight:800">Jun</div>
+            <div class="sbl-track"><div class="sbl-fill" style="width:48%;background:#7c3aed"><span>$143.600</span></div></div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;font-weight:600;color:#94a3b8">Promedio mensual</span>
+          <span style="font-size:13px;font-weight:800;color:#8b5cf6">$198.933</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+</div>
+</body>
+</html>

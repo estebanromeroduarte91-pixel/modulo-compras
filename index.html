@@ -2136,194 +2136,388 @@ function _renderDashboardLocal(){
 
 function _renderDashboardGlobal(){
   const ventas=getVentas();
+  const gastos=getGastos();
+  const ocs=getOCs();
   const mesActual=today().slice(0,7);
-  // Mes anterior
-  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1);
-  const mesAnterior=d.toISOString().slice(0,7);
-
-  const ventasMes=ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesActual));
-  const ventasMesAnt=ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesAnterior));
-  const totalMes=ventasMes.reduce((s,v)=>s+(+v.total_iva||0),0);
-  const totalMesAnt=ventasMesAnt.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const d0=new Date(); d0.setDate(1); d0.setMonth(d0.getMonth()-1);
+  const mesAnterior=d0.toISOString().slice(0,7);
 
   const bodegas=getBodegas();
   try{ if(typeof tp_loadState==='function') tp_loadState(); }catch(e){}
   const allOrders=(() => { try{ return JSON.parse(DB.get('tp_orders')||'[]'); }catch(e){ return []; } })();
 
+  // ── Datos base ──
+  const ventasMes=ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesActual));
+  const ventasMesAnt=ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(mesAnterior));
+  const totalMes=ventasMes.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const totalMesAnt=ventasMesAnt.reduce((s,v)=>s+(+v.total_iva||0),0);
+
+  // Compras mes (OCs)
+  const ocsMes=ocs.filter(o=>o.fecha&&o.fecha.startsWith(mesActual)).reduce((s,o)=>s+(+o.total||0),0);
+  const ocsMesAnt=ocs.filter(o=>o.fecha&&o.fecha.startsWith(mesAnterior)).reduce((s,o)=>s+(+o.total||0),0);
+
+  // Gastos mes
+  const gastosMes=gastos.filter(g=>g.fecha&&g.fecha.startsWith(mesActual)).reduce((s,g)=>s+(+g.monto||0),0);
+  const gastosMesAnt=gastos.filter(g=>g.fecha&&g.fecha.startsWith(mesAnterior)).reduce((s,g)=>s+(+g.monto||0),0);
+
+  // OTs
   const otAbiertas=allOrders.filter(o=>!['Entregado'].includes(o.status)).length;
-  const otAbiertasAnt=allOrders.filter(o=>!['Entregado'].includes(o.status)&&o.fecha&&o.fecha.startsWith(mesAnterior)).length;
+  const otCompletadasMes=allOrders.filter(o=>o.status==='Entregado'&&o.fecha&&o.fecha.startsWith(mesActual));
+  const otCompletadasMesAnt=allOrders.filter(o=>o.status==='Entregado'&&o.fecha&&o.fecha.startsWith(mesAnterior));
+  const totalOTMes=otCompletadasMes.length;
+  const totalOTMesAnt=otCompletadasMesAnt.length;
 
-  // Ticket promedio (OTs entregadas este mes)
-  const otEntregadasMes=allOrders.filter(o=>o.status==='Entregado'&&o.fecha&&o.fecha.startsWith(mesActual)&&o.total>0);
-  const otEntregadasAnt=allOrders.filter(o=>o.status==='Entregado'&&o.fecha&&o.fecha.startsWith(mesAnterior)&&o.total>0);
-  const ticketProm=otEntregadasMes.length?Math.round(otEntregadasMes.reduce((s,o)=>s+(+o.total||0),0)/otEntregadasMes.length):0;
-  const ticketPromAnt=otEntregadasAnt.length?Math.round(otEntregadasAnt.reduce((s,o)=>s+(+o.total||0),0)/otEntregadasAnt.length):0;
-
-  // Tiempo promedio de reparación (OTs entregadas este mes con fecha)
-  const tiempos=otEntregadasMes.map(o=>{
-    if(!o.fecha||!o.fechaCierre) return null;
-    const ini=new Date(o.fecha.slice(0,10)+'T12:00:00');
-    const fin=new Date(o.fechaCierre.slice(0,10)+'T12:00:00');
-    const d=Math.round((fin-ini)/(1000*60*60*24));
-    return isNaN(d)||d<0?null:d;
-  }).filter(x=>x!==null);
-  const tiemposAnt=otEntregadasAnt.map(o=>{
-    if(!o.fecha||!o.fechaCierre) return null;
-    const ini=new Date(o.fecha.slice(0,10)+'T12:00:00');
-    const fin=new Date(o.fechaCierre.slice(0,10)+'T12:00:00');
-    const d=Math.round((fin-ini)/(1000*60*60*24));
-    return isNaN(d)||d<0?null:d;
-  }).filter(x=>x!==null);
-  const tiempoProm=tiempos.length?(tiempos.reduce((s,x)=>s+x,0)/tiempos.length).toFixed(1):'—';
-  const tiempoPromAnt=tiemposAnt.length?(tiemposAnt.reduce((s,x)=>s+x,0)/tiemposAnt.length).toFixed(1):null;
+  // Utilidad bruta (ventas - compras - gastos)
+  const utilidad=totalMes-ocsMes-gastosMes;
+  const margen=totalMes>0?Math.round(utilidad/totalMes*100):0;
 
   // Helper delta badge
-  function _delta(curr,prev,fmt,invertido=false){
-    if(!prev||prev===0) return '';
-    const diff=curr-prev;
-    const pct=Math.round(Math.abs(diff/prev)*100);
-    if(pct===0) return `<span style="font-size:11px;color:var(--text2)">Sin cambio</span>`;
-    const positivo=invertido?(diff<0):(diff>0);
-    const color=positivo?'#16a34a':'#dc2626';
-    const arrow=positivo?'↑':'↓';
-    const label=fmt?fmt(Math.abs(diff)):pct+'%';
-    return `<span style="font-size:11px;color:${color};font-weight:500">${arrow} ${label} vs mes anterior</span>`;
+  function _pct(curr,prev){
+    if(!prev) return '';
+    const p=Math.round(Math.abs((curr-prev)/prev)*100);
+    const up=curr>=prev;
+    return `<div class="db-badge ${up?'db-up':'db-dn'}">${up?'↑':'↓'} ${p}% vs mes ant.</div>`;
+  }
+  function _pctInv(curr,prev){
+    if(!prev) return '';
+    const p=Math.round(Math.abs((curr-prev)/prev)*100);
+    const good=curr<=prev;
+    return `<div class="db-badge ${good?'db-up':'db-dn'}">${curr<=prev?'↓':'↑'} ${p}% vs mes ant.</div>`;
   }
 
-  const deltaMes=totalMesAnt>0?_delta(totalMes,totalMesAnt,v=>{const p=Math.round(Math.abs((totalMes-totalMesAnt)/totalMesAnt)*100);return p+'%'}):'';
-  const deltaOT=_delta(otAbiertas,otAbiertasAnt,null);
-  const deltaTicket=ticketPromAnt>0?_delta(ticketProm,ticketPromAnt,null):'';
-  const deltaTiempo=(tiempoPromAnt&&tiempoPromAnt!=='—')?_delta(parseFloat(tiempoProm),parseFloat(tiempoPromAnt),v=>v+' días',true):'';
+  // ── Últimos 6 meses ──
+  const mesesLabels=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const ultimos6=[];
+  for(let i=5;i>=0;i--){
+    const dd=new Date(); dd.setDate(1); dd.setMonth(dd.getMonth()-i);
+    ultimos6.push({key:dd.toISOString().slice(0,7), label:mesesLabels[dd.getMonth()]});
+  }
+  const coloresBodegas=['#2563eb','#0f172a','#64748b','#94a3b8','#cbd5e1'];
 
-  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const mesLabel=meses[d.getMonth()];
+  // Ventas por sucursal por mes (para gráfico)
+  const branchDatasets=bodegas.map((b,i)=>({
+    label:b.nombre||b.name||'Sucursal',
+    data:ultimos6.map(m=>ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(m.key)&&v.branchId===b.id).reduce((s,v)=>s+(+v.total_iva||0),0)),
+    color:coloresBodegas[i]||'#64748b'
+  }));
 
-  const branchCards=bodegas.map(b=>{
+  // Tabla sucursales mes actual
+  const branchRows=bodegas.map((b,i)=>{
     const bv=ventasMes.filter(v=>v.branchId===b.id);
-    const bOT=allOrders.filter(o=>o.branchId===b.id&&!['Entregado'].includes(o.status));
-    const bvAnt=ventasMesAnt.filter(v=>v.branchId===b.id);
-    const bTotalMes=bv.reduce((s,v)=>s+(+v.total_iva||0),0);
-    const bTotalAnt=bvAnt.reduce((s,v)=>s+(+v.total_iva||0),0);
-    const bDelta=bTotalAnt>0?_delta(bTotalMes,bTotalAnt,null):'';
+    const bTotal=bv.reduce((s,v)=>s+(+v.total_iva||0),0);
+    const bOTcomp=allOrders.filter(o=>o.status==='Entregado'&&o.branchId===b.id&&o.fecha&&o.fecha.startsWith(mesActual));
+    const bOTopen=allOrders.filter(o=>o.status!=='Entregado'&&o.branchId===b.id).length;
+    const bTicket=bOTcomp.length?Math.round(bOTcomp.reduce((s,o)=>s+(+o.total||0),0)/bOTcomp.length):0;
     const nombre=b.nombre||b.name||'Sin nombre';
-    return `<div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:13px;font-weight:600;color:var(--text)">${nombre}</div>
-        <button onclick="_superAdminEnterBranch('${b.id}')" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit">Operar →</button>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
-        <div style="background:var(--gray-50,#f9fafb);border-radius:8px;padding:8px 4px">
-          <div style="font-size:14px;font-weight:600;color:var(--text)">${fmt$(bTotalMes)}</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:2px">Ventas mes</div>
-          ${bDelta?`<div style="margin-top:3px">${bDelta}</div>`:''}
-        </div>
-        <div style="background:var(--gray-50,#f9fafb);border-radius:8px;padding:8px 4px">
-          <div style="font-size:14px;font-weight:600;color:var(--text)">${bOT.length}</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:2px">OTs abiertas</div>
-        </div>
-        <div style="background:var(--gray-50,#f9fafb);border-radius:8px;padding:8px 4px">
-          <div style="font-size:14px;font-weight:600;color:var(--text)">${bv.length}</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:2px">Transacciones</div>
-        </div>
-      </div>
+    return `<tr>
+      <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${coloresBodegas[i]||'#64748b'};margin-right:7px"></span><strong>${nombre}</strong></td>
+      <td>${fmt$(bTotal)}</td>
+      <td>${bOTcomp.length}</td>
+      <td>${bOTopen}</td>
+      <td>${bTicket>0?fmt$(bTicket):'—'}</td>
+    </tr>`;
+  });
+  const totalTicket=otCompletadasMes.length?Math.round(otCompletadasMes.reduce((s,o)=>s+(+o.total||0),0)/otCompletadasMes.length):0;
+
+  // Métodos de pago mes actual
+  const metTotals={};
+  ventasMes.forEach(v=>{ const m=v.metodo_pago||'Sin especificar'; metTotals[m]=(metTotals[m]||0)+(+v.total_iva||0); });
+  const metSorted=Object.entries(metTotals).sort((a,b)=>b[1]-a[1]);
+  const metColores=['#2563eb','#0f172a','#10b981','#f59e0b','#f97316','#8b5cf6'];
+  const metMax=metSorted[0]?metSorted[0][1]:1;
+
+  // Gastos por mes (barras horizontales)
+  const gastosXmes=ultimos6.map(m=>gastos.filter(g=>g.fecha&&g.fecha.startsWith(m.key)).reduce((s,g)=>s+(+g.monto||0),0));
+  const gastosMax=Math.max(...gastosXmes,1);
+  const gastosPromedio=gastosXmes.length?Math.round(gastosXmes.reduce((s,x)=>s+x,0)/gastosXmes.length):0;
+
+  // Compras por mes (barras horizontales)
+  const comprasXmes=ultimos6.map(m=>ocs.filter(o=>o.fecha&&o.fecha.startsWith(m.key)).reduce((s,o)=>s+(+o.total||0),0));
+  const comprasMax=Math.max(...comprasXmes,1);
+  const comprasPromedio=comprasXmes.length?Math.round(comprasXmes.reduce((s,x)=>s+x,0)/comprasXmes.length):0;
+
+  // OTs completadas por mes (mini chart)
+  const otsXmes=ultimos6.map(m=>allOrders.filter(o=>o.status==='Entregado'&&o.fecha&&o.fecha.startsWith(m.key)).length);
+  const otsXmesBranch=bodegas.map((b,bi)=>({
+    nombre:b.nombre||b.name||'Sucursal',
+    color:coloresBodegas[bi]||'#64748b',
+    data:ultimos6.map(m=>allOrders.filter(o=>o.status==='Entregado'&&o.branchId===b.id&&o.fecha&&o.fecha.startsWith(m.key)).length)
+  }));
+
+  function _barChart(id,datasets,labels,maxH){
+    // SVG-less placeholder — rendered via Canvas after insert
+    return `<canvas id="${id}" height="${maxH||70}"></canvas>`;
+  }
+
+  // Topbar: indicadores económicos
+  (async()=>{
+    let ufVal='—', usdVal='—';
+    try{
+      const r=await fetch('https://mindicador.cl/api');
+      if(r.ok){const j=await r.json();ufVal='$'+(+j.uf?.valor||0).toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2});usdVal='$'+(+j.dolar?.valor||0).toLocaleString('es-CL');}
+    }catch(e){}
+    const el=document.getElementById('db-ind-uf');if(el)el.textContent=ufVal;
+    const el2=document.getElementById('db-ind-usd');if(el2)el2.textContent=usdVal;
+  })();
+  document.getElementById('topbar-actions').innerHTML=`
+    <div style="display:flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:600;color:#64748b">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      UF <strong id="db-ind-uf" style="color:#0f172a">…</strong>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:600;color:#64748b">
+      USD <strong id="db-ind-usd" style="color:#0f172a">…</strong>
     </div>`;
-  }).join('');
 
   document.getElementById('page-content').innerHTML=`
-  <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">
-    <div>
-      <div style="font-size:16px;font-weight:700;color:var(--text)">Vista global</div>
-      <div style="font-size:12px;color:var(--text2)">Todas las sucursales · ${new Date().toLocaleDateString('es-CL',{month:'long',year:'numeric'})}</div>
+  <style>
+    .db-kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+    .db-kpi{background:#fff;border-radius:12px;border:1px solid #e8ecf2;padding:14px 16px;position:relative;overflow:hidden}
+    .db-kpi-acc{position:absolute;top:0;left:0;width:100%;height:3px;border-radius:12px 12px 0 0}
+    .db-kpi-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+    .db-kpi-lbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+    .db-kpi-val{font-size:19px;font-weight:800;color:#0f172a;line-height:1}
+    .db-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;margin-top:5px}
+    .db-up{background:#dcfce7;color:#15803d}
+    .db-dn{background:#fee2e2;color:#dc2626}
+    .db-neu{background:#f1f5f9;color:#64748b}
+    .db-card{background:#fff;border-radius:12px;border:1px solid #e8ecf2;padding:16px 18px}
+    .db-card-title{font-size:14px;font-weight:800;color:#0f172a;margin-bottom:2px}
+    .db-card-sub{font-size:11px;color:#94a3b8;margin-bottom:10px}
+    .db-row-3-1{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-bottom:12px}
+    .db-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+    .db-leg{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+    .db-leg-i{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#64748b}
+    .db-leg-d{width:8px;height:8px;border-radius:50%}
+    .db-xlabs{display:flex;margin-top:4px}
+    .db-xlabs span{flex:1;text-align:center;font-size:10px;color:#94a3b8;font-weight:600}
+    .db-suc-table{width:100%;border-collapse:collapse;margin-top:10px}
+    .db-suc-table th{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;padding:0 8px 7px;text-align:right;border-bottom:1px solid #f1f5f9}
+    .db-suc-table th:first-child{text-align:left}
+    .db-suc-table td{font-size:12px;font-weight:600;color:#374151;padding:7px 8px;border-top:1px solid #f8fafc;text-align:right}
+    .db-suc-table td:first-child{text-align:left;font-weight:700;color:#0f172a}
+    .db-suc-table tr.db-total td{font-weight:800;color:#0f172a;font-size:13px;border-top:2px solid #e2e8f0}
+    .db-met-list{display:flex;flex-direction:column;gap:7px}
+    .db-met-row{display:flex;align-items:center;gap:8px}
+    .db-met-lbl{font-size:12px;font-weight:600;color:#374151;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .db-met-bar{flex:0 0 70px;height:5px;background:#f1f5f9;border-radius:99px;overflow:hidden}
+    .db-met-fill{height:100%;border-radius:99px}
+    .db-met-val{font-size:12px;font-weight:700;color:#0f172a;width:72px;text-align:right;flex-shrink:0}
+    .db-met-pct{font-size:10px;color:#94a3b8;width:24px;text-align:right;flex-shrink:0}
+    .db-sbl{display:flex;flex-direction:column;gap:5px}
+    .db-sbl-row{display:flex;align-items:center;gap:7px}
+    .db-sbl-lbl{font-size:10px;font-weight:700;color:#64748b;width:26px;text-align:right;flex-shrink:0}
+    .db-sbl-track{flex:1;height:17px;background:#f1f5f9;border-radius:4px;overflow:hidden;position:relative}
+    .db-sbl-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:7px;min-width:2px}
+    .db-sbl-fill span{font-size:10px;font-weight:700;color:#fff;white-space:nowrap}
+    .db-ord-row{background:#f8fafc;border-radius:8px;padding:9px 12px;border:1px solid #f1f5f9;margin-bottom:6px}
+    .db-ord-name{font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+    .db-ord-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+    .db-ord-stat{text-align:center}
+    .db-ord-v{font-size:15px;font-weight:800;color:#0f172a}
+    .db-ord-l{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+    #page-content:has(.db-kpi-row){padding:14px!important}
+  </style>
+
+  <!-- KPIs -->
+  <div class="db-kpi-row">
+    <div class="db-kpi">
+      <div class="db-kpi-acc" style="background:#3b82f6"></div>
+      <div class="db-kpi-ico" style="background:#eff6ff;color:#2563eb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div class="db-kpi-lbl">Ventas totales</div>
+      <div class="db-kpi-val">${fmt$(totalMes)}</div>
+      ${_pct(totalMes,totalMesAnt)||`<div class="db-badge db-neu">${ventasMes.length} transacciones</div>`}
+    </div>
+    <div class="db-kpi">
+      <div class="db-kpi-acc" style="background:#10b981"></div>
+      <div class="db-kpi-ico" style="background:#f0fdf4;color:#16a34a"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div class="db-kpi-lbl">Utilidad bruta</div>
+      <div class="db-kpi-val">${fmt$(utilidad)}</div>
+      <div class="db-badge db-neu">Margen ${margen}%</div>
+    </div>
+    <div class="db-kpi">
+      <div class="db-kpi-acc" style="background:#f97316"></div>
+      <div class="db-kpi-ico" style="background:#fff7ed;color:#ea580c"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg></div>
+      <div class="db-kpi-lbl">Gastos del mes</div>
+      <div class="db-kpi-val">${fmt$(gastosMes)}</div>
+      ${_pctInv(gastosMes,gastosMesAnt)||`<div class="db-badge db-neu">${gastos.filter(g=>g.fecha&&g.fecha.startsWith(mesActual)).length} registros</div>`}
+    </div>
+    <div class="db-kpi">
+      <div class="db-kpi-acc" style="background:#8b5cf6"></div>
+      <div class="db-kpi-ico" style="background:#f5f3ff;color:#7c3aed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+      <div class="db-kpi-lbl">Compras del mes</div>
+      <div class="db-kpi-val">${fmt$(ocsMes)}</div>
+      ${_pctInv(ocsMes,ocsMesAnt)||`<div class="db-badge db-neu">${ocs.filter(o=>o.fecha&&o.fecha.startsWith(mesActual)).length} OCs</div>`}
+    </div>
+    <div class="db-kpi">
+      <div class="db-kpi-acc" style="background:#0f172a"></div>
+      <div class="db-kpi-ico" style="background:#f1f5f9;color:#475569"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+      <div class="db-kpi-lbl">OTs completadas</div>
+      <div class="db-kpi-val">${totalOTMes}</div>
+      ${_pct(totalOTMes,totalOTMesAnt)||`<div class="db-badge db-neu">${otAbiertas} abiertas</div>`}
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
-    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
-      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ventas del mes</div>
-      <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">${fmt$(totalMes)}</div>
-      ${deltaMes||`<span style="font-size:11px;color:var(--text2)">${ventasMes.length} transacciones</span>`}
-    </div>
-    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
-      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">OTs abiertas</div>
-      <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">${otAbiertas}</div>
-      <span style="font-size:11px;color:var(--text2)">Todas las sucursales</span>
-    </div>
-    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
-      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ticket promedio OT</div>
-      <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">${ticketProm>0?fmt$(ticketProm):'—'}</div>
-      ${deltaTicket||`<span style="font-size:11px;color:var(--text2)">${otEntregadasMes.length} OTs cerradas</span>`}
-    </div>
-    <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
-      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tiempo promedio</div>
-      <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">${tiempoProm!=='—'?tiempoProm+' días':'—'}</div>
-      ${deltaTiempo||`<span style="font-size:11px;color:var(--text2)">Por reparación cerrada</span>`}
-    </div>
-  </div>
-
-  ${bodegas.length?`
-  <div style="background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:24px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div>
-        <div style="font-size:14px;font-weight:600;color:var(--text)">Ventas por mes</div>
-        <div style="font-size:12px;color:var(--text2)">Últimos 6 meses · por sucursal</div>
+  <!-- Ventas por sucursal + Métodos de pago -->
+  <div class="db-row-3-1" style="grid-template-columns:3fr 2fr">
+    <div class="db-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+        <div><div class="db-card-title">Ventas por sucursal</div><div class="db-card-sub">Últimos 6 meses</div></div>
+        <div class="db-leg" style="margin:0">
+          ${bodegas.map((b,i)=>`<div class="db-leg-i"><div class="db-leg-d" style="background:${coloresBodegas[i]||'#64748b'}"></div>${escAttr(b.nombre||b.name||'')}</div>`).join('')}
+        </div>
       </div>
-      <div style="display:flex;gap:14px;align-items:center" id="dash-chart-legend"></div>
+      <canvas id="db-ventas-chart" height="80"></canvas>
+      <div class="db-xlabs">${ultimos6.map(m=>`<span>${m.label}</span>`).join('')}</div>
+      <table class="db-suc-table">
+        <thead><tr><th>Sucursal</th><th>Ventas</th><th>OTs compl.</th><th>OTs abiertas</th><th>Ticket prom.</th></tr></thead>
+        <tbody>
+          ${branchRows.join('')}
+          <tr class="db-total">
+            <td>Total</td>
+            <td>${fmt$(totalMes)}</td>
+            <td>${totalOTMes}</td>
+            <td>${otAbiertas}</td>
+            <td>${totalTicket>0?fmt$(totalTicket):'—'}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <canvas id="dash-ventas-chart" height="90"></canvas>
+    <div class="db-card">
+      <div class="db-card-title">Métodos de pago</div>
+      <div class="db-card-sub">${new Date().toLocaleDateString('es-CL',{month:'long',year:'numeric'})} · todas las sucursales</div>
+      ${metSorted.length?`
+      <div style="display:flex;justify-content:center;margin-bottom:14px">
+        <div style="position:relative;width:100px;height:100px">
+          <canvas id="db-met-donut" width="100" height="100"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+            <div style="font-size:13px;font-weight:800;color:#0f172a">${totalMes>=1000000?'$'+(Math.round(totalMes/100000)/10)+'M':fmt$(totalMes)}</div>
+            <div style="font-size:9px;font-weight:600;color:#94a3b8">TOTAL</div>
+          </div>
+        </div>
+      </div>
+      <div class="db-met-list">
+        ${metSorted.map((m,i)=>{
+          const pct=totalMes>0?Math.round(m[1]/totalMes*100):0;
+          const label=m[0].charAt(0).toUpperCase()+m[0].slice(1);
+          return `<div class="db-met-row">
+            <div style="width:8px;height:8px;border-radius:50%;background:${metColores[i]||'#94a3b8'};flex-shrink:0"></div>
+            <div class="db-met-lbl">${label}</div>
+            <div class="db-met-bar"><div class="db-met-fill" style="width:${Math.round(m[1]/metMax*100)}%;background:${metColores[i]||'#94a3b8'}"></div></div>
+            <div class="db-met-val">${fmt$(m[1])}</div>
+            <div class="db-met-pct">${pct}%</div>
+          </div>`;
+        }).join('')}
+      </div>`
+      :`<div style="text-align:center;padding:30px;color:#94a3b8;font-size:12px">Sin ventas este mes</div>`}
+    </div>
   </div>
-  <div style="margin-bottom:10px;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Sucursales</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">${branchCards}</div>`
-  :'<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px">No hay sucursales creadas. Ve a <b>Configuración → Sucursales</b>.</div>'}`;
 
-  // Renderizar gráfico si hay sucursales
-  if(bodegas.length){
-    setTimeout(()=>{
-      const canvas=document.getElementById('dash-ventas-chart');
-      if(!canvas) return;
-      // Calcular últimos 6 meses
-      const mesesLabels=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-      const ultimos6=[];
-      for(let i=5;i>=0;i--){
-        const dd=new Date(); dd.setDate(1); dd.setMonth(dd.getMonth()-i);
-        ultimos6.push({key:dd.toISOString().slice(0,7), label:mesesLabels[dd.getMonth()]});
-      }
-      const colores=['#2563eb','#0f172a','#64748b','#94a3b8','#cbd5e1','#e2e8f0'];
-      const datasets=bodegas.map((b,i)=>{
+  <!-- OTs + Gastos + Compras -->
+  <div class="db-row-3">
+    <!-- OTs completadas por sucursal -->
+    <div class="db-card">
+      <div class="db-card-title">Órdenes completadas</div>
+      <div class="db-card-sub">Últimos 6 meses · por sucursal</div>
+      <canvas id="db-ots-chart" height="80"></canvas>
+      <div class="db-xlabs" style="margin-bottom:10px">${ultimos6.map(m=>`<span>${m.label}</span>`).join('')}</div>
+      ${bodegas.map((b,bi)=>{
+        const bOTcomp=allOrders.filter(o=>o.status==='Entregado'&&o.branchId===b.id&&o.fecha&&o.fecha.startsWith(mesActual));
+        const bOTopen=allOrders.filter(o=>o.status!=='Entregado'&&o.branchId===b.id).length;
+        const bTicket=bOTcomp.length?Math.round(bOTcomp.reduce((s,o)=>s+(+o.total||0),0)/bOTcomp.length):0;
         const nombre=b.nombre||b.name||'Sucursal';
-        const data=ultimos6.map(m=>
-          ventas.filter(v=>v.estado!=='anulada'&&v.fecha&&v.fecha.startsWith(m.key)&&v.branchId===b.id)
-            .reduce((s,v)=>s+(+v.total_iva||0),0)
-        );
-        return {label:nombre, data, backgroundColor:colores[i]||colores[0], borderRadius:4, borderSkipped:false};
-      });
-      // Leyenda
-      const legend=document.getElementById('dash-chart-legend');
-      if(legend) legend.innerHTML=bodegas.map((b,i)=>`<span style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;background:${colores[i]||colores[0]};display:inline-block;border-radius:2px"></span>${escAttr(b.nombre||b.name)}</span>`).join('');
-      // Chart.js — cargar si no está disponible
-      function _buildChart(){
-        if(window.Chart){
-          if(canvas._chartInst) canvas._chartInst.destroy();
-          canvas._chartInst=new Chart(canvas,{
-            type:'bar',
-            data:{labels:ultimos6.map(m=>m.label), datasets},
-            options:{
-              responsive:true, maintainAspectRatio:true,
-              plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const b=ctx.dataset.label;const v=ctx.raw;const fmt=v>=1000000?'$'+Math.round(v/100000)/10+'M':v>=1000?'$'+Math.round(v/1000).toLocaleString('es-CL')+'K':'$'+v.toLocaleString('es-CL');return b+': '+fmt;}}}},
-              scales:{
-                x:{grid:{display:false},border:{display:false},ticks:{color:'#9ca3af',font:{size:11}}},
-                y:{grid:{color:'rgba(0,0,0,.05)'},border:{display:false},ticks:{color:'#9ca3af',font:{size:11},callback:v=>v===0?'$0':'$'+Math.round(v/1000000*10)/10+'M'}}
-              }
-            }
-          });
-        } else {
-          const s=document.createElement('script');
-          s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
-          s.onload=_buildChart; document.head.appendChild(s);
+        return `<div class="db-ord-row">
+          <div class="db-ord-name"><span style="width:8px;height:8px;border-radius:50%;background:${coloresBodegas[bi]};display:inline-block"></span>${escAttr(nombre)}</div>
+          <div class="db-ord-stats">
+            <div class="db-ord-stat"><div class="db-ord-v">${bOTcomp.length}</div><div class="db-ord-l">Completadas</div></div>
+            <div class="db-ord-stat"><div class="db-ord-v" style="color:#f97316">${bOTopen}</div><div class="db-ord-l">En proceso</div></div>
+            <div class="db-ord-stat"><div class="db-ord-v" style="font-size:12px">${bTicket>0?fmt$(bTicket):'—'}</div><div class="db-ord-l">Ticket prom.</div></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- Gastos por mes -->
+    <div class="db-card">
+      <div class="db-card-title">Gastos por mes</div>
+      <div class="db-card-sub">Últimos 6 meses</div>
+      <div class="db-sbl">
+        ${gastosXmes.map((v,i)=>{
+          const isCurrent=i===5;
+          const w=Math.max(Math.round(v/gastosMax*100),v>0?4:0);
+          return `<div class="db-sbl-row">
+            <div class="db-sbl-lbl" style="${isCurrent?'color:#ef4444;font-weight:800':''}">${ultimos6[i].label}</div>
+            <div class="db-sbl-track">
+              <div class="db-sbl-fill" style="width:${w}%;background:${isCurrent?'#ef4444':'#f97316'}">
+                ${v>0?`<span>${fmt$(v)}</span>`:''}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;font-weight:600;color:#94a3b8">Promedio mensual</span>
+        <span style="font-size:13px;font-weight:800;color:#f97316">${fmt$(gastosPromedio)}</span>
+      </div>
+    </div>
+
+    <!-- Compras por mes -->
+    <div class="db-card">
+      <div class="db-card-title">Compras por mes</div>
+      <div class="db-card-sub">Últimos 6 meses · órdenes de compra</div>
+      <div class="db-sbl">
+        ${comprasXmes.map((v,i)=>{
+          const isCurrent=i===5;
+          const w=Math.max(Math.round(v/comprasMax*100),v>0?4:0);
+          return `<div class="db-sbl-row">
+            <div class="db-sbl-lbl" style="${isCurrent?'color:#7c3aed;font-weight:800':''}">${ultimos6[i].label}</div>
+            <div class="db-sbl-track">
+              <div class="db-sbl-fill" style="width:${w}%;background:${isCurrent?'#7c3aed':'#8b5cf6'}">
+                ${v>0?`<span>${fmt$(v)}</span>`:''}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;font-weight:600;color:#94a3b8">Promedio mensual</span>
+        <span style="font-size:13px;font-weight:800;color:#8b5cf6">${fmt$(comprasPromedio)}</span>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Charts ──
+  setTimeout(()=>{
+    function _loadChart(cb){
+      if(window.Chart) cb();
+      else { const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'; s.onload=cb; document.head.appendChild(s); }
+    }
+    _loadChart(()=>{
+      const fmtTick=v=>v===0?'$0':v>=1000000?'$'+(Math.round(v/100000)/10)+'M':'$'+Math.round(v/1000)+'K';
+      const baseOpts=(stacked)=>({
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt$(ctx.raw)}`}}},
+        scales:{
+          x:{grid:{display:false},border:{display:false},ticks:{color:'#9ca3af',font:{size:10}},stacked},
+          y:{grid:{color:'rgba(0,0,0,.04)'},border:{display:false},ticks:{color:'#9ca3af',font:{size:10},callback:fmtTick},stacked}
         }
+      });
+
+      // Ventas por sucursal
+      const cv=document.getElementById('db-ventas-chart');
+      if(cv){ if(cv._ci)cv._ci.destroy(); cv._ci=new Chart(cv,{type:'bar',data:{labels:ultimos6.map(m=>m.label),datasets:branchDatasets.map(d=>({label:d.label,data:d.data,backgroundColor:d.color,borderRadius:3,borderSkipped:false}))},options:baseOpts(false)}); }
+
+      // OTs por sucursal
+      const co=document.getElementById('db-ots-chart');
+      if(co){ if(co._ci)co._ci.destroy(); co._ci=new Chart(co,{type:'bar',data:{labels:ultimos6.map(m=>m.label),datasets:otsXmesBranch.map(d=>({label:d.nombre,data:d.data,backgroundColor:d.color,borderRadius:3,borderSkipped:false}))},options:{...baseOpts(false),scales:{x:{grid:{display:false},border:{display:false},ticks:{color:'#9ca3af',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.04)'},border:{display:false},ticks:{color:'#9ca3af',font:{size:10},stepSize:1}}}}}); }
+
+      // Donut métodos de pago
+      const cd=document.getElementById('db-met-donut');
+      if(cd&&metSorted.length){
+        if(cd._ci)cd._ci.destroy();
+        cd._ci=new Chart(cd,{type:'doughnut',data:{labels:metSorted.map(m=>m[0]),datasets:[{data:metSorted.map(m=>m[1]),backgroundColor:metColores.slice(0,metSorted.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt$(ctx.raw)}`}}}}});
       }
-      _buildChart();
-    },50);
-  }
+    });
+  },60);
 }
 
 function badgeEstado(e){
