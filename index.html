@@ -2366,7 +2366,7 @@ function _renderDashboardGlobal(){
           ${bodegas.map((b,i)=>`<div class="db-leg-i"><div class="db-leg-d" style="background:${coloresBodegas[i]||'#64748b'}"></div>${escAttr(b.nombre||b.name||'')}</div>`).join('')}
         </div>
       </div>
-      <canvas id="db-ventas-chart" height="80"></canvas>
+      <div style="position:relative;height:90px"><canvas id="db-ventas-chart"></canvas></div>
       <div class="db-xlabs">${ultimos6.map(m=>`<span>${m.label}</span>`).join('')}</div>
       <table class="db-suc-table">
         <thead><tr><th>Sucursal</th><th>Ventas</th><th>OTs compl.</th><th>OTs abiertas</th><th>Ticket prom.</th></tr></thead>
@@ -2418,7 +2418,7 @@ function _renderDashboardGlobal(){
     <div class="db-card">
       <div class="db-card-title">Órdenes completadas</div>
       <div class="db-card-sub">Últimos 6 meses · por sucursal</div>
-      <canvas id="db-ots-chart" height="80"></canvas>
+      <div style="position:relative;height:80px"><canvas id="db-ots-chart"></canvas></div>
       <div class="db-xlabs" style="margin-bottom:10px">${ultimos6.map(m=>`<span>${m.label}</span>`).join('')}</div>
       ${bodegas.map((b,bi)=>{
         const bOTcomp=allOrders.filter(o=>o.status==='Entregado'&&o.branchId===b.id&&o.fecha&&o.fecha.startsWith(mesActual));
