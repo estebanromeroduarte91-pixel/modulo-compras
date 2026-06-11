@@ -2220,10 +2220,14 @@ function _renderDashboardGlobal(){
   const totalTicket=otCompletadasMes.length?Math.round(otCompletadasMes.reduce((s,o)=>s+(+o.total||0),0)/otCompletadasMes.length):0;
 
   // Métodos de pago mes actual
+  const _mpsCfg=getMetodosPago();
+  const _mpLabelById={};
+  _mpsCfg.forEach(mp=>{ _mpLabelById[mp.id]=mp.label||mp.id; _mpLabelById[(mp.label||'').toLowerCase()]=mp.label||mp.id; });
+  const _getMpLabel=id=>_mpLabelById[id]||_mpLabelById[(id||'').toLowerCase()]||id.charAt(0).toUpperCase()+id.slice(1);
   const metTotals={};
   ventasMes.forEach(v=>{ const m=v.metodo_pago||'Sin especificar'; metTotals[m]=(metTotals[m]||0)+(+v.total_iva||0); });
   const metSorted=Object.entries(metTotals).sort((a,b)=>b[1]-a[1]);
-  const metColores=['#2563eb','#0f172a','#10b981','#f59e0b','#f97316','#8b5cf6'];
+  const metColores=_mpsCfg.map((_,i)=>['#2563eb','#0f172a','#10b981','#f59e0b','#f97316','#8b5cf6'][i]||'#94a3b8');
   const metMax=metSorted[0]?metSorted[0][1]:1;
   // Breakdown por sucursal para cada método
   const metBySuc={};
@@ -2409,7 +2413,7 @@ function _renderDashboardGlobal(){
         <div id="db-met-tip" style="display:none;position:fixed;z-index:9999;background:#0f172a;color:#fff;border-radius:10px;padding:10px 14px;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:170px;pointer-events:none"></div>
         ${metSorted.map((m,i)=>{
           const pct=totalMes>0?Math.round(m[1]/totalMes*100):0;
-          const label=m[0].charAt(0).toUpperCase()+m[0].slice(1);
+          const label=_getMpLabel(m[0]);
           const sucData=metBySuc[m[0]]||{};
           const sucJson=escAttr(JSON.stringify(sucData));
           const color=metColores[i]||'#94a3b8';
@@ -2544,7 +2548,7 @@ function _renderDashboardGlobal(){
       const cd=document.getElementById('db-met-donut');
       if(cd&&metSorted.length){
         if(cd._ci)cd._ci.destroy();
-        cd._ci=new Chart(cd,{type:'doughnut',data:{labels:metSorted.map(m=>m[0]),datasets:[{data:metSorted.map(m=>m[1]),backgroundColor:metColores.slice(0,metSorted.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt$(ctx.raw)}`}}}}});
+        cd._ci=new Chart(cd,{type:'doughnut',data:{labels:metSorted.map(m=>_getMpLabel(m[0])),datasets:[{data:metSorted.map(m=>m[1]),backgroundColor:metColores.slice(0,metSorted.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt$(ctx.raw)}`}}}}});
       }
     });
   },60);
