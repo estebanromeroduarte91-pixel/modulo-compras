@@ -14607,10 +14607,22 @@ async function _aiEnviar(){
       body:{pregunta:q, contexto, anthropic_api_key:key}
     });
     document.getElementById('ai-loading-msg')?.remove();
-    if(error||!data?.ok) _aiAddMsg('bot','Error al consultar el asistente: '+(data?.error||error?.message||'desconocido'));
-    else _aiAddMsg('bot', data.respuesta);
+    if(error){
+      console.error('[AI] invoke error:', error);
+      const msg=error?.message||JSON.stringify(error);
+      if(msg.includes('non-2xx')||msg.includes('404')||msg.includes('not found'))
+        _aiAddMsg('bot','La función <strong>ai-query</strong> no está desplegada en Supabase. Ve al Dashboard → Edge Functions → New function y pega el código de ai-query.');
+      else
+        _aiAddMsg('bot','Error al consultar el asistente: '+msg);
+    } else if(!data?.ok){
+      console.error('[AI] data error:', data);
+      _aiAddMsg('bot','Error: '+(data?.error||'respuesta inesperada del asistente'));
+    } else {
+      _aiAddMsg('bot', data.respuesta);
+    }
   }catch(e){
     document.getElementById('ai-loading-msg')?.remove();
+    console.error('[AI] catch:', e);
     _aiAddMsg('bot','Error de conexión: '+e.message);
   }
   _aiLoading=false;
