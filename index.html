@@ -2772,6 +2772,8 @@ let _posBranchId='';
 let _posClienteInfo={rut:'',tel:'',email:''};
 
 function renderVentas(){
+  // Si seguimos en Taller, no reemplazar su contenido — solo actualizar estado interno
+  if(currentPage==='taller'){ tp_renderAll&&tp_renderAll(); return; }
   if(_vtaTab==='pos'){
     document.getElementById('topbar-actions').innerHTML=`
       <button class="btn btn-secondary" onclick="navVentas('resumen')">← Resumen</button>`;
@@ -3369,7 +3371,8 @@ function posSaveVenta(){
   const ventas=getVentas(); ventas.push(venta); setVentas(ventas);
   crearAsientoVenta(venta);
   _posItems=[]; _posCliente=''; _posNumBuf=''; _posDocumento='boleta'; _posClienteInfo={rut:'',tel:'',email:''}; _posBranchId='';
-  closeModal(); toast(`Venta ${venta.numero} registrada ✓`,'success'); renderVentas();
+  closeModal(); toast(`Venta ${venta.numero} registrada ✓`,'success');
+  if(currentPage==='taller') tp_renderAll&&tp_renderAll(); else renderVentas();
 }
 
 // ─── VENTAS CONFIG ─────────────────────────────
@@ -4212,7 +4215,8 @@ function saveVenta(){
     fecha,cliente,metodo_pago:metodo,items,total,total_iva,fecha_creacion:today()};
   const ventas=getVentas(); ventas.push(venta); setVentas(ventas);
   crearAsientoVenta(venta);
-  closeModal(); toast(`Venta ${venta.numero} registrada ✓`,'success'); renderVentas();
+  closeModal(); toast(`Venta ${venta.numero} registrada ✓`,'success');
+  if(currentPage==='taller') tp_renderAll&&tp_renderAll(); else renderVentas();
 }
 
 function verVenta(id){
@@ -10878,6 +10882,7 @@ function renderTaller() {
   </div>
 
 </div>`;
+  const _prevBranchId=tp_currentBranchId; // guardar selección previa antes de loadState
   tp_loadState();
   tp_addListeners();
   // Si el usuario tiene sucursal asignada (no super-admin), entrar directo a sus órdenes
@@ -10890,6 +10895,17 @@ function renderTaller() {
     if(_badge)_badge.style.display='flex';
     if(_badgeName&&_b)_badgeName.textContent=_b.nombre||_b.name;
     if(_backBtn)_backBtn.style.display='none'; // no puede volver a seleccionar
+    tp_showPage('orders',null); tp_renderAll();
+  } else if(_prevBranchId && tp_branches.find(b=>b.id===_prevBranchId)){
+    // Admin ya tenía una sucursal seleccionada — volver directo a las órdenes
+    tp_currentBranchId=_prevBranchId;
+    const _b=tp_branches.find(b=>b.id===_prevBranchId);
+    const _badge=document.getElementById('branch-context-badge');
+    const _badgeName=document.getElementById('branch-badge-name');
+    const _backBtn=document.getElementById('branch-back-btn');
+    if(_badge)_badge.style.display='flex';
+    if(_badgeName&&_b)_badgeName.textContent=_b.nombre||_b.name;
+    if(_backBtn)_backBtn.style.display='';
     tp_showPage('orders',null); tp_renderAll();
   } else {
     tp_showPage('branches', null);
