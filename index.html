@@ -11535,7 +11535,17 @@ function tp_saveOrder(){
     const yaExiste=clis.find(c=>(c.rut&&c.rut===data.rut)||(c.nombre+' '+(c.apellido||'')).trim().toLowerCase()===nombre.toLowerCase());
     if(!yaExiste&&nombre){const partes=nombre.split(' ');clis.push({id:'cli-tp-'+Date.now(),nombre:partes[0]||nombre,apellido:partes.slice(1).join(' ')||'',rut:data.rut||'',email:data.email||'',tel:data.tel||'',fecha_creacion:data.fecha||''});setClientes(clis);}
     // Enviar correo de confirmación de ingreso
-    tp_enviarCorreoIngreso(newOrder);
+    tp_enviarCorreoIngreso(newOrder).then(res=>{
+      if(res&&res.ok===false){
+        const msg=res.error||'Error desconocido';
+        if(msg.includes('Sin configuración')||msg.includes('smtp_config'))
+          toast('Correo de ingreso no enviado: configura SMTP en Ajustes','error');
+        else if(msg.includes('API Key')||msg.includes('resend'))
+          toast('Correo de ingreso no enviado: configura API Key de Resend','error');
+        else
+          toast('Correo de ingreso no enviado: '+msg,'error');
+      }
+    }).catch(e=>console.warn('tp_enviarCorreoIngreso:',e));
   }
   tp_saveState();tp_closeModal('mod-order');tp_renderAll();
 }
@@ -11557,9 +11567,9 @@ function tp_updateStatus(id,val){
 }
 
 async function tp_enviarCorreoIngreso(order){
-  if(!order.email) return;
+  if(!order.email){console.warn('tp_enviarCorreoIngreso: order.email vacío');return{ok:false,error:'Email del cliente vacío en la orden'};}
   const resendKeyIng=localStorage.getItem('erp_resend_key')||'';
-  if(!resendKeyIng) return;
+  if(!resendKeyIng) return{ok:false,error:'API Key de Resend no configurada'};
   const cfg=DB.get('tp_config')||{};
   const branch=tp_branches.find(b=>b.id===order.branchId)||{};
   const tallerNombre=cfg.nombre||'Taller';
@@ -11758,7 +11768,8 @@ async function tp_enviarCorreoIngreso(order){
 </table>
 </body></html>`;
 
-  await tp_callSendEmail(order.email,`Orden de trabajo #OT-${order.num} — ${order.modelo||'Equipo'} ingresado`,bodyHtml);
+  const _resIng=await tp_callSendEmail(order.email,`Orden de trabajo #OT-${order.num} — ${order.modelo||'Equipo'} ingresado`,bodyHtml);
+  return _resIng;
 }
 
 async function tp_notificarListo(id){
