@@ -1,6 +1,6 @@
 // ─── SUPABASE EDGE FUNCTION: ai-query ───
 // Nombre de la función: ai-query
-// Variables de entorno requeridas: ANTHROPIC_API_KEY
+// Variables de entorno requeridas: GROQ_API_KEY (opcional, puede venir en el body)
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,12 +13,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { pregunta, contexto, anthropic_api_key } = await req.json();
+    const { pregunta, contexto, groq_api_key } = await req.json();
 
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY") || anthropic_api_key;
+    const apiKey = Deno.env.get("GROQ_API_KEY") || groq_api_key;
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ ok: false, error: "Falta ANTHROPIC_API_KEY" }),
+        JSON.stringify({ ok: false, error: "Falta GROQ_API_KEY" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -43,36 +43,32 @@ Reglas:
 - "VTA" significa Venta (venta de producto o servicio)
 - El IVA en Chile es 19%`;
 
-    const userMessage = `Contexto del ERP (datos actuales):
-${contexto}
-
-Pregunta del usuario: ${pregunta}`;
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
+        model: "llama-3.3-70b-versatile",
         max_tokens: 1024,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userMessage }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Contexto del ERP (datos actuales):\n${contexto}\n\nPregunta: ${pregunta}` }
+        ],
       }),
     });
 
     if (!response.ok) {
       const err = await response.text();
       return new Response(
-        JSON.stringify({ ok: false, error: `Error Anthropic API: ${err}` }),
+        JSON.stringify({ ok: false, error: `Error Groq API: ${err}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await response.json();
-    const respuesta = data.content?.[0]?.text || "Sin respuesta";
+    const respuesta = data.choices?.[0]?.message?.content || "Sin respuesta";
 
     return new Response(JSON.stringify({ ok: true, respuesta }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

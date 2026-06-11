@@ -14592,9 +14592,9 @@ async function _aiEnviar(){
   const inp=document.getElementById('ai-input');
   const q=(inp?.value||'').trim();
   if(!q) return;
-  const key=localStorage.getItem('erp_anthropic_key')||'';
+  const key=localStorage.getItem('erp_groq_key')||'';
   if(!key){
-    _aiAddMsg('bot','Para usar el asistente primero debes guardar tu <strong>Anthropic API Key</strong> en Configuración → Correo / IA.');
+    _aiAddMsg('bot','Para usar el asistente primero debes guardar tu <strong>Groq API Key</strong> en Configuración → Correo / IA. Obtén una gratis en console.groq.com');
     inp.value=''; return;
   }
   inp.value='';
@@ -14603,30 +14603,40 @@ async function _aiEnviar(){
   _aiAddMsg('bot','<span class="ai-typing"><span></span><span></span><span></span></span>', 'ai-loading-msg');
   try{
     const contexto=_aiGetContexto();
-    const _aiResp = await fetch(`${_SB_URL}/functions/v1/ai-query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${_SB_KEY}`,
-        'apikey': _SB_KEY,
-      },
-      body: JSON.stringify({pregunta:q, contexto, anthropic_api_key:key})
+    const systemPrompt=`Eres un asistente de negocio integrado en un ERP chileno para talleres de reparación de celulares y tiendas de tecnología.
+Tu tarea es responder preguntas sobre el negocio usando los datos que te entrega el sistema.
+Reglas:
+- Responde siempre en español
+- Sé directo y conciso — una o dos oraciones para respuestas simples, una lista corta para respuestas complejas
+- Los montos son en pesos chilenos (CLP). Usa el formato $1.234.567
+- Si los datos no son suficientes para responder, dilo claramente
+- No inventes datos que no estén en el contexto
+- Las fechas usan formato DD-MM-YYYY o YYYY-MM-DD
+- "OT" significa Orden de Trabajo (reparación de equipo)
+- "VTA" significa Venta (venta de producto o servicio)
+- El IVA en Chile es 19%`;
+    const resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        max_tokens:1024,
+        messages:[
+          {role:'system',content:systemPrompt},
+          {role:'user',content:'Contexto del ERP:\n'+contexto+'\n\nPregunta: '+q}
+        ]
+      })
     });
-    const _aiRaw = await _aiResp.text();
     document.getElementById('ai-loading-msg')?.remove();
-    console.log('[AI] status:', _aiResp.status, 'body:', _aiRaw);
-    let data;
-    try { data = JSON.parse(_aiRaw); } catch(e){ data = null; }
-    if(!_aiResp.ok || !data?.ok){
-      const errMsg = data?.error || _aiRaw || `HTTP ${_aiResp.status}`;
-      console.error('[AI] error:', errMsg);
-      _aiAddMsg('bot', 'Error: ' + errMsg);
+    if(!resp.ok){
+      const err=await resp.text();
+      _aiAddMsg('bot','Error Groq: '+err);
     } else {
-      _aiAddMsg('bot', data.respuesta);
+      const data=await resp.json();
+      _aiAddMsg('bot', data.choices?.[0]?.message?.content||'Sin respuesta');
     }
   }catch(e){
     document.getElementById('ai-loading-msg')?.remove();
-    console.error('[AI] catch:', e);
     _aiAddMsg('bot','Error de conexión: '+e.message);
   }
   _aiLoading=false;
