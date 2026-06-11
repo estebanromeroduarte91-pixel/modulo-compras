@@ -1230,6 +1230,7 @@ async function _iniciarApp(user){
 
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('topbar-empresa').textContent = empresaNombre;
+  _aiInject();
   const _cargoLabel = _currentRole==='admin' ? 'Super-admin' : (getCargos().find(c=>c.id===_currentCargoId)?.nombre || _ROLES_LABEL[_currentRole]||_currentRole);
   // Actualizar footer del sidebar con nombre real
   const _initials = (_currentUserNombre||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
@@ -2008,6 +2009,14 @@ function renderConfigGlobal(){
                 <input id="smtp-groq-key" type="password"
                   placeholder="${localStorage.getItem('erp_groq_key')?'✓ Clave guardada — pega nueva para cambiar':'gsk_xxxxxxxxxxxxxxxxxxxx'}"
                   style="width:100%;padding:8px 12px;border:1px solid #c4b5fd;border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;background:#fff;outline:none;color:#3b0764">
+              </div>
+              <!-- Anthropic API Key -->
+              <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px">
+                <div style="font-size:12.5px;font-weight:700;color:#c2410c;margin-bottom:4px">Anthropic API Key — Asistente IA del ERP</div>
+                <div style="font-size:12px;color:#ea580c;margin-bottom:10px;line-height:1.5">Activa el asistente de IA que responde preguntas sobre ventas, gastos, OTs y más. Obtén tu clave en <a href="https://console.anthropic.com" target="_blank" style="color:#c2410c;font-weight:700">console.anthropic.com</a>.</div>
+                <input id="smtp-anthropic-key" type="password"
+                  placeholder="${localStorage.getItem('erp_anthropic_key')?'✓ Clave guardada — pega nueva para cambiar':'sk-ant-xxxxxxxxxxxxxxxxxxxx'}"
+                  style="width:100%;padding:8px 12px;border:1px solid #fed7aa;border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;background:#fff;outline:none;color:#9a3412">
               </div>
             </div>
           </div>
@@ -13267,6 +13276,8 @@ function tp_renderSmtpSettings(){
   if(resendEl) resendEl.placeholder=localStorage.getItem('erp_resend_key')?'✓ Clave guardada — pega nueva para cambiar':'re_xxxxxxxxxxxxxxxxxxxx';
   const groqEl=document.getElementById('smtp-groq-key');
   if(groqEl) groqEl.placeholder=localStorage.getItem('erp_groq_key')?'✓ Clave guardada — pega nueva para cambiar':'gsk_xxxxxxxxxxxxxxxxxxxx';
+  const anthropicEl=document.getElementById('smtp-anthropic-key');
+  if(anthropicEl) anthropicEl.placeholder=localStorage.getItem('erp_anthropic_key')?'✓ Clave guardada — pega nueva para cambiar':'sk-ant-xxxxxxxxxxxxxxxxxxxx';
 }
 
 function tp_saveSmtp(){
@@ -13280,6 +13291,8 @@ function tp_saveSmtp(){
   // Guardar keys en localStorage propio (no sincroniza a Supabase)
   if(resendInput) localStorage.setItem('erp_resend_key', resendInput);
   if(groqInput) localStorage.setItem('erp_groq_key', groqInput);
+  const anthropicInput=(document.getElementById('smtp-anthropic-key')?.value||'').trim();
+  if(anthropicInput) localStorage.setItem('erp_anthropic_key', anthropicInput);
   const cfg={
     host,
     port:parseInt(document.getElementById('smtp-port')?.value)||587,
@@ -13293,6 +13306,7 @@ function tp_saveSmtp(){
   document.getElementById('smtp-password').value='';
   if(document.getElementById('smtp-resend-key')) document.getElementById('smtp-resend-key').value='';
   if(document.getElementById('smtp-groq-key')) document.getElementById('smtp-groq-key').value='';
+  if(document.getElementById('smtp-anthropic-key')) document.getElementById('smtp-anthropic-key').value='';
   toast('Configuración guardada ✓','success');
 }
 
@@ -14483,6 +14497,193 @@ async function sysCancelarInvite(id){
 // ─────────────────────────────────────────────
 // INIT — manejado por auth (ver _iniciarApp)
 // ─────────────────────────────────────────────
+
+// ─── ASISTENTE IA ────────────────────────────
+let _aiOpen=false, _aiMsgs=[], _aiLoading=false;
+
+function _aiToggle(){
+  _aiOpen=!_aiOpen;
+  const panel=document.getElementById('ai-panel');
+  const btn=document.getElementById('ai-fab');
+  if(!panel) return;
+  panel.style.display=_aiOpen?'flex':'none';
+  btn.style.background=_aiOpen?'#1d4ed8':'#2563eb';
+  if(_aiOpen) setTimeout(()=>document.getElementById('ai-input')?.focus(),100);
+}
+
+function _aiGetContexto(){
+  const hoy=today();
+  const mesActual=hoy.slice(0,7);
+  const ventas=getVentas();
+  const gastos=getGastos();
+  let allOrders=[]; try{allOrders=JSON.parse(DB.get('tp_orders')||'[]');}catch(e){}
+
+  // Ventas del mes
+  const vtaMes=ventas.filter(v=>v.fecha&&v.fecha.startsWith(mesActual)&&v.estado!=='anulada');
+  const vtaMesTotal=vtaMes.reduce((s,v)=>s+(+v.total_iva||0),0);
+
+  // Últimos 3 meses de ventas (resumen)
+  const meses={};
+  ventas.filter(v=>v.estado!=='anulada').forEach(v=>{
+    const m=(v.fecha||'').slice(0,7); if(!m) return;
+    if(!meses[m]) meses[m]={total:0,count:0};
+    meses[m].total+=(+v.total_iva||0); meses[m].count++;
+  });
+  const ultMeses=Object.entries(meses).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,6);
+
+  // Gastos del mes
+  const gtoMes=gastos.filter(g=>g.fecha&&g.fecha.startsWith(mesActual));
+  const gtoMesTotal=gtoMes.reduce((s,g)=>s+(+g.monto||0),0);
+
+  // OTs abiertas y completadas este mes
+  const otAbiertas=allOrders.filter(o=>o.status!=='Entregado').length;
+  const otMes=allOrders.filter(o=>o.status==='Entregado'&&(o.fecha||'').startsWith(mesActual)).length;
+
+  // Top productos vendidos (histórico)
+  const prodCount={};
+  ventas.filter(v=>v.estado!=='anulada').forEach(v=>(v.items||[]).forEach(i=>{
+    const n=i.producto_nombre||''; if(!n) return;
+    if(!prodCount[n]) prodCount[n]={qty:0,total:0};
+    prodCount[n].qty+=(+i.cantidad||1); prodCount[n].total+=(+i.subtotal||0);
+  }));
+  const topProds=Object.entries(prodCount).sort((a,b)=>b[1].total-a[1].total).slice(0,5);
+
+  // Métodos de pago mes
+  const metMes={};
+  vtaMes.forEach(v=>{ const m=getMpLabel(v.metodo_pago||'otro'); metMes[m]=(metMes[m]||0)+(+v.total_iva||0); });
+
+  return `FECHA HOY: ${hoy}
+MES ACTUAL: ${mesActual}
+
+=== VENTAS MES ACTUAL (${mesActual}) ===
+Total ventas c/IVA: $${vtaMesTotal.toLocaleString('es-CL')}
+Número de ventas: ${vtaMes.length}
+Métodos de pago: ${Object.entries(metMes).map(([k,v])=>`${k}: $${v.toLocaleString('es-CL')}`).join(', ')||'Sin datos'}
+
+=== VENTAS ÚLTIMOS 6 MESES ===
+${ultMeses.map(([m,d])=>`${m}: $${d.total.toLocaleString('es-CL')} (${d.count} ventas)`).join('\n')}
+
+=== GASTOS MES ACTUAL (${mesActual}) ===
+Total gastos: $${gtoMesTotal.toLocaleString('es-CL')}
+Número de gastos: ${gtoMes.length}
+
+=== ÓRDENES DE TRABAJO ===
+OTs abiertas actualmente: ${otAbiertas}
+OTs completadas este mes: ${otMes}
+
+=== TOP 5 PRODUCTOS MÁS VENDIDOS (histórico) ===
+${topProds.map(([n,d],i)=>`${i+1}. ${n}: ${d.qty} unidades, $${d.total.toLocaleString('es-CL')}`).join('\n')||'Sin datos'}
+
+=== TOTALES HISTÓRICOS ===
+Total ventas históricas: $${ventas.filter(v=>v.estado!=='anulada').reduce((s,v)=>s+(+v.total_iva||0),0).toLocaleString('es-CL')}
+Total ventas registradas: ${ventas.filter(v=>v.estado!=='anulada').length}`;
+}
+
+async function _aiEnviar(){
+  if(_aiLoading) return;
+  const inp=document.getElementById('ai-input');
+  const q=(inp?.value||'').trim();
+  if(!q) return;
+  const key=localStorage.getItem('erp_anthropic_key')||'';
+  if(!key){
+    _aiAddMsg('bot','Para usar el asistente primero debes guardar tu <strong>Anthropic API Key</strong> en Configuración → Correo / IA.');
+    inp.value=''; return;
+  }
+  inp.value='';
+  _aiAddMsg('user', q);
+  _aiLoading=true;
+  _aiAddMsg('bot','<span class="ai-typing"><span></span><span></span><span></span></span>', 'ai-loading-msg');
+  try{
+    const contexto=_aiGetContexto();
+    const {data,error}=await _sb.functions.invoke('ai-query',{
+      body:{pregunta:q, contexto, anthropic_api_key:key}
+    });
+    document.getElementById('ai-loading-msg')?.remove();
+    if(error||!data?.ok) _aiAddMsg('bot','Error al consultar el asistente: '+(data?.error||error?.message||'desconocido'));
+    else _aiAddMsg('bot', data.respuesta);
+  }catch(e){
+    document.getElementById('ai-loading-msg')?.remove();
+    _aiAddMsg('bot','Error de conexión: '+e.message);
+  }
+  _aiLoading=false;
+}
+
+function _aiAddMsg(role, html, id=''){
+  const list=document.getElementById('ai-msgs');
+  if(!list) return;
+  const div=document.createElement('div');
+  if(id) div.id=id;
+  div.className='ai-msg ai-'+role;
+  div.innerHTML=html;
+  list.appendChild(div);
+  list.scrollTop=list.scrollHeight;
+}
+
+function _aiKeydown(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();_aiEnviar();}
+}
+
+// Inyectar UI del chat al iniciar sesión
+function _aiInject(){
+  if(document.getElementById('ai-fab')) return;
+  const css=document.createElement('style');
+  css.textContent=`
+    #ai-fab{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:#2563eb;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.45);display:flex;align-items:center;justify-content:center;z-index:9990;transition:all .2s}
+    #ai-fab:hover{background:#1d4ed8;transform:scale(1.07)}
+    #ai-panel{position:fixed;bottom:88px;right:24px;width:360px;height:500px;background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:9989;flex-direction:column;display:none;overflow:hidden;border:1px solid #e2e8f0}
+    #ai-panel-header{background:#2563eb;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    #ai-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#f8fafc}
+    .ai-msg{max-width:85%;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.55;word-break:break-word}
+    .ai-user{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:4px}
+    .ai-bot{align-self:flex-start;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom-left-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    #ai-input-row{padding:10px 12px;border-top:1px solid #e2e8f0;display:flex;gap:8px;flex-shrink:0;background:#fff}
+    #ai-input{flex:1;border:1.5px solid #e2e8f0;border-radius:10px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;resize:none;height:38px;line-height:1.4;transition:border .15s}
+    #ai-input:focus{border-color:#2563eb}
+    #ai-send{width:38px;height:38px;border-radius:10px;background:#2563eb;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+    #ai-send:hover{background:#1d4ed8}
+    .ai-typing{display:inline-flex;gap:4px;padding:2px 0}
+    .ai-typing span{width:7px;height:7px;border-radius:50%;background:#94a3b8;animation:ai-bounce .9s infinite}
+    .ai-typing span:nth-child(2){animation-delay:.2s}
+    .ai-typing span:nth-child(3){animation-delay:.4s}
+    @keyframes ai-bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+  `;
+  document.head.appendChild(css);
+
+  const fab=document.createElement('button');
+  fab.id='ai-fab';
+  fab.title='Asistente IA';
+  fab.onclick=_aiToggle;
+  fab.innerHTML=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="10" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="10" r="1" fill="#fff" stroke="none"/></svg>`;
+
+  const panel=document.createElement('div');
+  panel.id='ai-panel';
+  panel.innerHTML=`
+    <div id="ai-panel-header">
+      <div style="display:flex;align-items:center;gap:9px">
+        <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fff">Asistente ERP</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.7)">Pregúntame sobre tu negocio</div>
+        </div>
+      </div>
+      <button onclick="_aiToggle()" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.7);font-size:20px;line-height:1;padding:2px">×</button>
+    </div>
+    <div id="ai-msgs"></div>
+    <div id="ai-input-row">
+      <textarea id="ai-input" placeholder="¿Cuánto vendimos este mes?…" onkeydown="_aiKeydown(event)" rows="1"></textarea>
+      <button id="ai-send" onclick="_aiEnviar()" title="Enviar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>`;
+
+  document.body.appendChild(fab);
+  document.body.appendChild(panel);
+
+  // Mensaje de bienvenida
+  _aiAddMsg('bot','¡Hola! Soy tu asistente de negocio. Puedes preguntarme cosas como:<br><br>• <em>¿Cuánto vendimos este mes?</em><br>• <em>¿Cuál fue el mes con más ventas?</em><br>• <em>¿Cuántas OTs tenemos abiertas?</em><br>• <em>¿Cuál es el producto más vendido?</em>');
+}
 </script>
 </body>
 </html>
