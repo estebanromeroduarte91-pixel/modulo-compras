@@ -14603,20 +14603,24 @@ async function _aiEnviar(){
   _aiAddMsg('bot','<span class="ai-typing"><span></span><span></span><span></span></span>', 'ai-loading-msg');
   try{
     const contexto=_aiGetContexto();
-    const {data,error}=await _sb.functions.invoke('ai-query',{
-      body:{pregunta:q, contexto, anthropic_api_key:key}
+    const _aiResp = await fetch(`${_SB_URL}/functions/v1/ai-query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${_SB_KEY}`,
+        'apikey': _SB_KEY,
+      },
+      body: JSON.stringify({pregunta:q, contexto, anthropic_api_key:key})
     });
+    const _aiRaw = await _aiResp.text();
     document.getElementById('ai-loading-msg')?.remove();
-    if(error){
-      console.error('[AI] invoke error:', error);
-      const msg=error?.message||JSON.stringify(error);
-      if(msg.includes('non-2xx')||msg.includes('404')||msg.includes('not found'))
-        _aiAddMsg('bot','La función <strong>ai-query</strong> no está desplegada en Supabase. Ve al Dashboard → Edge Functions → New function y pega el código de ai-query.');
-      else
-        _aiAddMsg('bot','Error al consultar el asistente: '+msg);
-    } else if(!data?.ok){
-      console.error('[AI] data error:', data);
-      _aiAddMsg('bot','Error: '+(data?.error||'respuesta inesperada del asistente'));
+    console.log('[AI] status:', _aiResp.status, 'body:', _aiRaw);
+    let data;
+    try { data = JSON.parse(_aiRaw); } catch(e){ data = null; }
+    if(!_aiResp.ok || !data?.ok){
+      const errMsg = data?.error || _aiRaw || `HTTP ${_aiResp.status}`;
+      console.error('[AI] error:', errMsg);
+      _aiAddMsg('bot', 'Error: ' + errMsg);
     } else {
       _aiAddMsg('bot', data.respuesta);
     }
