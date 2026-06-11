@@ -3938,7 +3938,13 @@ function filtrarVentas(q){
   const all=getVentas().filter(v=>!isGlobal||!_vtaSucursal||(v.branchId===_vtaSucursal));
   const base=_vtaFiltro==='todas'?all:all.filter(v=>v.estado===_vtaFiltro);
   const porFecha=_vtaFiltrarPorFecha(base);
-  const res=q?porFecha.filter(v=>(v.numero||'').toLowerCase().includes(q)||(v.cliente||'').toLowerCase().includes(q)):porFecha;
+  const res=q?porFecha.filter(v=>{
+    const ql=q.replace(/[.\-]/g,'');
+    if((v.numero||'').toLowerCase().includes(q)) return true;
+    if((v.cliente||'').toLowerCase().includes(q)) return true;
+    if((v.rut||'').replace(/[.\-]/g,'').includes(ql)) return true;
+    return false;
+  }):porFecha;
   document.getElementById('vta-table').innerHTML=renderVentasTable(res, isGlobal&&!_vtaSucursal);
 }
 
