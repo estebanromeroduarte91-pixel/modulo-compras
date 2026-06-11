@@ -2596,7 +2596,7 @@ function _vtaCliSearch(q){
   drop.innerHTML=`
     <div style="padding:8px 14px 4px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px">Resultados</div>
     ${matches.map((c,i)=>{
-      const nv=ventas.filter(v=>v.estado!=='anulada'&&(v.clienteId===c.id||(v.cliente||'').toLowerCase()===(c.nombre||'').toLowerCase())).length;
+      const nv=ventas.filter(v=>v.estado!=='anulada'&&_vtaMatchCliente(v,c)).length;
       const bg=bgColors[i%bgColors.length];
       const tx=txColors[i%txColors.length];
       return `<div onclick="_vtaCliSelect('${c.id}')"
@@ -2637,8 +2637,20 @@ function _vtaCliSelect(clienteId){
   // Renderizar ficha
   _vtaCliRenderPanel(c);
 }
+function _vtaMatchCliente(v,c){
+  if(!c) return false;
+  if(v.clienteId&&v.clienteId===c.id) return true;
+  const fullName=((c.nombre||'')+' '+(c.apellido||'')).trim().toLowerCase();
+  const vNombre=(v.cliente||'').toLowerCase();
+  if(vNombre===fullName) return true;
+  if(fullName&&vNombre.startsWith(fullName)) return true;
+  if(fullName&&fullName.startsWith(vNombre)&&vNombre.length>2) return true;
+  // Match por RUT si la venta lo tiene
+  if(c.rut&&v.rut&&c.rut.replace(/[.\-]/g,'')===v.rut.replace(/[.\-]/g,'')) return true;
+  return false;
+}
 function _vtaFiltrarPorCliente(c){
-  const ventas=getVentas().filter(v=>v.estado!=='anulada'&&(v.clienteId===c.id||(v.cliente||'').toLowerCase()===(c.nombre||'').toLowerCase()));
+  const ventas=getVentas().filter(v=>v.estado!=='anulada'&&_vtaMatchCliente(v,c));
   const isGlobal=!_currentBranchContext&&!tp_currentBranchId;
   const el=document.getElementById('vta-table');
   if(el) el.innerHTML=renderVentasTable(ventas.slice().reverse().slice(0,200), isGlobal&&!_vtaSucursal);
@@ -2646,7 +2658,7 @@ function _vtaFiltrarPorCliente(c){
 function _vtaCliRenderPanel(c){
   const panel=document.getElementById('vta-cli-panel');
   if(!panel) return;
-  const ventas=getVentas().filter(v=>v.estado!=='anulada'&&(v.clienteId===c.id||(v.cliente||'').toLowerCase()===(c.nombre||'').toLowerCase()));
+  const ventas=getVentas().filter(v=>v.estado!=='anulada'&&_vtaMatchCliente(v,c));
   const total=ventas.reduce((s,v)=>s+(+v.total_iva||0),0);
   const ticket=ventas.length?Math.round(total/ventas.length):0;
   const sorted=ventas.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
