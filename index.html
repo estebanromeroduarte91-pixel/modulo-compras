@@ -2671,12 +2671,16 @@ function _vtaCliFicha(c){
           <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Folio</th>
           <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Fecha</th>
           <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Sucursal</th>
+          <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">OT</th>
           <th style="text-align:right;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Total</th>
           <th style="padding:7px 8px"></th>
         </tr></thead>
         <tbody>
-          ${ventas.map((v,vi)=>{
+          ${(()=>{ const _allOT=(()=>{try{return JSON.parse(DB.get('tp_orders')||'[]');}catch(e){return [];}})(); return ventas.map((v,vi)=>{
             const rowId='vfi-'+vi;
+            // Buscar OT: primero por otId guardado, luego por nombre+fecha como fallback
+            let ot=v.otId?_allOT.find(o=>o.id===v.otId):null;
+            if(!ot&&!v.otId){ ot=_allOT.find(o=>o.status==='Entregado'&&(o.nombre||'').toLowerCase()===(v.cliente||'').toLowerCase()&&(o.fecha||'').slice(0,10)<=(v.fecha||'')); }
             const itemsHtml=(v.items||[]).map(it=>`
               <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px;color:#374151">
                 <span><span style="background:#e2e8f0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;color:#475569;margin-right:6px">×${it.cantidad||1}</span>${escAttr(it.producto_nombre||'—')}</span>
@@ -2684,7 +2688,7 @@ function _vtaCliFicha(c){
               </div>`).join('');
             const neto=v.total||0;
             const totalIva=v.total_iva||0;
-            const desglose=`<tr id="${rowId}" style="display:none"><td colspan="5" style="padding:2px 8px 10px">
+            const desglose=`<tr id="${rowId}" style="display:none"><td colspan="6" style="padding:2px 8px 10px">
               <div style="background:#f8fafc;border-radius:8px;padding:10px 14px">
                 ${itemsHtml}
                 <div style="display:flex;justify-content:flex-end;padding-top:7px;margin-top:4px;border-top:1.5px solid #e2e8f0;font-size:12px;font-weight:700;color:#0f172a">
@@ -2692,10 +2696,14 @@ function _vtaCliFicha(c){
                 </div>
               </div>
             </td></tr>`;
+            const otCell=ot
+              ?`<span style="font-size:11px;font-weight:700;color:#7c3aed;background:#f5f3ff;padding:3px 9px;border-radius:20px;white-space:nowrap">OT-${ot.num||'?'}</span>`
+              :`<span style="font-size:11px;color:#cbd5e1">—</span>`;
             return `<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
               <td style="padding:10px 8px;font-weight:700;color:#2563eb;font-size:13px">${v.numero||'—'}</td>
               <td style="padding:10px 8px;font-size:13px;color:#374151">${fmtDate(v.fecha)}</td>
               <td style="padding:10px 8px"><span style="font-size:11px;padding:3px 9px;border-radius:20px;background:#f1f5f9;color:#64748b;font-weight:600">${escAttr(v.branchNombre||'—')}</span></td>
+              <td style="padding:10px 8px">${otCell}</td>
               <td style="padding:10px 8px;text-align:right;font-size:13px;font-weight:700;color:#0f172a">${fmt$(totalIva)}</td>
               <td style="padding:10px 8px;text-align:right;white-space:nowrap">
                 <button id="${rowId}-btn" onclick="(function(){const r=document.getElementById('${rowId}');const b=document.getElementById('${rowId}-btn');const open=r.style.display!=='none';r.style.display=open?'none':'';b.style.borderColor=open?'':'#2563eb';b.style.color=open?'':'#2563eb';b.style.background=open?'':'#eff6ff';})()" title="Ver productos"
@@ -2706,7 +2714,7 @@ function _vtaCliFicha(c){
                   onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#64748b'">${svgDl}</button>
               </td>
             </tr>${desglose}`;
-          }).join('')}
+          }).join('')})()}
         </tbody>
       </table>`
       :`<div style="text-align:center;padding:28px;color:#94a3b8;font-size:13px">Sin ventas registradas</div>`}
@@ -3456,9 +3464,10 @@ function posSaveVenta(){
   });
   DB.set('stock',stock);
   // Cerrar OT vinculada como Entregada
+  let _linkedOtId=null, _linkedOtNum=null;
   if(_posLinkedOrderId){
     const idx=(tp_orders||[]).findIndex(o=>o.id===_posLinkedOrderId);
-    if(idx>=0){ tp_orders[idx].status='Entregado'; DB.set('tp_orders',JSON.stringify(tp_orders)); }
+    if(idx>=0){ tp_orders[idx].status='Entregado'; DB.set('tp_orders',JSON.stringify(tp_orders)); _linkedOtId=_posLinkedOrderId; _linkedOtNum=tp_orders[idx].num||null; }
     _posLinkedOrderId=null;
   }
   const selBranch=getBodegas().find(b=>b.id===_posBranchId);
@@ -3470,6 +3479,7 @@ function posSaveVenta(){
     fecha:today(),cliente:_posCliente||'Cliente genérico',metodo_pago:_posMetodo,
     branchId:_posBranchId||'',branchNombre:selBranch?(selBranch.nombre||selBranch.name||''):'',
     bodega_id:_bodegaId,cajaId:_sesAb?.cajaId||'',
+    otId:_linkedOtId||null,otNum:_linkedOtNum||null,
     items,total,total_iva,fecha_creacion:today()};
   const ventas=getVentas(); ventas.push(venta); setVentas(ventas);
   crearAsientoVenta(venta);
