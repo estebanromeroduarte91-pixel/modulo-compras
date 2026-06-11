@@ -2366,7 +2366,7 @@ function _renderDashboardGlobal(){
           ${bodegas.map((b,i)=>`<div class="db-leg-i"><div class="db-leg-d" style="background:${coloresBodegas[i]||'#64748b'}"></div>${escAttr(b.nombre||b.name||'')}</div>`).join('')}
         </div>
       </div>
-      <div style="position:relative;height:90px"><canvas id="db-ventas-chart"></canvas></div>
+      <canvas id="db-ventas-chart" style="width:100%;height:90px;display:block"></canvas>
       <div class="db-xlabs">${ultimos6.map(m=>`<span>${m.label}</span>`).join('')}</div>
       <table class="db-suc-table">
         <thead><tr><th>Sucursal</th><th>Ventas</th><th>OTs compl.</th><th>OTs abiertas</th><th>Ticket prom.</th></tr></thead>
@@ -2418,7 +2418,7 @@ function _renderDashboardGlobal(){
     <div class="db-card">
       <div class="db-card-title">Órdenes completadas</div>
       <div class="db-card-sub">Últimos 6 meses · por sucursal</div>
-      <div style="position:relative;height:80px"><canvas id="db-ots-chart"></canvas></div>
+      <canvas id="db-ots-chart" style="width:100%;height:80px;display:block"></canvas>
       <div class="db-xlabs" style="margin-bottom:10px">${ultimos6.map(m=>`<span>${m.label}</span>`).join('')}</div>
       ${bodegas.map((b,bi)=>{
         const bOTcomp=allOrders.filter(o=>o.status==='Entregado'&&o.branchId===b.id&&o.fecha&&o.fecha.startsWith(mesActual));
@@ -2493,22 +2493,35 @@ function _renderDashboardGlobal(){
     }
     _loadChart(()=>{
       const fmtTick=v=>v===0?'$0':v>=1000000?'$'+(Math.round(v/100000)/10)+'M':'$'+Math.round(v/1000)+'K';
-      const baseOpts=(stacked)=>({
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt$(ctx.raw)}`}}},
-        scales:{
-          x:{grid:{display:false},border:{display:false},ticks:{color:'#9ca3af',font:{size:10}},stacked},
-          y:{grid:{color:'rgba(0,0,0,.04)'},border:{display:false},ticks:{color:'#9ca3af',font:{size:10},callback:fmtTick},stacked}
-        }
-      });
+      function _mkOpts(extraScales){
+        return {
+          responsive:false,
+          animation:false,
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt$(ctx.raw)}`}}},
+          scales:{
+            x:{grid:{display:false},border:{display:false},ticks:{color:'#9ca3af',font:{size:10}}},
+            y:{grid:{color:'rgba(0,0,0,.04)'},border:{display:false},ticks:{color:'#9ca3af',font:{size:10},callback:fmtTick}},
+            ...(extraScales||{})
+          }
+        };
+      }
+      function _initCanvas(id,heightPx){
+        const c=document.getElementById(id);
+        if(!c) return null;
+        if(c._ci){c._ci.destroy();c._ci=null;}
+        const w=c.parentElement?.clientWidth||600;
+        c.width=w; c.height=heightPx;
+        c.style.width=w+'px'; c.style.height=heightPx+'px';
+        return c;
+      }
 
       // Ventas por sucursal
-      const cv=document.getElementById('db-ventas-chart');
-      if(cv){ if(cv._ci)cv._ci.destroy(); cv._ci=new Chart(cv,{type:'bar',data:{labels:ultimos6.map(m=>m.label),datasets:branchDatasets.map(d=>({label:d.label,data:d.data,backgroundColor:d.color,borderRadius:3,borderSkipped:false}))},options:baseOpts(false)}); }
+      const cv=_initCanvas('db-ventas-chart',90);
+      if(cv){ cv._ci=new Chart(cv,{type:'bar',data:{labels:ultimos6.map(m=>m.label),datasets:branchDatasets.map(d=>({label:d.label,data:d.data,backgroundColor:d.color,borderRadius:3,borderSkipped:false}))},options:_mkOpts()}); }
 
       // OTs por sucursal
-      const co=document.getElementById('db-ots-chart');
-      if(co){ if(co._ci)co._ci.destroy(); co._ci=new Chart(co,{type:'bar',data:{labels:ultimos6.map(m=>m.label),datasets:otsXmesBranch.map(d=>({label:d.nombre,data:d.data,backgroundColor:d.color,borderRadius:3,borderSkipped:false}))},options:{...baseOpts(false),scales:{x:{grid:{display:false},border:{display:false},ticks:{color:'#9ca3af',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.04)'},border:{display:false},ticks:{color:'#9ca3af',font:{size:10},stepSize:1}}}}}); }
+      const co=_initCanvas('db-ots-chart',80);
+      if(co){ co._ci=new Chart(co,{type:'bar',data:{labels:ultimos6.map(m=>m.label),datasets:otsXmesBranch.map(d=>({label:d.nombre,data:d.data,backgroundColor:d.color,borderRadius:3,borderSkipped:false}))},options:_mkOpts({y:{grid:{color:'rgba(0,0,0,.04)'},border:{display:false},ticks:{color:'#9ca3af',font:{size:10},stepSize:1}}})}); }
 
       // Donut métodos de pago
       const cd=document.getElementById('db-met-donut');
