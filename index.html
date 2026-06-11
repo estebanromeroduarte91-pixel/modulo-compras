@@ -2641,6 +2641,7 @@ function _vtaCliFicha(c){
   const ini=((c.nombre||'?')+' '+(c.apellido||'')).trim().split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase();
   const nombreCompleto=((c.nombre||'')+' '+(c.apellido||'')).trim();
   const svgDl=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+  const svgEye=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
   showModal(`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
   <div class="modal modal-lg" style="max-width:700px">
     <div class="modal-header" style="padding:20px 24px">
@@ -2654,45 +2655,57 @@ function _vtaCliFicha(c){
       <button class="close-btn" onclick="closeModal()">×</button>
     </div>
     <!-- KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9">
-      ${[['Total comprado',fmt$(total),'#2563eb'],['Nro. de ventas',ventas.length,'#0f172a'],['Ticket promedio',ticket>0?fmt$(ticket):'—','#0f172a'],['Última compra',ultima,'#0f172a']].map(([lbl,val,col],i)=>`
-      <div style="padding:14px 18px;${i<3?'border-right:1px solid #f1f5f9':''}">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9">
+      ${[['Total comprado',fmt$(total),'#2563eb'],['Nro. de ventas',ventas.length,'#0f172a'],['Última compra',ultima,'#0f172a']].map(([lbl,val,col],i)=>`
+      <div style="padding:14px 18px;${i<2?'border-right:1px solid #f1f5f9':''}">
         <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${lbl}</div>
         <div style="font-size:15px;font-weight:800;color:${col}">${val}</div>
       </div>`).join('')}
     </div>
     <!-- Tabla ventas -->
-    <div style="padding:0 24px 20px">
+    <div style="padding:0 24px 20px;max-height:420px;overflow-y:auto">
       <div style="padding:14px 0 10px;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px">Historial de compras</div>
       ${ventas.length?`
       <table style="width:100%;border-collapse:collapse">
         <thead><tr style="border-bottom:2px solid #f1f5f9">
           <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Folio</th>
           <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Fecha</th>
-          <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Productos</th>
+          <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Sucursal</th>
           <th style="text-align:right;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Total</th>
-          <th style="text-align:center;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Estado</th>
           <th style="padding:7px 8px"></th>
         </tr></thead>
         <tbody>
-          ${ventas.map(v=>{
-            const estadoColor={pagada:'#10b981',pendiente:'#f59e0b',anulada:'#ef4444'};
-            const estadoBg={pagada:'#f0fdf4',pendiente:'#fffbeb',anulada:'#fef2f2'};
-            const prods=(v.items||[]).map(i=>i.producto_nombre||'').filter(Boolean).slice(0,2).join(', ')+(v.items?.length>2?'…':'');
+          ${ventas.map((v,vi)=>{
+            const rowId='vfi-'+vi;
+            const itemsHtml=(v.items||[]).map(it=>`
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px;color:#374151">
+                <span><span style="background:#e2e8f0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;color:#475569;margin-right:6px">×${it.cantidad||1}</span>${escAttr(it.producto_nombre||'—')}</span>
+                <span style="font-weight:700;color:#0f172a;flex-shrink:0;margin-left:12px">${fmt$(it.subtotal||0)}</span>
+              </div>`).join('');
+            const neto=v.total||0;
+            const totalIva=v.total_iva||0;
+            const desglose=`<tr id="${rowId}" style="display:none"><td colspan="5" style="padding:2px 8px 10px">
+              <div style="background:#f8fafc;border-radius:8px;padding:10px 14px">
+                ${itemsHtml}
+                <div style="display:flex;justify-content:flex-end;padding-top:7px;margin-top:4px;border-top:1.5px solid #e2e8f0;font-size:12px;font-weight:700;color:#0f172a">
+                  Neto: ${fmt$(neto)} &nbsp;·&nbsp; Total c/IVA: ${fmt$(totalIva)}
+                </div>
+              </div>
+            </td></tr>`;
             return `<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-              <td style="padding:10px 8px"><span style="font-weight:700;color:#2563eb;font-size:13px">${v.numero||'—'}</span></td>
+              <td style="padding:10px 8px;font-weight:700;color:#2563eb;font-size:13px">${v.numero||'—'}</td>
               <td style="padding:10px 8px;font-size:13px;color:#374151">${fmtDate(v.fecha)}</td>
-              <td style="padding:10px 8px;font-size:12px;color:#64748b;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escAttr(prods||'—')}</td>
-              <td style="padding:10px 8px;text-align:right;font-size:13px;font-weight:700;color:#0f172a">${fmt$(v.total_iva||0)}</td>
-              <td style="padding:10px 8px;text-align:center"><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;color:${estadoColor[v.estado]||'#64748b'};background:${estadoBg[v.estado]||'#f1f5f9'}">${(v.estado||'').charAt(0).toUpperCase()+(v.estado||'').slice(1)}</span></td>
-              <td style="padding:10px 8px;text-align:right">
+              <td style="padding:10px 8px"><span style="font-size:11px;padding:3px 9px;border-radius:20px;background:#f1f5f9;color:#64748b;font-weight:600">${escAttr(v.branchNombre||'—')}</span></td>
+              <td style="padding:10px 8px;text-align:right;font-size:13px;font-weight:700;color:#0f172a">${fmt$(totalIva)}</td>
+              <td style="padding:10px 8px;text-align:right;white-space:nowrap">
+                <button id="${rowId}-btn" onclick="(function(){const r=document.getElementById('${rowId}');const b=document.getElementById('${rowId}-btn');const open=r.style.display!=='none';r.style.display=open?'none':'';b.style.borderColor=open?'':'#2563eb';b.style.color=open?'':'#2563eb';b.style.background=open?'':'#eff6ff';})()" title="Ver productos"
+                  style="background:none;border:1.5px solid #e2e8f0;border-radius:7px;cursor:pointer;color:#64748b;padding:5px 8px;line-height:0;transition:all .15s;margin-right:4px"
+                  onmouseover="if(this.style.background!=='rgb(239, 246, 255)')this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="if(this.style.background!=='rgb(239, 246, 255)'){this.style.borderColor='#e2e8f0';this.style.color='#64748b'}">${svgEye}</button>
                 <button onclick="event.stopPropagation();_vtaDescargarBoleta('${v.id}')" title="Descargar boleta PDF"
                   style="background:none;border:1.5px solid #e2e8f0;border-radius:7px;cursor:pointer;color:#64748b;padding:5px 8px;line-height:0;transition:all .15s"
-                  onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#64748b'">
-                  ${svgDl}
-                </button>
+                  onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#64748b'">${svgDl}</button>
               </td>
-            </tr>`;
+            </tr>${desglose}`;
           }).join('')}
         </tbody>
       </table>`

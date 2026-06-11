@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup — Historial cliente</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:32px}
+  .modal{background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.14);width:700px;overflow:hidden}
+  .modal-header{padding:20px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9}
+  .avatar{width:46px;height:46px;border-radius:50%;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid #f1f5f9}
+  .kpi{padding:14px 18px}
+  .kpi:not(:last-child){border-right:1px solid #f1f5f9}
+  .kpi-lbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .kpi-val{font-size:15px;font-weight:800;color:#0f172a}
+  .kpi-val.blue{color:#2563eb}
+  .body{padding:0 24px 20px}
+  .section-title{padding:14px 0 10px;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px}
+  table{width:100%;border-collapse:collapse}
+  thead tr{border-bottom:2px solid #f1f5f9}
+  th{text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px}
+  th.right{text-align:right}
+  td{padding:11px 8px;border-bottom:1px solid #f8fafc;font-size:13px;color:#374151;vertical-align:middle}
+  td.folio{font-weight:700;color:#2563eb}
+  td.total{text-align:right;font-weight:700;color:#0f172a}
+  td.suc span{font-size:11px;padding:3px 9px;border-radius:20px;background:#f1f5f9;color:#64748b;font-weight:600}
+  td.actions{text-align:right;white-space:nowrap}
+  tr:hover td{background:#f8fafc}
+  .btn-icon{background:none;border:1.5px solid #e2e8f0;border-radius:7px;cursor:pointer;color:#64748b;padding:5px 8px;line-height:0;transition:all .15s;display:inline-flex;align-items:center;justify-content:center}
+  .btn-icon:hover{border-color:#2563eb;color:#2563eb}
+  .btn-icon + .btn-icon{margin-left:5px}
+  .close-btn{background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;padding:4px}
+
+  /* Desglose productos (expandible inline) */
+  .desglose{display:none;background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:2px}
+  .desglose.open{display:block}
+  .desglose-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px;color:#374151}
+  .desglose-row:last-child{border-bottom:none}
+  .desglose-row .qty{background:#e2e8f0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;color:#475569;margin-right:6px}
+  .desglose-row .price{font-weight:700;color:#0f172a}
+</style>
+</head>
+<body>
+
+<div class="modal">
+  <!-- Header -->
+  <div class="modal-header">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="avatar">MJ</div>
+      <div>
+        <div style="font-size:17px;font-weight:800;color:#0f172a">María Jesus Correa</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px">RUT 19.081.582-K · jcorresc@gmail.com</div>
+      </div>
+    </div>
+    <button class="close-btn">×</button>
+  </div>
+
+  <!-- KPIs (sin "última compra" para dar espacio) -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-lbl">Total comprado</div>
+      <div class="kpi-val blue">$364.970</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Nro. de ventas</div>
+      <div class="kpi-val">1</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Última compra</div>
+      <div class="kpi-val">10-06-2026</div>
+    </div>
+  </div>
+
+  <!-- Historial -->
+  <div class="body">
+    <div class="section-title">Historial de compras</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Folio</th>
+          <th>Fecha</th>
+          <th>Sucursal</th>
+          <th class="right">Total</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Fila con desglose cerrado -->
+        <tr>
+          <td class="folio">VTA-03328</td>
+          <td>10-06-2026</td>
+          <td class="suc"><span>Los Dominicos</span></td>
+          <td class="total">$364.970</td>
+          <td class="actions">
+            <button class="btn-icon" title="Ver detalle" onclick="toggleDesglose('d1',this)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button class="btn-icon" title="Descargar boleta PDF">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+          </td>
+        </tr>
+        <!-- Fila desglose expandida (para mostrar cómo se vería) -->
+        <tr id="d1-row" style="display:none">
+          <td colspan="5" style="padding:4px 8px 10px">
+            <div class="desglose open" id="d1">
+              <div class="desglose-row">
+                <span><span class="qty">×1</span> iPhone 12 Conector de Carga</span>
+                <span class="price">$54.613</span>
+              </div>
+              <div class="desglose-row">
+                <span><span class="qty">×1</span> iPhone 12/12 Pro Batería</span>
+                <span class="price">$67.218</span>
+              </div>
+              <div class="desglose-row">
+                <span><span class="qty">×1</span> iPhone 12/12 Pro Pantalla Original</span>
+                <span class="price">$184.866</span>
+              </div>
+              <div style="display:flex;justify-content:flex-end;padding-top:7px;margin-top:4px;border-top:1.5px solid #e2e8f0">
+                <span style="font-size:12px;font-weight:700;color:#0f172a">Neto: $306.697 &nbsp;·&nbsp; Total c/IVA: $364.970</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Segunda venta de ejemplo -->
+        <tr>
+          <td class="folio">VTA-03100</td>
+          <td>15-03-2026</td>
+          <td class="suc"><span>La Dehesa</span></td>
+          <td class="total">$89.990</td>
+          <td class="actions">
+            <button class="btn-icon" title="Ver detalle" onclick="toggleDesglose('d2',this)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button class="btn-icon" title="Descargar boleta PDF">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+          </td>
+        </tr>
+        <tr id="d2-row" style="display:none">
+          <td colspan="5" style="padding:4px 8px 10px">
+            <div class="desglose" id="d2">
+              <div class="desglose-row">
+                <span><span class="qty">×1</span> Vidrio templado iPhone 12</span>
+                <span class="price">$89.990</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function toggleDesglose(id, btn){
+  const row = document.getElementById(id+'-row');
+  const div = document.getElementById(id);
+  const isOpen = div.classList.contains('open');
+  div.classList.toggle('open', !isOpen);
+  row.style.display = isOpen ? 'none' : '';
+  // cambiar color del ojo cuando está activo
+  btn.style.borderColor = isOpen ? '' : '#2563eb';
+  btn.style.color = isOpen ? '' : '#2563eb';
+  btn.style.background = isOpen ? '' : '#eff6ff';
+}
+// Mostrar desglose de la primera fila por defecto para el mockup
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btn = document.querySelector('button[onclick*="d1"]');
+  toggleDesglose('d1', btn);
+});
+</script>
+</body>
+</html>
