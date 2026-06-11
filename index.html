@@ -14522,69 +14522,128 @@ function _aiToggle(){
 function _aiGetContexto(){
   const hoy=today();
   const mesActual=hoy.slice(0,7);
-  const ventas=getVentas();
+  const ventas=getVentas().filter(v=>v.estado!=='anulada');
   const gastos=getGastos();
+  const productos=getProductos();
+  const clientes=getClientes();
+  const ocs=getOCs();
+  const bodegas=getBodegas();
+  const proveedores=getProveedores();
   let allOrders=[]; try{allOrders=JSON.parse(DB.get('tp_orders')||'[]');}catch(e){}
 
-  // Ventas del mes
-  const vtaMes=ventas.filter(v=>v.fecha&&v.fecha.startsWith(mesActual)&&v.estado!=='anulada');
+  // ── Ventas por mes ──
+  const meses={};
+  ventas.forEach(v=>{
+    const m=(v.fecha||'').slice(0,7); if(!m) return;
+    if(!meses[m]) meses[m]={total:0,count:0,neto:0};
+    meses[m].total+=(+v.total_iva||0);
+    meses[m].neto+=(+v.total_neto||+v.neto||Math.round((+v.total_iva||0)/1.19)||0);
+    meses[m].count++;
+  });
+  const mesesOrden=Object.entries(meses).sort((a,b)=>b[0].localeCompare(a[0]));
+  const vtaMes=ventas.filter(v=>(v.fecha||'').startsWith(mesActual));
   const vtaMesTotal=vtaMes.reduce((s,v)=>s+(+v.total_iva||0),0);
 
-  // Últimos 3 meses de ventas (resumen)
-  const meses={};
-  ventas.filter(v=>v.estado!=='anulada').forEach(v=>{
-    const m=(v.fecha||'').slice(0,7); if(!m) return;
-    if(!meses[m]) meses[m]={total:0,count:0};
-    meses[m].total+=(+v.total_iva||0); meses[m].count++;
-  });
-  const ultMeses=Object.entries(meses).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,6);
+  // ── Métodos de pago mes ──
+  const metMes={};
+  vtaMes.forEach(v=>{ const m=getMpLabel(v.metodo_pago||'otro'); metMes[m]=(metMes[m]||0)+(+v.total_iva||0); });
 
-  // Gastos del mes
-  const gtoMes=gastos.filter(g=>g.fecha&&g.fecha.startsWith(mesActual));
-  const gtoMesTotal=gtoMes.reduce((s,g)=>s+(+g.monto||0),0);
+  // ── Gastos por mes y categoría ──
+  const gtoMes=gastos.filter(g=>(g.fecha||'').startsWith(mesActual));
+  const gtoCat={};
+  gastos.forEach(g=>{ const c=g.categoria||'Sin categoría'; if(!gtoCat[c]) gtoCat[c]=0; gtoCat[c]+=(+g.monto||0); });
+  const gtoMeses={};
+  gastos.forEach(g=>{ const m=(g.fecha||'').slice(0,7); if(!m) return; if(!gtoMeses[m]) gtoMeses[m]=0; gtoMeses[m]+=(+g.monto||0); });
 
-  // OTs abiertas y completadas este mes
-  const otAbiertas=allOrders.filter(o=>o.status!=='Entregado').length;
-  const otMes=allOrders.filter(o=>o.status==='Entregado'&&(o.fecha||'').startsWith(mesActual)).length;
-
-  // Top productos vendidos (histórico)
+  // ── Productos más vendidos ──
   const prodCount={};
-  ventas.filter(v=>v.estado!=='anulada').forEach(v=>(v.items||[]).forEach(i=>{
+  ventas.forEach(v=>(v.items||[]).forEach(i=>{
     const n=i.producto_nombre||''; if(!n) return;
     if(!prodCount[n]) prodCount[n]={qty:0,total:0};
     prodCount[n].qty+=(+i.cantidad||1); prodCount[n].total+=(+i.subtotal||0);
   }));
-  const topProds=Object.entries(prodCount).sort((a,b)=>b[1].total-a[1].total).slice(0,5);
+  const topProds=Object.entries(prodCount).sort((a,b)=>b[1].total-a[1].total).slice(0,15);
 
-  // Métodos de pago mes
-  const metMes={};
-  vtaMes.forEach(v=>{ const m=getMpLabel(v.metodo_pago||'otro'); metMes[m]=(metMes[m]||0)+(+v.total_iva||0); });
+  // ── OTs ──
+  const otAbiertas=allOrders.filter(o=>o.status!=='Entregado');
+  const otEntregadas=allOrders.filter(o=>o.status==='Entregado');
+  const otMes=otEntregadas.filter(o=>(o.fecha||'').startsWith(mesActual));
 
-  return `FECHA HOY: ${hoy}
-MES ACTUAL: ${mesActual}
+  // ── Ventas recientes (todas) ──
+  const vtasRecientes=ventas.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  // ── Clientes top por compras ──
+  const cliTotal={};
+  ventas.forEach(v=>{
+    const n=v.cliente||'Anónimo';
+    if(!cliTotal[n]) cliTotal[n]={total:0,count:0};
+    cliTotal[n].total+=(+v.total_iva||0); cliTotal[n].count++;
+  });
+  const topCli=Object.entries(cliTotal).sort((a,b)=>b[1].total-a[1].total);
+
+  // ── Inventario completo ──
+  const invLines=productos.map(p=>`  - ${p.nombre||'?'} | Stock: ${p.stock??'?'} | Precio venta: $${(+p.precio_venta||0).toLocaleString('es-CL')} | Costo: $${(+p.costo||0).toLocaleString('es-CL')} | Categoría: ${p.categoria||'?'}`);
+
+  // ── OCs todas ──
+  const ocsRecientes=ocs.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  return `FECHA HOY: ${hoy} | MES ACTUAL: ${mesActual}
 
 === VENTAS MES ACTUAL (${mesActual}) ===
-Total ventas c/IVA: $${vtaMesTotal.toLocaleString('es-CL')}
-Número de ventas: ${vtaMes.length}
-Métodos de pago: ${Object.entries(metMes).map(([k,v])=>`${k}: $${v.toLocaleString('es-CL')}`).join(', ')||'Sin datos'}
+Total c/IVA: $${vtaMesTotal.toLocaleString('es-CL')} | Número de ventas: ${vtaMes.length}
+Métodos de pago: ${Object.entries(metMes).map(([k,v])=>`${k}: $${v.toLocaleString('es-CL')}`).join(' | ')||'Sin datos'}
 
-=== VENTAS ÚLTIMOS 6 MESES ===
-${ultMeses.map(([m,d])=>`${m}: $${d.total.toLocaleString('es-CL')} (${d.count} ventas)`).join('\n')}
+=== VENTAS POR MES (histórico completo) ===
+${mesesOrden.map(([m,d])=>`${m}: $${d.total.toLocaleString('es-CL')} c/IVA | Neto: $${d.neto.toLocaleString('es-CL')} | ${d.count} ventas`).join('\n')||'Sin datos'}
 
-=== GASTOS MES ACTUAL (${mesActual}) ===
-Total gastos: $${gtoMesTotal.toLocaleString('es-CL')}
-Número de gastos: ${gtoMes.length}
+=== TODAS LAS VENTAS (histórico completo) ===
+${vtasRecientes.map(v=>`  ${v.fecha||'?'} | ${v.numero||'?'} | ${v.cliente||'Anónimo'} | $${(+v.total_iva||0).toLocaleString('es-CL')} | ${getMpLabel(v.metodo_pago||'')} | Sucursal: ${v.sucursal||'?'} | ${(v.items||[]).map(i=>`${i.producto_nombre}(x${i.cantidad||1} $${(+i.subtotal||0).toLocaleString('es-CL')})`).join(', ')}`).join('\n')||'Sin datos'}
 
-=== ÓRDENES DE TRABAJO ===
-OTs abiertas actualmente: ${otAbiertas}
-OTs completadas este mes: ${otMes}
+=== TOP 15 PRODUCTOS MÁS VENDIDOS (histórico) ===
+${topProds.map(([n,d],i)=>`  ${i+1}. ${n}: ${d.qty} unidades vendidas | $${d.total.toLocaleString('es-CL')} en ventas`).join('\n')||'Sin datos'}
 
-=== TOP 5 PRODUCTOS MÁS VENDIDOS (histórico) ===
-${topProds.map(([n,d],i)=>`${i+1}. ${n}: ${d.qty} unidades, $${d.total.toLocaleString('es-CL')}`).join('\n')||'Sin datos'}
+=== GASTOS MES ACTUAL ===
+Total: $${gtoMes.reduce((s,g)=>s+(+g.monto||0),0).toLocaleString('es-CL')} | ${gtoMes.length} gastos
+${gtoMes.map(g=>`  ${g.fecha||'?'} | ${g.descripcion||'?'} | ${g.categoria||'?'} | $${(+g.monto||0).toLocaleString('es-CL')}`).join('\n')||'Sin gastos'}
 
-=== TOTALES HISTÓRICOS ===
-Total ventas históricas: $${ventas.filter(v=>v.estado!=='anulada').reduce((s,v)=>s+(+v.total_iva||0),0).toLocaleString('es-CL')}
-Total ventas registradas: ${ventas.filter(v=>v.estado!=='anulada').length}`;
+=== TODOS LOS GASTOS (histórico completo) ===
+${gastos.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(g=>`  ${g.fecha||'?'} | ${g.descripcion||'?'} | ${g.categoria||'?'} | $${(+g.monto||0).toLocaleString('es-CL')} | ${g.proveedor||''}`).join('\n')||'Sin datos'}
+
+=== GASTOS POR MES (histórico) ===
+${Object.entries(gtoMeses).sort((a,b)=>b[0].localeCompare(a[0])).map(([m,t])=>`  ${m}: $${t.toLocaleString('es-CL')}`).join('\n')||'Sin datos'}
+
+=== GASTOS POR CATEGORÍA (histórico) ===
+${Object.entries(gtoCat).sort((a,b)=>b[1]-a[1]).map(([c,t])=>`  ${c}: $${t.toLocaleString('es-CL')}`).join('\n')||'Sin datos'}
+
+=== ÓRDENES DE TRABAJO (OT) ===
+Abiertas: ${otAbiertas.length} | Entregadas total: ${otEntregadas.length} | Entregadas este mes: ${otMes.length}
+OTs abiertas:
+${otAbiertas.slice(0,20).map(o=>`  OT-${o.num||'?'} | ${o.cliente||'?'} | ${o.equipo||'?'} | Estado: ${o.status||'?'} | Ingreso: ${o.fecha||'?'}`).join('\n')||'  Ninguna'}
+OTs entregadas (todas):
+${otEntregadas.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(o=>`  OT-${o.num||'?'} | ${o.cliente||'?'} | ${o.equipo||'?'} | ${o.fecha||'?'} | $${(+o.total||0).toLocaleString('es-CL')}`).join('\n')||'  Ninguna'}
+
+=== INVENTARIO COMPLETO (${productos.length} productos) ===
+${invLines.join('\n')||'Sin productos'}
+
+=== TODOS LOS CLIENTES (${clientes.length}) ===
+${clientes.map(c=>`  ${(c.nombre||'')} ${c.apellido||''} | RUT: ${c.rut||'?'} | Tel: ${c.telefono||'?'} | Email: ${c.email||'?'}`).join('\n')||'Sin clientes'}
+
+=== CLIENTES POR VOLUMEN DE COMPRAS ===
+${topCli.map(([n,d],i)=>`  ${i+1}. ${n}: $${d.total.toLocaleString('es-CL')} en ${d.count} compras`).join('\n')||'Sin datos'}
+
+=== TODAS LAS ÓRDENES DE COMPRA (OC) ===
+${ocsRecientes.map(o=>`  ${o.fecha||'?'} | OC-${o.numero||'?'} | ${o.proveedor||'?'} | $${(+o.total||0).toLocaleString('es-CL')} | ${o.estado||'?'}`).join('\n')||'Sin OCs'}
+
+=== SUCURSALES ===
+${bodegas.map(b=>`  ${b.nombre||'?'} | ID: ${b.id||'?'}`).join('\n')||'Sin sucursales'}
+
+=== PROVEEDORES (${proveedores.length}) ===
+${proveedores.map(p=>`  ${p.nombre||'?'} | Tel: ${p.telefono||'?'} | Email: ${p.email||'?'}`).join('\n')||'Sin proveedores'}
+
+=== RESUMEN GENERAL ===
+Total ventas históricas c/IVA: $${ventas.reduce((s,v)=>s+(+v.total_iva||0),0).toLocaleString('es-CL')}
+Total ventas registradas: ${ventas.length}
+Total gastos históricos: $${gastos.reduce((s,g)=>s+(+g.monto||0),0).toLocaleString('es-CL')}`;
 }
 
 async function _aiEnviar(){
