@@ -2225,6 +2225,16 @@ function _renderDashboardGlobal(){
   const metSorted=Object.entries(metTotals).sort((a,b)=>b[1]-a[1]);
   const metColores=['#2563eb','#0f172a','#10b981','#f59e0b','#f97316','#8b5cf6'];
   const metMax=metSorted[0]?metSorted[0][1]:1;
+  // Breakdown por sucursal para cada método
+  const metBySuc={};
+  bodegas.forEach(b=>{
+    const nombre=b.nombre||b.name||'Sin nombre';
+    ventasMes.filter(v=>v.branchId===b.id).forEach(v=>{
+      const m=v.metodo_pago||'Sin especificar';
+      if(!metBySuc[m]) metBySuc[m]={};
+      metBySuc[m][nombre]=(metBySuc[m][nombre]||0)+(+v.total_iva||0);
+    });
+  });
 
   // Gastos por mes (barras horizontales)
   const gastosXmes=ultimos6.map(m=>gastos.filter(g=>g.fecha&&g.fecha.startsWith(m.key)).reduce((s,g)=>s+(+g.monto||0),0));
@@ -2395,14 +2405,21 @@ function _renderDashboardGlobal(){
           </div>
         </div>
       </div>
-      <div class="db-met-list">
+      <div class="db-met-list" style="position:relative">
+        <div id="db-met-tip" style="display:none;position:fixed;z-index:9999;background:#0f172a;color:#fff;border-radius:10px;padding:10px 14px;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:170px;pointer-events:none"></div>
         ${metSorted.map((m,i)=>{
           const pct=totalMes>0?Math.round(m[1]/totalMes*100):0;
           const label=m[0].charAt(0).toUpperCase()+m[0].slice(1);
-          return `<div class="db-met-row">
-            <div style="width:8px;height:8px;border-radius:50%;background:${metColores[i]||'#94a3b8'};flex-shrink:0"></div>
+          const sucData=metBySuc[m[0]]||{};
+          const sucJson=escAttr(JSON.stringify(sucData));
+          const color=metColores[i]||'#94a3b8';
+          return `<div class="db-met-row" style="cursor:pointer;border-radius:7px;padding:3px 5px;transition:background .15s"
+            onmouseenter="_dbMetTip(event,'${escAttr(label)}','${escAttr(color)}','${sucJson}',${m[1]})"
+            onmousemove="_dbMetTipMove(event)"
+            onmouseleave="_dbMetTipHide()">
+            <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
             <div class="db-met-lbl">${label}</div>
-            <div class="db-met-bar"><div class="db-met-fill" style="width:${Math.round(m[1]/metMax*100)}%;background:${metColores[i]||'#94a3b8'}"></div></div>
+            <div class="db-met-bar"><div class="db-met-fill" style="width:${Math.round(m[1]/metMax*100)}%;background:${color}"></div></div>
             <div class="db-met-val">${fmt$(m[1])}</div>
             <div class="db-met-pct">${pct}%</div>
           </div>`;
@@ -2531,6 +2548,47 @@ function _renderDashboardGlobal(){
       }
     });
   },60);
+}
+
+// ── Tooltip métodos de pago ──────────────────────────────
+function _dbMetTip(e,label,color,sucJson,total){
+  let suc={};try{suc=JSON.parse(sucJson);}catch(ex){}
+  const tip=document.getElementById('db-met-tip');
+  if(!tip) return;
+  const entries=Object.entries(suc).sort((a,b)=>b[1]-a[1]);
+  const fmt=v=>'$'+Math.round(v).toLocaleString('es-CL');
+  tip.innerHTML=`
+    <div style="font-weight:700;font-size:12px;margin-bottom:7px;display:flex;align-items:center;gap:6px">
+      <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span>${label}
+    </div>
+    ${entries.length?entries.map(([suc,val])=>{
+      const pct=total>0?Math.round(val/total*100):0;
+      return `<div style="display:flex;justify-content:space-between;gap:14px;padding:3px 0;border-top:1px solid rgba(255,255,255,.1)">
+        <span style="color:#94a3b8;font-size:11px">${suc}</span>
+        <span style="font-weight:700;font-size:11px">${fmt(val)} <span style="color:#64748b;font-weight:500">${pct}%</span></span>
+      </div>`;
+    }).join(''):`<div style="color:#64748b;font-size:11px">Sin desglose por sucursal</div>`}
+    <div style="display:flex;justify-content:space-between;gap:14px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.2)">
+      <span style="color:#fff;font-weight:600;font-size:11px">Total</span>
+      <span style="font-weight:800;font-size:11px">${fmt(total)}</span>
+    </div>`;
+  tip.style.display='block';
+  _dbMetTipMove(e);
+  e.currentTarget.style.background='rgba(0,0,0,.04)';
+}
+function _dbMetTipMove(e){
+  const tip=document.getElementById('db-met-tip');
+  if(!tip||tip.style.display==='none') return;
+  const vw=window.innerWidth, vh=window.innerHeight;
+  let x=e.clientX+14, y=e.clientY-10;
+  if(x+200>vw) x=e.clientX-214;
+  if(y+tip.offsetHeight>vh) y=vh-tip.offsetHeight-8;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+function _dbMetTipHide(){
+  const tip=document.getElementById('db-met-tip');
+  if(tip) tip.style.display='none';
+  document.querySelectorAll('.db-met-row').forEach(r=>r.style.background='');
 }
 
 function badgeEstado(e){
