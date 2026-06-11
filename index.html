@@ -2626,16 +2626,79 @@ function _vtaCliSelect(clienteId){
   const c=clientes.find(x=>x.id===clienteId);
   if(!c) return;
   _vtaCliSel=c;
-  // Rellenar input
   const inp=document.getElementById('vta-cli-search');
-  if(inp){ inp.value=c.nombre||''; inp.style.borderColor='#2563eb'; inp.style.background='#fff'; inp.style.width='260px'; }
+  if(inp){ inp.value=((c.nombre||'')+' '+(c.apellido||'')).trim(); inp.style.borderColor='#2563eb'; inp.style.background='#fff'; inp.style.width='260px'; }
   const clr=document.getElementById('vta-cli-clear');
   if(clr) clr.style.display='block';
   _vtaCliDropHide();
-  // Filtrar tabla por este cliente
-  _vtaFiltrarPorCliente(c);
-  // Renderizar ficha
-  _vtaCliRenderPanel(c);
+  _vtaCliFicha(c);
+}
+function _vtaCliFicha(c){
+  const ventas=getVentas().filter(v=>v.estado!=='anulada'&&_vtaMatchCliente(v,c)).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const total=ventas.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const ticket=ventas.length?Math.round(total/ventas.length):0;
+  const ultima=ventas[0]?.fecha?fmtDate(ventas[0].fecha):'—';
+  const ini=((c.nombre||'?')+' '+(c.apellido||'')).trim().split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase();
+  const nombreCompleto=((c.nombre||'')+' '+(c.apellido||'')).trim();
+  const svgDl=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+  showModal(`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal modal-lg" style="max-width:700px">
+    <div class="modal-header" style="padding:20px 24px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:46px;height:46px;border-radius:50%;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">${ini}</div>
+        <div>
+          <div style="font-size:17px;font-weight:800;color:#0f172a">${escAttr(nombreCompleto||'—')}</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px">${[c.rut?'RUT '+c.rut:'',c.email||'',c.tel||''].filter(Boolean).join(' · ')||'Sin datos adicionales'}</div>
+        </div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <!-- KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9">
+      ${[['Total comprado',fmt$(total),'#2563eb'],['Nro. de ventas',ventas.length,'#0f172a'],['Ticket promedio',ticket>0?fmt$(ticket):'—','#0f172a'],['Última compra',ultima,'#0f172a']].map(([lbl,val,col],i)=>`
+      <div style="padding:14px 18px;${i<3?'border-right:1px solid #f1f5f9':''}">
+        <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${lbl}</div>
+        <div style="font-size:15px;font-weight:800;color:${col}">${val}</div>
+      </div>`).join('')}
+    </div>
+    <!-- Tabla ventas -->
+    <div style="padding:0 24px 20px">
+      <div style="padding:14px 0 10px;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px">Historial de compras</div>
+      ${ventas.length?`
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:2px solid #f1f5f9">
+          <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Folio</th>
+          <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Fecha</th>
+          <th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Productos</th>
+          <th style="text-align:right;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Total</th>
+          <th style="text-align:center;padding:7px 8px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Estado</th>
+          <th style="padding:7px 8px"></th>
+        </tr></thead>
+        <tbody>
+          ${ventas.map(v=>{
+            const estadoColor={pagada:'#10b981',pendiente:'#f59e0b',anulada:'#ef4444'};
+            const estadoBg={pagada:'#f0fdf4',pendiente:'#fffbeb',anulada:'#fef2f2'};
+            const prods=(v.items||[]).map(i=>i.producto_nombre||'').filter(Boolean).slice(0,2).join(', ')+(v.items?.length>2?'…':'');
+            return `<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+              <td style="padding:10px 8px"><span style="font-weight:700;color:#2563eb;font-size:13px">${v.numero||'—'}</span></td>
+              <td style="padding:10px 8px;font-size:13px;color:#374151">${fmtDate(v.fecha)}</td>
+              <td style="padding:10px 8px;font-size:12px;color:#64748b;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escAttr(prods||'—')}</td>
+              <td style="padding:10px 8px;text-align:right;font-size:13px;font-weight:700;color:#0f172a">${fmt$(v.total_iva||0)}</td>
+              <td style="padding:10px 8px;text-align:center"><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;color:${estadoColor[v.estado]||'#64748b'};background:${estadoBg[v.estado]||'#f1f5f9'}">${(v.estado||'').charAt(0).toUpperCase()+(v.estado||'').slice(1)}</span></td>
+              <td style="padding:10px 8px;text-align:right">
+                <button onclick="event.stopPropagation();_vtaDescargarBoleta('${v.id}')" title="Descargar boleta PDF"
+                  style="background:none;border:1.5px solid #e2e8f0;border-radius:7px;cursor:pointer;color:#64748b;padding:5px 8px;line-height:0;transition:all .15s"
+                  onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#64748b'">
+                  ${svgDl}
+                </button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`
+      :`<div style="text-align:center;padding:28px;color:#94a3b8;font-size:13px">Sin ventas registradas</div>`}
+    </div>
+  </div></div>`);
 }
 function _vtaMatchCliente(v,c){
   if(!c) return false;
@@ -2696,9 +2759,6 @@ function _vtaCliClear(){
   const clr=document.getElementById('vta-cli-clear');
   if(clr) clr.style.display='none';
   _vtaCliDropHide();
-  const panel=document.getElementById('vta-cli-panel');
-  if(panel) panel.style.display='none';
-  // Restaurar tabla
   filtrarVentas('');
 }
 function _vtaDescargarBoleta(ventaId){
