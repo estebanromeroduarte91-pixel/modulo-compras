@@ -14640,10 +14640,49 @@ ${bodegas.map(b=>`  ${b.nombre||'?'} | ID: ${b.id||'?'}`).join('\n')||'Sin sucur
 === PROVEEDORES (${proveedores.length}) ===
 ${proveedores.map(p=>`  ${p.nombre||'?'} | Tel: ${p.telefono||'?'} | Email: ${p.email||'?'}`).join('\n')||'Sin proveedores'}
 
-=== RESUMEN GENERAL ===
-Total ventas históricas c/IVA: $${ventas.reduce((s,v)=>s+(+v.total_iva||0),0).toLocaleString('es-CL')}
-Total ventas registradas: ${ventas.length}
-Total gastos históricos: $${gastos.reduce((s,g)=>s+(+g.monto||0),0).toLocaleString('es-CL')}`;
+=== ESTADÍSTICAS GLOBALES (histórico completo) ===
+${(()=>{
+  const _tv=ventas.reduce((s,v)=>s+(+v.total_iva||0),0);
+  const _tg=gastos.reduce((s,g)=>s+(+g.monto||0),0);
+  const _tc=ocs.filter(o=>['recibida','confirmada'].includes(o.estado)).reduce((s,o)=>s+(+o.total||0),0);
+  const _util=_tv-_tg-_tc;
+  const _margen=_tv>0?Math.round(_util/_tv*100):0;
+  const _ticketProm=ventas.length>0?Math.round(_tv/ventas.length):0;
+
+  // Por mes: ventas, gastos, utilidad
+  const _statMes={};
+  ventas.forEach(v=>{ const m=(v.fecha||'').slice(0,7); if(!m) return; if(!_statMes[m]) _statMes[m]={v:0,g:0,c:0}; _statMes[m].v+=(+v.total_iva||0); });
+  gastos.forEach(g=>{ const m=(g.fecha||'').slice(0,7); if(!m) return; if(!_statMes[m]) _statMes[m]={v:0,g:0,c:0}; _statMes[m].g+=(+g.monto||0); });
+  ocs.filter(o=>['recibida','confirmada'].includes(o.estado)).forEach(o=>{ const m=(o.fecha||'').slice(0,7); if(!m) return; if(!_statMes[m]) _statMes[m]={v:0,g:0,c:0}; _statMes[m].c+=(+o.total||0); });
+
+  // Ventas por sucursal
+  const _bSales={};
+  ventas.forEach(v=>{ const b=v.sucursal||v.branchName||'Sin sucursal'; if(!_bSales[b]) _bSales[b]=0; _bSales[b]+=(+v.total_iva||0); });
+
+  // Ticket promedio por mes
+  const _ticketMes={};
+  ventas.forEach(v=>{ const m=(v.fecha||'').slice(0,7); if(!m) return; if(!_ticketMes[m]) _ticketMes[m]={s:0,n:0}; _ticketMes[m].s+=(+v.total_iva||0); _ticketMes[m].n++; });
+
+  return `KPIs GLOBALES:
+  Total ventas c/IVA: $${_tv.toLocaleString('es-CL')}
+  Total gastos: $${_tg.toLocaleString('es-CL')}
+  Total compras (OC): $${_tc.toLocaleString('es-CL')}
+  Utilidad bruta: $${_util.toLocaleString('es-CL')}
+  Margen bruto: ${_margen}%
+  Ticket promedio histórico: $${_ticketProm.toLocaleString('es-CL')}
+  Total ventas registradas: ${ventas.length}
+  Total clientes: ${clientes.length}
+  Total productos en catálogo: ${productos.length}
+
+UTILIDAD POR MES:
+${Object.entries(_statMes).sort((a,b)=>b[0].localeCompare(a[0])).map(([m,d])=>{const u=d.v-d.g-d.c;const mg=d.v>0?Math.round(u/d.v*100):0;return `  ${m}: Ventas $${d.v.toLocaleString('es-CL')} | Gastos $${d.g.toLocaleString('es-CL')} | Compras $${d.c.toLocaleString('es-CL')} | Utilidad $${u.toLocaleString('es-CL')} | Margen ${mg}%`;}).join('\n')||'Sin datos'}
+
+TICKET PROMEDIO POR MES:
+${Object.entries(_ticketMes).sort((a,b)=>b[0].localeCompare(a[0])).map(([m,d])=>`  ${m}: $${Math.round(d.s/d.n).toLocaleString('es-CL')} (${d.n} ventas)`).join('\n')||'Sin datos'}
+
+VENTAS POR SUCURSAL (histórico):
+${Object.entries(_bSales).sort((a,b)=>b[1]-a[1]).map(([s,t])=>`  ${s}: $${t.toLocaleString('es-CL')}`).join('\n')||'Sin datos'}`;
+})()}`;
 }
 
 async function _aiEnviar(){
