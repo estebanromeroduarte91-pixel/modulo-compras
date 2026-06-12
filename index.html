@@ -8912,7 +8912,7 @@ function _renderMovContent(){
     return `<span style="font-size:12px;color:var(--text2)">—</span>`;
   };
 
-  const prodsList=m=>(m.productos||[]).map(p=>`<div style="font-size:12px;color:var(--text);font-weight:500">${escAttr(p.producto_nombre||'?')} <span style="font-weight:400;color:var(--text2)">×${p.cantidad}</span></div>`).join('');
+  const prodsList=m=>(m.productos||[]).map(p=>`<div style="font-size:12px;color:var(--text);font-weight:500">${escAttr(p.producto_nombre||'?')}</div>`).join('');
 
   const cantidadTotal=m=>{
     const total=(m.productos||[]).reduce((s,p)=>s+(+p.cantidad||0),0);
@@ -8931,8 +8931,7 @@ function _renderMovContent(){
       <td style="font-size:12px">${m.referencia?`<span style="color:#2563eb;font-weight:500">${escAttr(m.referencia)}</span>`:'<span style="color:var(--text2)">Manual</span>'}</td>
       <td style="text-align:right">${cantidadTotal(m)}</td>
       <td style="font-size:12px;color:var(--text2)">${escAttr(m.usuario||'')}</td>
-      <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escAttr(m.notas||'')}</td>
-    </tr>`).join(''):`<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text2)">Sin movimientos registrados</td></tr>`;
+    </tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text2)">Sin movimientos registrados</td></tr>`;
 
   document.getElementById('page-content').innerHTML=`
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;background:var(--surface,#fff)">
@@ -8970,7 +8969,6 @@ function _renderMovContent(){
           <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Referencia</th>
           <th style="padding:9px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Cant.</th>
           <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Usuario</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Notas</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -8988,10 +8986,11 @@ function _tslRenderLineas(){
       ?`<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#dcfce7;color:#166534;white-space:nowrap">${stock} disp.</span>`
       :`<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#fef9c3;color:#854d0e;white-space:nowrap">${stock} disp.</span>`):'';
     return `<tr>
-      <td style="padding:5px 4px">
-        <input list="tsl-prods-list" data-idx="${i}" data-field="nombre" value="${escAttr(l.prod_nombre)}" placeholder="Buscar producto..."
+      <td style="padding:5px 4px;position:relative">
+        <input id="tsl-inp-${i}" autocomplete="off" value="${escAttr(l.prod_nombre)}" placeholder="Buscar producto..."
           style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;background:var(--surface,#fff);color:var(--text)"
-          oninput="_tslInputNombre(this,${i})">
+          oninput="_tslInputNombre(this,${i})" onfocus="_tslInputNombre(this,${i})" onblur="setTimeout(()=>_tslHideDropdown(${i}),150)">
+        <div id="tsl-dd-${i}" style="display:none;position:absolute;left:0;top:100%;width:100%;background:var(--surface,#fff);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:10001;max-height:220px;overflow-y:auto;margin-top:2px"></div>
       </td>
       <td style="padding:5px 4px;width:90px">${stockHtml}</td>
       <td style="padding:5px 4px;width:72px">
@@ -9009,22 +9008,58 @@ function _tslRenderLineas(){
   _movActualizarResumen();
 }
 
+function _tslHideDropdown(i){
+  const dd=document.getElementById('tsl-dd-'+i);
+  if(dd) dd.style.display='none';
+}
+
+function _tslSelectProd(i, prodId, prodNombre){
+  window._tslLineas[i].prod_id=prodId;
+  window._tslLineas[i].prod_nombre=prodNombre;
+  const inp=document.getElementById('tsl-inp-'+i);
+  if(inp) inp.value=prodNombre;
+  _tslHideDropdown(i);
+  // update stock badge
+  const prod=(window._tslProds||[]).find(p=>p.id===prodId);
+  const row=inp?.closest('tr');
+  if(row&&prod){
+    const s=+prod.stock||0;
+    row.cells[1].innerHTML=s>5
+      ?`<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#dcfce7;color:#166534;white-space:nowrap">${s} disp.</span>`
+      :`<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#fef9c3;color:#854d0e;white-space:nowrap">${s} disp.</span>`;
+  } else if(row){ row.cells[1].innerHTML=''; }
+  _movActualizarResumen();
+}
+
 function _tslInputNombre(el, i){
-  const v=el.value;
-  const found=(window._tslProds||[]).find(p=>p.nombre===v);
-  window._tslLineas[i].prod_nombre=v;
-  window._tslLineas[i].prod_id=found?found.id:'';
-  // update stock badge in same row
-  const row=el.closest('tr');
-  if(row){
-    const stockCell=row.cells[1];
-    if(found){
-      const s=+found.stock||0;
-      stockCell.innerHTML=s>5
-        ?`<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#dcfce7;color:#166534;white-space:nowrap">${s} disp.</span>`
-        :`<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:#fef9c3;color:#854d0e;white-space:nowrap">${s} disp.</span>`;
-    } else { stockCell.innerHTML=''; }
+  const v=el.value.trim().toLowerCase();
+  const prods=window._tslProds||[];
+  // exact match
+  const exact=prods.find(p=>p.nombre===el.value);
+  window._tslLineas[i].prod_nombre=el.value;
+  window._tslLineas[i].prod_id=exact?exact.id:'';
+  if(!exact){
+    const row=el.closest('tr');
+    if(row) row.cells[1].innerHTML='';
   }
+  // show dropdown
+  const dd=document.getElementById('tsl-dd-'+i);
+  if(!dd) return;
+  if(!v){ dd.style.display='none'; _movActualizarResumen(); return; }
+  const matches=prods.filter(p=>(p.nombre||'').toLowerCase().includes(v)).slice(0,7);
+  if(!matches.length){ dd.style.display='none'; _movActualizarResumen(); return; }
+  dd.style.display='block';
+  dd.innerHTML=matches.map(p=>{
+    const s=+p.stock||0;
+    const badge=s>5
+      ?`<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#dcfce7;color:#166534;margin-left:6px">${s}</span>`
+      :`<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#fef9c3;color:#854d0e;margin-left:6px">${s}</span>`;
+    return `<div onmousedown="_tslSelectProd(${i},'${p.id}',${JSON.stringify(p.nombre||'')})"
+      style="padding:7px 12px;cursor:pointer;font-size:12.5px;display:flex;align-items:center;justify-content:space-between"
+      onmouseover="this.style.background='var(--gray-100,#f3f4f6)'" onmouseout="this.style.background=''">
+      <span>${escHtml(p.nombre||'')}</span>${badge}
+    </div>`;
+  }).join('');
   _movActualizarResumen();
 }
 
@@ -9069,7 +9104,6 @@ function modalNuevoTraslado(){
 
     <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
       <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Productos a trasladar</div>
-      <datalist id="tsl-prods-list">${productos.map(p=>`<option value="${escAttr(p.nombre||'')}"></option>`).join('')}</datalist>
       <table style="width:100%;border-collapse:collapse">
         <thead><tr style="border-bottom:1px solid var(--border)">
           <th style="padding:5px 4px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Producto</th>
