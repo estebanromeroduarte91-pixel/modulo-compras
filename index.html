@@ -793,6 +793,7 @@ select{cursor:pointer}
     <div class="nav-subitem" id="nav-productos" onclick="nav('productos')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span> Productos</div>
     <div class="nav-subitem" id="nav-categorias" onclick="nav('categorias')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span> Categorías</div>
     <div class="nav-subitem" id="nav-bodegas" onclick="nav('bodegas')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Bodegas / Sucursales</div>
+    <div class="nav-subitem" id="nav-movimientos" onclick="nav('movimientos')"><span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg></span> Historial de movimientos</div>
   </div>
 
   <div class="nav-section">Administración</div>
@@ -1364,6 +1365,13 @@ const getKits = ()=> DB.get('kits')||[];
 const setKits = v=> DB.set('kits',v);
 const getTraslados = ()=>{ try{ return JSON.parse(DB.get('traslados')||'[]'); }catch(e){ return []; } };
 const setTraslados = v=> DB.set('traslados', JSON.stringify(v));
+const getMovimientos = ()=>{ try{ return JSON.parse(DB.get('mov_inventario')||'[]'); }catch(e){ return []; } };
+const setMovimientos = v=> DB.set('mov_inventario', JSON.stringify(v));
+function registrarMovimiento({tipo,productos,bodega_origen='',bodega_destino='',referencia='',referencia_id='',notas=''}){
+  const movs=getMovimientos();
+  movs.unshift({id:uid(),fecha:today(),hora:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),tipo,productos,bodega_origen,bodega_destino,referencia,referencia_id,notas,usuario:_currentUserNombre||'Sistema'});
+  setMovimientos(movs);
+}
 const getTecnicosExt = ()=>{ try{ return JSON.parse(DB.get('tecnicos_ext')||'[]'); }catch(e){ return []; } };
 const setTecnicosExt = v=> DB.set('tecnicos_ext', JSON.stringify(v));
 const getVentas = ()=> DB.get('ventas')||[];
@@ -1476,7 +1484,7 @@ const pageTitles = {
   dashboard:'Dashboard',ventas:'Ventas','ventas-config':'Ventas — Configuración',
   oc:'Compras',gastos:'Gastos',contabilidad:'Contabilidad',
   proveedores:'Proveedores',productos:'Productos',categorias:'Categorías',bodegas:'Bodegas',estadisticas:'Estadísticas',
-  traslados:'Traslados',taller:'Taller — Órdenes de Servicio','sys-usuarios':'Accesos'
+  traslados:'Traslados',movimientos:'Historial de movimientos',taller:'Taller — Órdenes de Servicio','sys-usuarios':'Accesos'
 };
 const _SUBMENUS=[
   {parent:'nav-ventas-parent',    submenu:'submenu-ventas'},
@@ -1619,7 +1627,7 @@ function nav(page){
   // Restaurar topbar al salir de taller
   const tb=document.getElementById('topbar');if(tb)tb.style.display='';
   ({dashboard:renderDashboard,ventas:renderVentas,'ventas-config':renderVentasConfig,clientes:renderClientes,oc:renderOC,gastos:renderGastos,proveedores:renderProveedores,
-    productos:renderProductos,categorias:renderCategorias,kits:renderKits,traslados:renderTraslados,bodegas:renderBodegas,estadisticas:renderEstadisticas,contabilidad:renderContabilidad,
+    productos:renderProductos,categorias:renderCategorias,kits:renderKits,traslados:renderTraslados,bodegas:renderBodegas,movimientos:renderMovimientos,estadisticas:renderEstadisticas,contabilidad:renderContabilidad,
     'sys-usuarios':renderSysUsuarios,cargos:renderCargos,'config-global':renderConfigGlobal,caja:renderCaja
   }[page]||renderDashboard)();
 }
@@ -3497,6 +3505,8 @@ function posSaveVenta(){
     items,total,total_iva,fecha_creacion:today()};
   const ventas=getVentas(); ventas.push(venta); setVentas(ventas);
   crearAsientoVenta(venta);
+  // Registrar movimiento de salida por venta
+  registrarMovimiento({tipo:'salida',productos:items.map(i=>({producto_id:i.producto_id,producto_nombre:i.producto_nombre,cantidad:i.cantidad})),bodega_origen:venta.branchNombre||'',referencia:venta.numero,referencia_id:venta.id,notas:'Venta registrada'});
   _posItems=[]; _posCliente=''; _posNumBuf=''; _posDocumento='boleta'; _posClienteInfo={rut:'',tel:'',email:''}; _posBranchId='';
   closeModal(); toast(`Venta ${venta.numero} registrada ✓`,'success');
   if(currentPage==='taller') tp_renderAll&&tp_renderAll(); else renderVentas();
@@ -6564,12 +6574,14 @@ function confirmarRecepcion(ocId){
     if(!ri.producto_id) return;
     const key=ri.producto_id+'_'+bodId;
     stock[key]=(stock[key]||0)+ri.cantidad;
-    // Also update product global stock
     const prods=getProductos();
     const pi=prods.findIndex(p=>p.id===ri.producto_id);
     if(pi>=0){ prods[pi].stock=(+prods[pi].stock||0)+ri.cantidad; setProductos(prods); }
   });
   DB.set('stock',stock);
+  // Registrar movimiento de entrada por OC
+  const _ocNum=getOCs().find(o=>o.id===ocId)?.numero||ocId;
+  registrarMovimiento({tipo:'entrada',productos:recItems.map(ri=>({producto_id:ri.producto_id,producto_nombre:ri.producto_nombre||ri.nombre||'?',cantidad:ri.cantidad})),bodega_destino:bodNombre,referencia:'OC-'+_ocNum,referencia_id:ocId,notas:'Recepción OC'});
   // Save recepcion to OC
   const ocs=getOCs();
   const i=ocs.findIndex(o=>o.id===ocId);
@@ -8652,8 +8664,16 @@ function saveProducto(editId){
     descripcion:document.getElementById('pr-desc').value.trim()
   };
   const prods=getProductos();
-  if(editId){ const i=prods.findIndex(p=>p.id===editId); if(i>=0) Object.assign(prods[i],prod); }
-  else { prod.id=uid(); prods.push(prod); }
+  if(editId){
+    const i=prods.findIndex(p=>p.id===editId);
+    if(i>=0){
+      const stockAntes=+prods[i].stock||0;
+      const stockDespues=+prod.stock||0;
+      const diff=stockDespues-stockAntes;
+      Object.assign(prods[i],prod);
+      if(diff!==0) registrarMovimiento({tipo:'ajuste',productos:[{producto_id:editId,producto_nombre:prod.nombre,cantidad:Math.abs(diff),direccion:diff>0?'+':'-'}],notas:`Ajuste manual: ${diff>0?'+':''}${diff} unidades`});
+    }
+  } else { prod.id=uid(); prods.push(prod); }
   setProductos(prods); closeModal(); toast(editId?'Producto actualizado':'Producto guardado'); renderProductos();
 }
 
@@ -8835,6 +8855,251 @@ function confirmarImportarProductos(){
   renderProductos();
 }
 
+
+// ─────────────────────────────────────────────
+// MOVIMIENTOS DE INVENTARIO
+// ─────────────────────────────────────────────
+let _movFiltro={tipo:'todos',bodega:'',q:'',desde:'',hasta:''};
+
+function renderMovimientos(){
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-primary" onclick="modalNuevoTraslado()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+      Nuevo traslado
+    </button>`;
+  _renderMovContent();
+}
+
+function _renderMovContent(){
+  const bodegas=getBodegas();
+  let movs=getMovimientos();
+
+  // filtros
+  if(_movFiltro.tipo!=='todos') movs=movs.filter(m=>m.tipo===_movFiltro.tipo);
+  if(_movFiltro.bodega) movs=movs.filter(m=>m.bodega_origen===_movFiltro.bodega||m.bodega_destino===_movFiltro.bodega);
+  if(_movFiltro.q){ const q=_movFiltro.q.toLowerCase(); movs=movs.filter(m=>(m.productos||[]).some(p=>(p.producto_nombre||'').toLowerCase().includes(q))||(m.referencia||'').toLowerCase().includes(q)); }
+  if(_movFiltro.desde) movs=movs.filter(m=>m.fecha>=_movFiltro.desde);
+  if(_movFiltro.hasta) movs=movs.filter(m=>m.fecha<=_movFiltro.hasta);
+
+  // kpis (sin filtro de tipo para que siempre muestren el mes)
+  const allMovs=getMovimientos().filter(m=>m.fecha&&m.fecha.startsWith(today().slice(0,7)));
+  const kpiEntradas=allMovs.filter(m=>m.tipo==='entrada').reduce((s,m)=>(m.productos||[]).reduce((a,p)=>a+(+p.cantidad||0),s),0);
+  const kpiSalidas=allMovs.filter(m=>m.tipo==='salida').reduce((s,m)=>(m.productos||[]).reduce((a,p)=>a+(+p.cantidad||0),s),0);
+  const kpiTraslados=allMovs.filter(m=>m.tipo==='traslado').length;
+  const kpiAjustes=allMovs.filter(m=>m.tipo==='ajuste').length;
+
+  const tipoBadge=t=>{
+    const map={entrada:`<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:#dcfce7;color:#166534"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block"></span>Entrada</span>`,
+      salida:`<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:#fee2e2;color:#991b1b"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;display:inline-block"></span>Salida</span>`,
+      traslado:`<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:#dbeafe;color:#1e40af"><span style="width:6px;height:6px;border-radius:50%;background:#3b82f6;display:inline-block"></span>Traslado</span>`,
+      ajuste:`<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:#fef9c3;color:#854d0e"><span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;display:inline-block"></span>Ajuste</span>`};
+    return map[t]||t;
+  };
+
+  const rutaCol=m=>{
+    if(m.tipo==='traslado') return `<span style="font-size:12px;color:var(--text2)">${m.bodega_origen||'?'} → ${m.bodega_destino||'?'}</span>`;
+    if(m.tipo==='entrada') return `<span style="font-size:12px;color:var(--text2)">${m.bodega_destino||'—'}</span>`;
+    if(m.tipo==='salida') return `<span style="font-size:12px;color:var(--text2)">${m.bodega_origen||'—'}</span>`;
+    return `<span style="font-size:12px;color:var(--text2)">—</span>`;
+  };
+
+  const prodsList=m=>(m.productos||[]).map(p=>`<div style="font-size:12px;color:var(--text);font-weight:500">${escAttr(p.producto_nombre||'?')} <span style="font-weight:400;color:var(--text2)">×${p.cantidad}</span></div>`).join('');
+
+  const cantidadTotal=m=>{
+    const total=(m.productos||[]).reduce((s,p)=>s+(+p.cantidad||0),0);
+    if(m.tipo==='entrada'||m.tipo==='traslado') return `<span style="color:#059669;font-weight:500">+${total}</span>`;
+    if(m.tipo==='salida') return `<span style="color:#dc2626;font-weight:500">−${total}</span>`;
+    const dir=(m.productos||[])[0]?.direccion||'+';
+    return `<span style="color:${dir==='+'?'#059669':'#dc2626'};font-weight:500">${dir}${total}</span>`;
+  };
+
+  const rows=movs.length?movs.map(m=>`
+    <tr>
+      <td style="color:var(--text2);font-size:12px;white-space:nowrap">${m.fecha||'?'}<br><span style="font-size:11px">${m.hora||''}</span></td>
+      <td>${tipoBadge(m.tipo)}</td>
+      <td>${prodsList(m)}</td>
+      <td>${rutaCol(m)}</td>
+      <td style="font-size:12px">${m.referencia?`<span style="color:#2563eb;font-weight:500">${escAttr(m.referencia)}</span>`:'<span style="color:var(--text2)">Manual</span>'}</td>
+      <td style="text-align:right">${cantidadTotal(m)}</td>
+      <td style="font-size:12px;color:var(--text2)">${escAttr(m.usuario||'')}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escAttr(m.notas||'')}</td>
+    </tr>`).join(''):`<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text2)">Sin movimientos registrados</td></tr>`;
+
+  document.getElementById('page-content').innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;background:var(--surface,#fff)">
+    <div style="padding:14px 18px;border-right:1px solid var(--border)"><div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Entradas este mes</div><div style="font-size:20px;font-weight:700;color:#059669">+${kpiEntradas} u.</div></div>
+    <div style="padding:14px 18px;border-right:1px solid var(--border)"><div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Salidas este mes</div><div style="font-size:20px;font-weight:700;color:#dc2626">−${kpiSalidas} u.</div></div>
+    <div style="padding:14px 18px;border-right:1px solid var(--border)"><div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Traslados este mes</div><div style="font-size:20px;font-weight:700;color:#2563eb">${kpiTraslados}</div></div>
+    <div style="padding:14px 18px"><div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ajustes manuales</div><div style="font-size:20px;font-weight:700;color:var(--text)">${kpiAjustes}</div></div>
+  </div>
+
+  <div class="card" style="overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="text" placeholder="Buscar producto o referencia..." style="height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;width:200px;background:var(--surface,#fff);color:var(--text)" oninput="_movFiltro.q=this.value;_renderMovContent()" value="${escAttr(_movFiltro.q)}">
+      <select style="height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface,#fff);color:var(--text)" onchange="_movFiltro.tipo=this.value;_renderMovContent()">
+        <option value="todos" ${_movFiltro.tipo==='todos'?'selected':''}>Todos los tipos</option>
+        <option value="entrada" ${_movFiltro.tipo==='entrada'?'selected':''}>Entradas</option>
+        <option value="salida" ${_movFiltro.tipo==='salida'?'selected':''}>Salidas</option>
+        <option value="traslado" ${_movFiltro.tipo==='traslado'?'selected':''}>Traslados</option>
+        <option value="ajuste" ${_movFiltro.tipo==='ajuste'?'selected':''}>Ajustes</option>
+      </select>
+      <select style="height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface,#fff);color:var(--text)" onchange="_movFiltro.bodega=this.value;_renderMovContent()">
+        <option value="">Todas las sucursales</option>
+        ${bodegas.map(b=>`<option value="${escAttr(b.nombre||b.name||'')}" ${_movFiltro.bodega===(b.nombre||b.name||'')?'selected':''}>${escAttr(b.nombre||b.name||'')}</option>`).join('')}
+      </select>
+      <input type="date" style="height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface,#fff);color:var(--text)" value="${_movFiltro.desde}" onchange="_movFiltro.desde=this.value;_renderMovContent()">
+      <input type="date" style="height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface,#fff);color:var(--text)" value="${_movFiltro.hasta}" onchange="_movFiltro.hasta=this.value;_renderMovContent()">
+      ${(_movFiltro.tipo!=='todos'||_movFiltro.bodega||_movFiltro.q||_movFiltro.desde||_movFiltro.hasta)?`<button class="btn btn-secondary" style="height:32px;font-size:12px" onclick="_movFiltro={tipo:'todos',bodega:'',q:'',desde:'',hasta:''};_renderMovContent()">Limpiar filtros</button>`:''}
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Fecha</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Tipo</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Productos</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Sucursal</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Referencia</th>
+          <th style="padding:9px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Cant.</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Usuario</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Notas</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function modalNuevoTraslado(){
+  const bodegas=getBodegas();
+  const productos=getProductos();
+  let _tslLineas=[{id:Date.now(),prod_id:'',prod_nombre:'',cantidad:1}];
+
+  const renderLineas=()=>{
+    const cont=document.getElementById('tsl-lineas');
+    if(!cont) return;
+    cont.innerHTML=_tslLineas.map((l,i)=>{
+      const prod=productos.find(p=>p.id===l.prod_id);
+      const stockOrigen=+prod?.stock||0;
+      const stockBadge=l.prod_id?(stockOrigen>5?`<span style="font-size:11px;padding:2px 6px;border-radius:4px;background:#dcfce7;color:#166534">${stockOrigen} disp.</span>`:`<span style="font-size:11px;padding:2px 6px;border-radius:4px;background:#fef9c3;color:#854d0e">${stockOrigen} disp.</span>`):'';
+      return `<tr>
+        <td style="padding:6px 4px">
+          <input list="tsl-prods-list" value="${escAttr(l.prod_nombre)}" placeholder="Buscar producto..." style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;background:var(--surface,#fff);color:var(--text)"
+            oninput="(function(el,i){const v=el.value;const found=window._tslProds.find(p=>p.nombre===v);window._tslLineas[i].prod_nombre=v;if(found){window._tslLineas[i].prod_id=found.id;}else{window._tslLineas[i].prod_id='';} document.getElementById('tsl-lineas').querySelectorAll('tr')[i].querySelector('.tsl-stock').innerHTML=found?(+found.stock>5?'<span style=\\'font-size:11px;padding:2px 6px;border-radius:4px;background:#dcfce7;color:#166534\\'>'+(+found.stock)+' disp.</span>':'<span style=\\'font-size:11px;padding:2px 6px;border-radius:4px;background:#fef9c3;color:#854d0e\\'>'+(+found.stock)+' disp.</span>'):''; _movActualizarResumen();})(this,${i})">
+        </td>
+        <td style="padding:6px 4px;white-space:nowrap" class="tsl-stock">${stockBadge}</td>
+        <td style="padding:6px 4px;width:70px"><input type="number" min="1" value="${l.cantidad}" style="width:64px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;text-align:center;background:var(--surface,#fff);color:var(--text)" oninput="window._tslLineas[${i}].cantidad=+this.value||1;_movActualizarResumen()"></td>
+        <td style="padding:6px 4px;width:32px">${_tslLineas.length>1?`<button onclick="window._tslLineas.splice(${i},1);document.getElementById('tsl-lineas').closest('table').querySelector('tbody').innerHTML='';(function(){const c=document.getElementById('tsl-lineas');if(c){c.innerHTML=window._tslLineas.map((_,ii)=>'').join('');}})()" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:4px;border-radius:4px" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color=''" onclick="window._tslLineas.splice(${i},1);window._reRenderTslLineas()">✕</button>`:''}
+        </td>
+      </tr>`;
+    }).join('');
+    _movActualizarResumen();
+  };
+
+  window._tslLineas=_tslLineas;
+  window._tslProds=productos;
+  window._reRenderTslLineas=()=>{ _tslLineas=window._tslLineas; renderLineas(); };
+
+  showModal(`
+    <div style="width:580px">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+          Traslado entre sucursales
+        </div>
+        <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text2)">×</button>
+      </div>
+
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Ruta del traslado</div>
+        <div style="display:grid;grid-template-columns:1fr 28px 1fr;gap:8px;align-items:end">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Sucursal origen</label>
+            <select id="tsl-origen" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface,#fff);color:var(--text)">
+              ${bodegas.map(b=>`<option value="${escAttr(b.nombre||b.name||b.id)}">${escAttr(b.nombre||b.name||'?')}</option>`).join('')}
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;padding-bottom:2px;color:var(--text2);font-size:18px">→</div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Sucursal destino</label>
+            <select id="tsl-destino" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface,#fff);color:var(--text)">
+              ${bodegas.slice().reverse().map(b=>`<option value="${escAttr(b.nombre||b.name||b.id)}">${escAttr(b.nombre||b.name||'?')}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Productos a trasladar</div>
+        <datalist id="tsl-prods-list">${productos.map(p=>`<option value="${escAttr(p.nombre||'')}"></option>`).join('')}</datalist>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:5px 4px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase">Producto</th>
+            <th style="padding:5px 4px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase">Stock</th>
+            <th style="padding:5px 4px;text-align:center;font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase">Cant.</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="tsl-lineas"></tbody>
+        </table>
+        <button onclick="window._tslLineas.push({id:Date.now(),prod_id:'',prod_nombre:'',cantidad:1});window._reRenderTslLineas()" style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;border:1px dashed var(--border);background:none;color:var(--text2);font-size:12px;cursor:pointer">
+          + Agregar producto
+        </button>
+      </div>
+
+      <div style="padding:10px 20px;background:var(--gray-50,#f8fafc);border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text2)" id="tsl-resumen">
+        &nbsp;
+      </div>
+
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+        <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Motivo / Notas <span style="font-weight:400">(opcional)</span></label>
+        <textarea id="tsl-notas" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:none;height:52px;background:var(--surface,#fff);color:var(--text)" placeholder="Ej: Reposición por quiebre de stock..."></textarea>
+      </div>
+
+      <div style="padding:12px 20px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text2)">El stock se actualizará automáticamente en ambas sucursales</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="guardarTraslado()">Confirmar traslado</button>
+        </div>
+      </div>
+    </div>
+  `);
+  renderLineas();
+}
+
+function _movActualizarResumen(){
+  const el=document.getElementById('tsl-resumen'); if(!el) return;
+  const lineas=window._tslLineas||[];
+  const nProds=lineas.filter(l=>l.prod_id).length;
+  const total=lineas.reduce((s,l)=>s+(+l.cantidad||0),0);
+  const origen=document.getElementById('tsl-origen')?.value||'—';
+  const destino=document.getElementById('tsl-destino')?.value||'—';
+  el.innerHTML=nProds?`<strong>${nProds}</strong> producto${nProds!==1?'s':''} &nbsp;·&nbsp; <strong>${total}</strong> unidades en total &nbsp;·&nbsp; ${origen} → ${destino}`:'Agrega productos para ver el resumen';
+}
+
+function guardarTraslado(){
+  const lineas=(window._tslLineas||[]).filter(l=>l.prod_id&&l.cantidad>0);
+  if(!lineas.length){ toast('Agrega al menos un producto','error'); return; }
+  const origen=document.getElementById('tsl-origen')?.value||'';
+  const destino=document.getElementById('tsl-destino')?.value||'';
+  if(!origen||!destino){ toast('Selecciona origen y destino','error'); return; }
+  if(origen===destino){ toast('El origen y destino no pueden ser iguales','error'); return; }
+  const notas=document.getElementById('tsl-notas')?.value||'';
+
+  // Actualizar stock
+  const prods=getProductos();
+  lineas.forEach(l=>{
+    const i=prods.findIndex(p=>p.id===l.prod_id);
+    if(i>=0) prods[i].stock=Math.max(0,(+prods[i].stock||0)-(+l.cantidad||0));
+  });
+  setProductos(prods);
+
+  // Registrar movimiento
+  registrarMovimiento({tipo:'traslado',productos:lineas.map(l=>({producto_id:l.prod_id,producto_nombre:l.prod_nombre,cantidad:l.cantidad})),bodega_origen:origen,bodega_destino:destino,notas:notas||`Traslado ${origen} → ${destino}`});
+
+  closeModal();
+  toast(`Traslado registrado: ${lineas.length} producto${lineas.length!==1?'s':''} enviados de ${origen} a ${destino}`,'success');
+  _renderMovContent();
+}
 
 // ─────────────────────────────────────────────
 // BODEGAS
