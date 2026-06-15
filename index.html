@@ -8942,33 +8942,45 @@ function _renderMovContent(){
   </div>
 
   <div class="card" style="overflow:hidden">
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <input type="text" placeholder="Buscar producto o referencia..." style="height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;width:200px;background:var(--surface,#fff);color:var(--text)" oninput="_movFiltro.q=this.value;_renderMovContent()" value="${escAttr(_movFiltro.q)}">
-      <select style="height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface,#fff);color:var(--text)" onchange="_movFiltro.tipo=this.value;_renderMovContent()">
-        <option value="todos" ${_movFiltro.tipo==='todos'?'selected':''}>Todos los tipos</option>
-        <option value="entrada" ${_movFiltro.tipo==='entrada'?'selected':''}>Entradas</option>
-        <option value="salida" ${_movFiltro.tipo==='salida'?'selected':''}>Salidas</option>
-        <option value="traslado" ${_movFiltro.tipo==='traslado'?'selected':''}>Traslados</option>
-        <option value="ajuste" ${_movFiltro.tipo==='ajuste'?'selected':''}>Ajustes</option>
-      </select>
-      <select style="height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface,#fff);color:var(--text)" onchange="_movFiltro.bodega=this.value;_renderMovContent()">
-        <option value="">Todas las sucursales</option>
-        ${bodegas.map(b=>`<option value="${escAttr(b.nombre||b.name||'')}" ${_movFiltro.bodega===(b.nombre||b.name||'')?'selected':''}>${escAttr(b.nombre||b.name||'')}</option>`).join('')}
-      </select>
-      <input type="date" style="height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface,#fff);color:var(--text)" value="${_movFiltro.desde}" onchange="_movFiltro.desde=this.value;_renderMovContent()">
-      <input type="date" style="height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface,#fff);color:var(--text)" value="${_movFiltro.hasta}" onchange="_movFiltro.hasta=this.value;_renderMovContent()">
-      ${(_movFiltro.tipo!=='todos'||_movFiltro.bodega||_movFiltro.q||_movFiltro.desde||_movFiltro.hasta)?`<button class="btn btn-secondary" style="height:32px;font-size:12px" onclick="_movFiltro={tipo:'todos',bodega:'',q:'',desde:'',hasta:''};_renderMovContent()">Limpiar filtros</button>`:''}
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:180px">
+          <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text2)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Buscar producto o referencia..." style="width:100%;height:34px;padding:0 10px 0 32px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;background:var(--surface,#fff);color:var(--text)" oninput="_movFiltro.q=this.value;_renderMovContent()" value="${escAttr(_movFiltro.q)}">
+        </div>
+        <div style="position:relative;display:flex;align-items:center;gap:6px;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;background:var(--surface,#fff);color:var(--text2);cursor:pointer" onclick="this.querySelector('select').focus()">
+          <svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          <select style="border:none;background:transparent;font-size:12.5px;color:var(--text);cursor:pointer;outline:none;appearance:none;padding-right:16px" onchange="_movFiltro.bodega=this.value;_renderMovContent()">
+            <option value="">Todas las sucursales</option>
+            ${bodegas.map(b=>`<option value="${escAttr(b.nombre||b.name||'')}" ${_movFiltro.bodega===(b.nombre||b.name||'')?'selected':''}>${escAttr(b.nombre||b.name||'')}</option>`).join('')}
+          </select>
+          <svg style="width:12px;height:12px;flex-shrink:0;pointer-events:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;background:var(--surface,#fff);color:var(--text2)">
+          <svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="date" style="border:none;background:transparent;font-size:12.5px;color:var(--text);outline:none;width:120px" value="${_movFiltro.desde}" onchange="_movFiltro.desde=this.value;_renderMovContent()">
+          <span style="color:var(--text2)">—</span>
+          <input type="date" style="border:none;background:transparent;font-size:12.5px;color:var(--text);outline:none;width:120px" value="${_movFiltro.hasta}" onchange="_movFiltro.hasta=this.value;_renderMovContent()">
+        </div>
+        ${(_movFiltro.tipo!=='todos'||_movFiltro.bodega||_movFiltro.q||_movFiltro.desde||_movFiltro.hasta)?`<button class="btn btn-secondary" style="height:34px;font-size:12px" onclick="_movFiltro={tipo:'todos',bodega:'',q:'',desde:'',hasta:''};_renderMovContent()">Limpiar</button>`:''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${[['todos','Todos',''],['entrada','Entradas','#16a34a'],['salida','Salidas','#dc2626'],['traslado','Traslados','#2563eb'],['ajuste','Ajustes','#ca8a04']].map(([val,label,color])=>`
+          <button onclick="_movFiltro.tipo='${val}';_renderMovContent()" style="display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:999px;font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid ${_movFiltro.tipo===val?'var(--primary)':'var(--border)'};background:${_movFiltro.tipo===val?'var(--primary-light,#eff6ff)':'var(--surface,#fff)'};color:${_movFiltro.tipo===val?'var(--primary)':'var(--text2)'}">
+            ${color?`<span style="width:7px;height:7px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>`:''}${label}
+          </button>`).join('')}
+      </div>
     </div>
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="border-bottom:1px solid var(--border)">
-          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Fecha</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Tipo</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Productos</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Sucursal</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Referencia</th>
-          <th style="padding:9px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Cant.</th>
-          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Usuario</th>
+          <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Fecha</th>
+          <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Tipo</th>
+          <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Productos</th>
+          <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Sucursal</th>
+          <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Referencia</th>
+          <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Cant.</th>
+          <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Usuario</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
