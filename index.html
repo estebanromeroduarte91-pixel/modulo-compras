@@ -13969,8 +13969,7 @@ function tp_printOrder(id){
 
 function tp_printLabel(id){
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
-  const sw=window.screen.width,sh=window.screen.height,pw=520,ph=420;
-  const w=window.open('','_blank',`width=${pw},height=${ph},left=${Math.round((sw-pw)/2)},top=${Math.round((sh-ph)/2)},toolbar=0,menubar=0,scrollbars=0`);
+  const w=window.open('','_blank');
   const tallerNom=(()=>{try{const c=JSON.parse(localStorage.getItem('erp_smtp_config')||'{}');return c.from_name||c.fromName||'Taller';}catch(e){return'Taller';}})();
   const otUrl=`${location.origin}${location.pathname}?ot=${encodeURIComponent(o.id)}`;
   w.document.write(`<!DOCTYPE html><html><head><title>Etiqueta OT #${o.num}</title>
