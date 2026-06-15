@@ -10555,6 +10555,9 @@ function renderTaller() {
         <button id="stab-seguimiento" class="tp-subnav-btn" onclick="tp_settingsTab('seguimiento')" style="border-bottom:2px solid transparent">
           📧 Seguimiento
         </button>
+        <button id="stab-terminos" class="tp-subnav-btn" onclick="tp_settingsTab('terminos')" style="border-bottom:2px solid transparent">
+          📄 Términos
+        </button>
       </div>
 
       <!-- TAB: SUCURSALES -->
@@ -10701,6 +10704,18 @@ function renderTaller() {
               Guardar configuración
             </button>
             <div id="seg-config-status" style="font-size:12px;color:var(--text2)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: TÉRMINOS Y CONDICIONES -->
+      <div id="settings-tab-terminos" style="display:none">
+        <div style="max-width:700px">
+          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px">Términos y condiciones</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Este texto aparecerá al pie de cada orden de servicio impresa.</div>
+          <textarea id="tp-terminos-textarea" rows="10" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);resize:vertical;line-height:1.6" placeholder="Escribe aquí los términos y condiciones que aparecerán en la orden impresa..."></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:10px">
+            <button class="btn btn-primary btn-sm" onclick="tp_saveTerminos()">Guardar</button>
           </div>
         </div>
       </div>
@@ -13329,8 +13344,22 @@ function tp_refreshTecnicoSelect(){
 }
 
 // ─── SETTINGS TABS ───
+function tp_saveTerminos(){
+  const val=document.getElementById('tp-terminos-textarea')?.value||'';
+  localStorage.setItem('erp_tp_terminos',val);
+  showToast('Términos guardados');
+}
+function tp_loadTerminos(){
+  const val=localStorage.getItem('erp_tp_terminos')||'';
+  const el=document.getElementById('tp-terminos-textarea');
+  if(el) el.value=val;
+}
+function tp_getTerminos(){
+  return localStorage.getItem('erp_tp_terminos')||'';
+}
+
 function tp_settingsTab(tab){
-  ['sucursales','checklist','smtp','mensajes','seguimiento'].forEach(t=>{
+  ['sucursales','checklist','smtp','mensajes','seguimiento','terminos'].forEach(t=>{
     const el=document.getElementById('settings-tab-'+t);
     const btn=document.getElementById('stab-'+t);
     if(!el||!btn) return;
@@ -13346,6 +13375,7 @@ function tp_settingsTab(tab){
   if(tab==='smtp') tp_renderSmtpSettings();
   if(tab==='mensajes') tp_renderMensajesSettings();
   if(tab==='seguimiento') tp_loadSeguimientoConfig();
+  if(tab==='terminos') tp_loadTerminos();
 }
 
 function tp_getSeguimientoConfig(){
@@ -13952,19 +13982,73 @@ function tp_openSend(id,tipo){
 // ─── PRINT ───
 function tp_printOrder(id){
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
-  const chk=(arr,label)=>!arr?.length?'':`<h2>${label}</h2><table>${arr.map(c=>`<tr><td>${c.checked?'✓':'✗'}</td><td>${c.label}</td></tr>`).join('')}</table>`;
-  const ph=(arr,label)=>!arr?.length?'':`<h2>${label}</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${arr.map(s=>`<img src="${s}" style="height:90px;border-radius:6px;border:1px solid #ddd">`).join('')}</div>`;
+  const esc=s=>(s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const tallerNom=(()=>{try{const c=JSON.parse(localStorage.getItem('erp_smtp_config')||'{}');return c.from_name||c.fromName||'Mi Taller';}catch(e){return'Mi Taller';}})();
+  const terminos=tp_getTerminos();
+  const chkGrid=arr=>{
+    if(!arr?.length) return '';
+    return `<div class="sec"><div class="stitle">Checklist de ingreso</div><div class="cg">${arr.map(c=>`<div class="ci"><div class="ci-icon ${c.checked?'ok':'fail'}">${c.checked?'✓':'✗'}</div>${esc(c.label)}</div>`).join('')}</div></div>`;
+  };
+  const ph=(arr,label)=>!arr?.length?'':`<div class="sec"><div class="stitle">${label}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${arr.map(s=>`<img src="${s}" style="height:80px;border-radius:6px;border:1px solid #e0e0e0">`).join('')}</div></div>`;
+  const terminosHtml=terminos?`<div class="sec"><div class="stitle">Términos y condiciones</div><div class="tc-box">${esc(terminos).replace(/\n/g,'<br>')}</div></div>`:'';
   const w=window.open('','_blank');
-  w.document.write(`<html><head><title>Orden #${o.num}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:2rem;max-width:640px;margin:0 auto;font-size:13px}h1{font-size:18px;margin-bottom:4px}h2{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#666;margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px}table{width:100%;border-collapse:collapse}td{padding:5px 0;vertical-align:top}td:first-child{color:#666;width:42%}.footer{margin-top:2rem;border-top:1px solid #ddd;padding-top:1rem;color:#999;font-size:11px;text-align:center}</style></head><body>
-    <h1>Taller — Orden #${o.num}</h1><p style="color:#666;font-size:12px">Emitida ${new Date().toLocaleDateString('es-CL')}</p>
-    <h2>Cliente</h2><table><tr><td>Nombre</td><td>${o.nombre}</td></tr><tr><td>Teléfono</td><td>${o.tel||'—'}</td></tr><tr><td>Correo</td><td>${o.email||'—'}</td></tr></table>
-    <h2>Equipo</h2><table><tr><td>Modelo</td><td>${o.modelo}</td></tr><tr><td>N° serie/IMEI</td><td>${o.serie||'—'}</td></tr><tr><td>Color</td><td>${o.color||'—'}</td></tr><tr><td>Estado físico</td><td>${o.estadoFisico||'—'}</td></tr></table>
-    <h2>Reparación</h2><table><tr><td>Trabajo</td><td>${o.trabajo}</td></tr><tr><td>Presupuesto</td><td>${tp_fmtMoney(o.presup)}</td></tr><tr><td>Costo real</td><td>${tp_fmtMoney(o.costo)}</td></tr><tr><td>Estado</td><td>${o.status}</td></tr></table>
-    ${chk(o.checkIngreso,'Checklist de ingreso')}${ph(o.photosIngreso,'Fotos de ingreso')}
-    ${chk(o.checkSalida,'Checklist de salida')}${ph(o.photosSalida,'Fotos de salida')}
-    <div class="footer">Firma cliente: ______________________ &nbsp;&nbsp; Firma técnico: ______________________</div>
-  </body></html>`);
-  w.document.close();setTimeout(()=>w.print(),400);
+  w.document.write(`<!DOCTYPE html><html><head><title>Orden #${o.num}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    @page{size:letter;margin:16mm 18mm}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Manrope',system-ui,sans-serif;color:#111;background:#fff;font-size:13px}
+    .page{max-width:640px;margin:0 auto}
+    .top-bar{display:flex;justify-content:space-between;align-items:center;padding-bottom:18px;border-bottom:1px solid #e0e0e0;margin-bottom:24px}
+    .logo{font-size:17px;font-weight:800;color:#111}
+    .tsub{font-size:10px;color:#aaa;margin-top:2px}
+    .oright{text-align:right}
+    .olbl{font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+    .onum{font-size:26px;font-weight:800;color:#111;letter-spacing:-1px;line-height:1}
+    .ofecha{font-size:10px;color:#aaa;margin-top:3px}
+    .sec{margin-bottom:20px}
+    .stitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#aaa;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid #ebebeb}
+    .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px 32px}
+    .fl{display:flex;flex-direction:column;gap:2px}
+    .flb{font-size:9px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+    .fv{font-size:13px;color:#111;font-weight:600}
+    .tbox{background:#f7f7f7;border-radius:8px;padding:10px 12px;font-size:13px;color:#333;margin-top:4px;line-height:1.6;font-weight:500;border-left:3px solid #111}
+    .cg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+    .ci{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:500;padding:7px 10px;border-radius:7px;border:1px solid #e8e8e8;color:#333}
+    .ci-icon{width:17px;height:17px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;border:1.5px solid #ccc;color:#111;background:#fff}
+    .ci-icon.ok{border-color:#111;background:#111;color:#fff}
+    .ci-icon.fail{border-color:#111;color:#111;background:#fff}
+    .tc-box{background:#f7f7f7;border-radius:8px;padding:12px 14px;font-size:10px;color:#555;line-height:1.8;white-space:pre-wrap;font-weight:500}
+    .foot{margin-top:28px;padding-top:16px;border-top:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:flex-end}
+    .fbl{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+    .fline{width:160px;height:1px;background:#333}
+    .flbl{font-size:9px;color:#aaa;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+    .disc{font-size:9.5px;color:#bbb;max-width:220px;line-height:1.6;text-align:right;font-weight:500}
+  </style></head><body><div class="page">
+    <div class="top-bar">
+      <div><div class="logo">${esc(tallerNom)}</div><div class="tsub">Servicio técnico</div></div>
+      <div class="oright"><div class="olbl">Orden de servicio</div><div class="onum">#${o.num}</div><div class="ofecha">${new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'})}</div></div>
+    </div>
+    <div class="sec"><div class="stitle">Cliente</div><div class="fg">
+      <div class="fl"><span class="flb">Nombre</span><span class="fv">${esc(o.nombre||'—')}</span></div>
+      <div class="fl"><span class="flb">Teléfono</span><span class="fv">${esc(o.tel||'—')}</span></div>
+      <div class="fl"><span class="flb">Email</span><span class="fv">${esc(o.email||'—')}</span></div>
+    </div></div>
+    <div class="sec"><div class="stitle">Equipo</div><div class="fg">
+      <div class="fl"><span class="flb">Modelo</span><span class="fv">${esc(o.modelo||'—')}</span></div>
+      <div class="fl"><span class="flb">Clave / PIN</span><span class="fv">${esc(o.pin||'—')}</span></div>
+      <div class="fl" style="grid-column:1/-1"><span class="flb">Trabajo solicitado</span><div class="tbox">${esc(o.trabajo||'—')}</div></div>
+    </div></div>
+    ${chkGrid(o.checkIngreso)}
+    ${o.obs?`<div class="sec"><div class="stitle">Observaciones al ingreso</div><div style="background:#f7f7f7;border-radius:8px;padding:10px 12px;font-size:12px;color:#555;line-height:1.6">${esc(o.obs)}</div></div>`:''}
+    ${ph(o.photosIngreso,'Fotos de ingreso')}
+    ${terminosHtml}
+    <div class="foot">
+      <div class="fbl"><div style="height:36px"></div><div class="fline"></div><div class="flbl">Firma del cliente</div></div>
+      <div class="disc">${terminos?'Al firmar, el cliente declara haber leído y aceptado los términos y condiciones.':'Al firmar, el cliente acepta los datos declarados en esta orden.'}</div>
+    </div>
+  </div><script>window.onload=()=>setTimeout(()=>window.print(),500);<\/script></body></html>`);
+  w.document.close();
 }
 
 function tp_printLabel(id){
