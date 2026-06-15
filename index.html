@@ -12021,8 +12021,11 @@ function tp_saveOrder(){
   const trabajo=(document.getElementById('f-trabajo')?.value||'').trim();
   if(!nombre){alert('El nombre del cliente es requerido.');return;}
   if(!modelo){alert('Selecciona el modelo.');return;}
-  const checkBoxes=document.querySelectorAll('#checklist-ingreso-form .checklist-item input[type=checkbox]');
+  const checkBoxes=document.querySelectorAll('#checklist-ingreso-form .checklist-item:not(.chk-special) input[type=checkbox]');
+  const specialBoxes=document.querySelectorAll('#checklist-ingreso-form .chk-special input[type=checkbox]');
   const checkIngreso=tp_checklistIngreso.map((label,i)=>({label,checked:checkBoxes[i]?.checked||false}));
+  checkIngreso._apagado=specialBoxes[0]?.checked||false;
+  checkIngreso._mojado=specialBoxes[1]?.checked||false;
   const data={
     nombre,modelo,trabajo,
     tel:(document.getElementById('f-tel')?.value||'').trim(),
@@ -12978,11 +12981,42 @@ function tp_handlePhotos(type,inp){
 }
 
 // ─── CHECKLIST ───
+function _tp_chkSpecialTrigger(type,specialVal){
+  const cont=document.getElementById('checklist-'+type+'-form');if(!cont)return;
+  // desmarcar todos los items normales
+  cont.querySelectorAll('.checklist-item:not(.chk-special) input[type=checkbox]').forEach(cb=>cb.checked=false);
+  // mostrar o quitar aviso
+  const existing=cont.querySelector('.chk-special-notice');
+  if(existing)existing.remove();
+  // verificar si algún especial sigue marcado
+  const anySpecial=[...cont.querySelectorAll('.chk-special input[type=checkbox]')].some(cb=>cb.checked);
+  if(anySpecial){
+    const label=specialVal==='apagado'?'apagado':'mojado';
+    const notice=document.createElement('div');
+    notice.className='chk-special-notice';
+    notice.style.cssText='margin-top:8px;padding:10px 12px;background:var(--yellow-bg,#fffbeb);border:1px solid var(--yellow-border,#fde68a);border-radius:8px;font-size:12px;color:var(--yellow-text,#92400e);line-height:1.6';
+    notice.innerHTML=`<b>Equipo ${label}:</b> No es posible verificar el estado de las funciones. El taller no se hace responsable por fallas preexistentes que no puedan ser detectadas en este momento.`;
+    cont.appendChild(notice);
+  }
+}
 function tp_renderOrderChecklist(type,saved){
   const list=type==='ingreso'?tp_checklistIngreso:tp_checklistSalida;
   const cont=document.getElementById('checklist-'+type+'-form');if(!cont)return;
-  cont.innerHTML=list.map((label,i)=>{const checked=saved?(saved[i]?.checked||false):false;return`<div class="checklist-item" onclick="this.querySelector('input').click()"><input type="checkbox" ${checked?'checked':''}><span class="item-label">${label}</span></div>`;}).join('');
-  if(!list.length)cont.innerHTML='<div style="padding:10px;font-size:12.5px;color:var(--text3);text-align:center">Sin ítems. Ve a Configuración para agregar.</div>';
+  const savedApagado=saved?._apagado||false;
+  const savedMojado=saved?._mojado||false;
+  const specialHtml=`
+    <div class="checklist-item chk-special" onclick="this.querySelector('input').click();_tp_chkSpecialTrigger('${type}','apagado')">
+      <input type="checkbox" ${savedApagado?'checked':''} onchange="_tp_chkSpecialTrigger('${type}','apagado')">
+      <span class="item-label" style="color:var(--red,#dc2626);font-weight:600">⚠ Apagado</span>
+    </div>
+    <div class="checklist-item chk-special" onclick="this.querySelector('input').click();_tp_chkSpecialTrigger('${type}','mojado')">
+      <input type="checkbox" ${savedMojado?'checked':''} onchange="_tp_chkSpecialTrigger('${type}','mojado')">
+      <span class="item-label" style="color:var(--red,#dc2626);font-weight:600">⚠ Mojado</span>
+    </div>`;
+  cont.innerHTML=specialHtml+list.map((label,i)=>{const checked=saved?(saved[i]?.checked||false):false;return`<div class="checklist-item" onclick="this.querySelector('input').click()"><input type="checkbox" ${checked?'checked':''}><span class="item-label">${label}</span></div>`;}).join('');
+  if(!list.length&&!specialHtml)cont.innerHTML='<div style="padding:10px;font-size:12.5px;color:var(--text3);text-align:center">Sin ítems. Ve a Configuración para agregar.</div>';
+  // restaurar aviso si venía guardado
+  if(savedApagado||savedMojado) _tp_chkSpecialTrigger(type, savedApagado?'apagado':'mojado');
 }
 function tp_renderSettingsChecklists(){
   ['ingreso','salida'].forEach(type=>{
