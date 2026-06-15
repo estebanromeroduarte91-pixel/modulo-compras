@@ -14008,11 +14008,9 @@ function tp_printLabel(id){
       <div class="qr-lbl">Abrir OT</div>
     </div>
   </div>
-  <div class="no-print" style="text-align:center;padding:16px">
-    <button onclick="window.print()" style="font-family:'Manrope',system-ui,sans-serif;font-size:13px;font-weight:700;padding:9px 28px;background:#0f172a;color:#fff;border:none;border-radius:8px;cursor:pointer">Imprimir etiqueta</button>
-  </div>
   <script>
     new QRCode(document.getElementById('qr'),{text:'${otUrl}',width:52,height:52,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
+    window.onload=()=>setTimeout(()=>window.print(),600);
   <\/script>
   </body></html>`);
   w.document.close();
