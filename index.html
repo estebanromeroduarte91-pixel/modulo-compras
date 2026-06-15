@@ -13984,6 +13984,7 @@ function tp_printOrder(id){
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
   const esc=s=>(s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const tallerNom=(()=>{try{const c=JSON.parse(localStorage.getItem('erp_smtp_config')||'{}');return c.from_name||c.fromName||'Mi Taller';}catch(e){return'Mi Taller';}})();
+  const logoUrl=(()=>{try{const c=tp_getSeguimientoConfig();return c.logoUrl||'';}catch(e){return'';}})();
   const terminos=tp_getTerminos();
   const chkGrid=arr=>{
     if(!arr?.length) return '';
@@ -14029,7 +14030,7 @@ function tp_printOrder(id){
     .disc{font-size:8.5px;color:#ccc;max-width:200px;line-height:1.5;text-align:right;font-weight:500}
   </style></head><body><div class="page">
     <div class="hdr">
-      <div><div class="logo">${esc(tallerNom)}</div><div class="tsub">Servicio técnico</div></div>
+      <div>${logoUrl?`<img src="${logoUrl}" style="max-height:48px;max-width:160px;object-fit:contain;display:block">`:`<div class="logo">${esc(tallerNom)}</div><div class="tsub">Servicio técnico</div>`}</div>
       <div class="hdr-right"><div class="hdr-lbl">Orden de servicio</div><div class="hdr-num">#${o.num}</div><div class="hdr-fecha">${new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'})}</div></div>
     </div>
     <div class="row2">
