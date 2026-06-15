@@ -1243,8 +1243,17 @@ async function _iniciarApp(user){
   if(_sidebarRole) _sidebarRole.textContent = _cargoLabel;
   _applyRoleAccess();
 
-  // Navegación inicial según rol
-  if(_currentRole==='admin') nav('dashboard');
+  // Navegación inicial según rol (o deep-link por ?ot=)
+  const _urlOt=new URLSearchParams(location.search).get('ot');
+  if(_urlOt){
+    // Limpiar URL sin recargar
+    history.replaceState(null,'',location.pathname);
+    navTaller('orders','Taller — Órdenes');
+    setTimeout(()=>{
+      const ord=(tp_orders||[]).find(x=>x.id===_urlOt||String(x.num)===_urlOt);
+      if(ord) tp_openOrder(ord.id);
+    },600);
+  } else if(_currentRole==='admin') nav('dashboard');
   else if(_currentCargoId==='tecnico'||_currentRole==='tecnico') navTaller('orders','Taller — Órdenes');
   else nav('dashboard');
 }
@@ -12915,6 +12924,7 @@ function tp_openDetail(id){
     <div class="od-footer">
       <button class="btn btn-danger btn-sm" onclick="tp_deleteOrder('${o.id}')">Eliminar</button>
       <button class="btn btn-default btn-sm" onclick="tp_printOrder('${o.id}')">Imprimir</button>
+      <button class="btn btn-default btn-sm" onclick="tp_printLabel('${o.id}')">🏷️ Etiqueta</button>
       <div class="ml-auto"></div>
       ${(()=>{
         const ae=o.aprobacion_estado;
@@ -13955,6 +13965,50 @@ function tp_printOrder(id){
     <div class="footer">Firma cliente: ______________________ &nbsp;&nbsp; Firma técnico: ______________________</div>
   </body></html>`);
   w.document.close();setTimeout(()=>w.print(),400);
+}
+
+function tp_printLabel(id){
+  const o=tp_orders.find(x=>x.id===id);if(!o)return;
+  const w=window.open('','_blank','width=400,height=320');
+  const tallerNom=(()=>{try{const c=JSON.parse(localStorage.getItem('erp_smtp_config')||'{}');return c.from_name||c.fromName||'Taller';}catch(e){return'Taller';}})();
+  const otUrl=`${location.origin}${location.pathname}?ot=${encodeURIComponent(o.id)}`;
+  w.document.write(`<!DOCTYPE html><html><head><title>Etiqueta OT #${o.num}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <style>
+    @page{size:6cm 4cm;margin:0}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{width:6cm;height:4cm;font-family:'Manrope',system-ui,sans-serif;overflow:hidden;background:#fff;padding:3mm 3mm 3mm 4mm;display:flex;gap:3mm}
+    .left{display:flex;flex-direction:column;justify-content:space-between;flex:1}
+    .modelo{font-size:8pt;font-weight:800;color:#000}
+    .cliente{font-size:7.5pt;font-weight:600;color:#000;margin-top:.5mm}
+    .orden{font-size:14pt;font-weight:800;color:#000;margin:2mm 0 1.5mm}
+    .row{font-size:6.5pt;color:#000;margin-top:1.5mm;font-weight:500;line-height:1.4}
+    .row b{font-weight:700}
+    .footer{font-size:4.5pt;color:#999;font-weight:500;margin-top:auto;padding-top:2mm}
+    .right{display:flex;flex-direction:column;align-items:center;justify-content:center;width:15mm;border-left:.3px solid #ddd;padding-left:2.5mm;flex-shrink:0}
+    .qr-lbl{font-size:4pt;color:#aaa;margin-top:1.5mm;text-align:center;font-weight:500}
+  </style></head><body>
+    <div class="left">
+      <div>
+        <div class="modelo">${escAttr(o.modelo||'—')}</div>
+        <div class="cliente">${escAttr(o.nombre||'—')}</div>
+        <div class="orden">Orden N° ${o.num}</div>
+        <div class="row"><b>Trabajo:</b> ${escAttr(o.trabajo||'—')}</div>
+        <div class="row"><b>Clave:</b> ${escAttr(o.pin||'—')}</div>
+      </div>
+      <div class="footer">${escAttr(tallerNom)}</div>
+    </div>
+    <div class="right">
+      <div id="qr"></div>
+      <div class="qr-lbl">Abrir OT</div>
+    </div>
+  <script>
+    new QRCode(document.getElementById('qr'),{text:'${otUrl}',width:52,height:52,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
+  <\/script>
+  </body></html>`);
+  w.document.close();
+  setTimeout(()=>{w.print();},400);
 }
 
 // ─── STATS ───
