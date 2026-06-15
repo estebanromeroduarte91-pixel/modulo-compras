@@ -12997,6 +12997,16 @@ function tp_addCheckItem(type){
   const val=(inp?.value||'').trim();if(!val)return;
   if(type==='ingreso')tp_checklistIngreso.push(val);else tp_checklistSalida.push(val);
   inp.value='';tp_saveState();tp_renderSettingsChecklists();
+  if(type==='ingreso'){
+    showModal(`<div style="width:420px;padding:28px 28px 24px">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">¿Agregar también a salida?</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:24px">¿Quieres agregar <b>"${val}"</b> también al checklist de salida?</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-default btn-sm" onclick="closeModal()">No, solo ingreso</button>
+        <button class="btn btn-primary btn-sm" onclick="tp_checklistSalida.push('${val.replace(/'/g,"\\'")}');tp_saveState();tp_renderSettingsChecklists();closeModal();showToast('Agregado a ingreso y salida')">Sí, agregar a ambos</button>
+      </div>
+    </div>`);
+  }
 }
 function tp_removeCheckItem(type,idx){
   if(type==='ingreso')tp_checklistIngreso.splice(idx,1);else tp_checklistSalida.splice(idx,1);
