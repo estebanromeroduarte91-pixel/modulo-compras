@@ -14976,7 +14976,7 @@ async function _sysGuardarUserConfig(userId, currentRole){
   const branchId=document.getElementById('edit-branch-sel')?.value||'';
   if(cargoId==='__admin'){ /* no cambiar rol admin */ }
   else if(cargoId){
-    const roleMap={tecnico:'tecnico',vendedor:'vendedor',encargado:'tecnico'};
+    const roleMap={tecnico:'tecnico',vendedor:'vendedor',encargado:'encargado'};
     const newRole=roleMap[cargoId]||'tecnico';
     const {error:roleErr}=await _sb.from('user_profiles').update({role:newRole}).eq('id',userId);
     if(roleErr){ toast('Error al actualizar rol: '+roleErr.message,'error'); return; }
