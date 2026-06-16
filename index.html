@@ -9206,10 +9206,11 @@ function renderBodegas(){
 
 function renderBodegasTable(bodegas){
   if(!bodegas.length) return `<div class="empty-state"><div class="empty-icon">🏭</div><h3>Sin bodegas</h3><p>Agrega las bodegas o puntos de almacenamiento</p></div>`;
-  return `<table><thead><tr><th>Nombre</th><th>Dirección</th><th>Responsable</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+  return `<table><thead><tr><th>Nombre</th><th>Dirección</th><th>Horario</th><th>Responsable</th><th>Teléfono</th><th>Acciones</th></tr></thead>
   <tbody>${bodegas.map(b=>`<tr>
     <td><strong>${b.nombre}</strong></td>
     <td>${b.direccion||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${b.horario||'—'}</td>
     <td>${b.responsable||'—'}</td>
     <td>${b.tel?`<a href="https://wa.me/${b.tel.replace(/\D/g,'')}" target="_blank" style="color:#25d366;font-weight:500;text-decoration:none">📞 ${b.tel}</a>`:'—'}</td>
     <td><div style="display:flex;gap:4px">
@@ -9235,6 +9236,7 @@ function modalNuevaBodega(bEdit){
       <div class="form-group"><label>Nombre *</label><input id="b-nombre" value="${bEdit?bEdit.nombre||'':''}" placeholder="Bodega Principal"></div>
       <div class="form-group"><label>Dirección</label><input id="b-dir" value="${bEdit?bEdit.direccion||'':''}" placeholder="Dirección física"></div>
       <div class="form-group"><label>Teléfono / WhatsApp</label><input id="b-tel" value="${bEdit?bEdit.tel||'':''}" placeholder="+56912345678" type="tel"></div>
+      <div class="form-group"><label>Horario de atención</label><input id="b-horario" value="${bEdit?bEdit.horario||'':''}" placeholder="Lun–Vie 9:00–18:00"></div>
       <div class="form-group"><label>Responsable</label><input id="b-resp" value="${bEdit?bEdit.responsable||'':''}" placeholder="Nombre responsable"></div>
       <div class="form-group"><label>Notas</label><textarea id="b-notas" rows="2">${bEdit?bEdit.notas||'':''}</textarea></div>
     </div>
@@ -9255,6 +9257,7 @@ function saveBodega(editId){
   if(!nombre){ toast('El nombre es obligatorio','error'); return; }
   const bodega={nombre,direccion:document.getElementById('b-dir').value.trim(),
     tel:document.getElementById('b-tel').value.trim(),
+    horario:document.getElementById('b-horario').value.trim(),
     responsable:document.getElementById('b-resp').value.trim(),
     notas:document.getElementById('b-notas').value.trim()};
   const bodegas=getBodegas();
@@ -12159,7 +12162,7 @@ async function tp_enviarCorreoIngreso(order){
   }
 
   // Mensaje personalizado desde configuración
-  const ingresoTplData={nombre:order.nombre||'',modelo:order.modelo||'',orden:order.num||'',sucursal:branchNombre,horario:cfg.horario||'',tecnico:order.tecnico||'',fecha_estimada:order.fechaEstimada||'',presupuesto:'',link:''};
+  const ingresoTplData={nombre:order.nombre||'',modelo:order.modelo||'',orden:order.num||'',sucursal:branchNombre,horario:branch.horario||cfg.horario||'',tecnico:order.tecnico||'',fecha_estimada:order.fechaEstimada||'',presupuesto:'',link:''};
   const emailPlainIngreso=tp_applyMsgTemplate('ingreso_email',ingresoTplData);
 
   // Pills de contacto
@@ -12438,8 +12441,8 @@ function tp_modalAprobacion(orderId){
     nombre:o.nombre||'',
     modelo:o.modelo||'',
     orden:o.num||'',
-    sucursal:cfg.sucursal||cfg.taller||'nuestra sucursal',
-    horario:cfg.horario||'',
+    sucursal:_branchAprob.nombre||_branchAprob.name||cfg.nombre||'',
+    horario:_branchAprob.horario||cfg.horario||'',
     tecnico:o.tecnico||'',
     fecha_estimada:o.fechaEstimada||'',
     presupuesto:presup,
@@ -12514,11 +12517,12 @@ async function tp_enviarAprobacion(orderId, canal){
   // Email: usar template aprobacion_email con todas las variables
   const cfg=DB.get('tp_config')||{};
   const _logoAprob=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})();
+  const _branchAprob=tp_branches.find(b=>b.id===o.branchId)||{};
   const presup=o.presup?'$'+Number(o.presup).toLocaleString('es-CL'):'$0';
   const tplData={
     nombre:o.nombre||'',modelo:o.modelo||'',orden:o.num||'',
-    sucursal:cfg.sucursal||cfg.taller||'nuestra sucursal',
-    horario:cfg.horario||'',tecnico:o.tecnico||'',
+    sucursal:_branchAprob.nombre||_branchAprob.name||cfg.nombre||'',
+    horario:_branchAprob.horario||cfg.horario||'',tecnico:o.tecnico||'',
     fecha_estimada:o.fechaEstimada||'',presupuesto:presup,
     trabajo:o.trabajo||'—',link,
   };
