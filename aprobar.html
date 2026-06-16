@@ -143,20 +143,32 @@
         </div>`:''}`;
     }
 
+    function renderHeader(meta){
+      const taller=meta.taller||'TallerPro';
+      const logoUrl=meta.logoUrl||'';
+      return `<div class="header">${logoUrl
+        ?`<img src="${esc(logoUrl)}" class="header-logo" alt="${esc(taller)}">`
+        :`<div class="header-label">${esc(taller)}</div>`
+      }</div>`;
+    }
+
     function renderFinal(estado,d){
       const meta=parseTrabajo(d.trabajo);
-      const taller=meta.taller||'TallerPro';
       if(estado==='aprobado') return `
-        <div class="header"><div class="header-label">${esc(taller)}</div><div class="header-title">Aprobación recibida</div></div>
+        ${renderHeader(meta)}
         <div class="body" style="text-align:center;padding:32px 24px">
-          <div class="icon ok">✅</div>
+          <div class="icon ok" style="font-size:0">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
           <h1>¡Presupuesto aprobado!</h1>
           <p class="msg">Gracias <strong>${esc(d.cliente||'')}</strong>, hemos recibido tu aprobación.<br>Nos pondremos en contacto pronto.</p>
         </div>`;
       return `
-        <div class="header" style="background:#dc2626"><div class="header-label">${esc(taller)}</div><div class="header-title">Respuesta registrada</div></div>
+        ${renderHeader(meta)}
         <div class="body" style="text-align:center;padding:32px 24px">
-          <div class="icon ko">❌</div>
+          <div class="icon ko" style="font-size:0">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
           <h1>Presupuesto no aprobado</h1>
           <p class="msg">Hemos registrado tu respuesta. Si tienes dudas, contáctanos directamente.</p>
         </div>`;
