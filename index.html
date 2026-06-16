@@ -12103,8 +12103,6 @@ function tp_updateStatus(id,val){
 
 async function tp_enviarCorreoIngreso(order){
   if(!order.email){console.warn('tp_enviarCorreoIngreso: order.email vacío');return{ok:false,error:'Email del cliente vacío en la orden'};}
-  const resendKeyIng=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
-  if(!resendKeyIng) return{ok:false,error:'API Key de Resend no configurada'};
   const cfg=DB.get('tp_config')||{};
   const branch=tp_branches.find(b=>b.id===order.branchId)||{};
   const tallerNombre=cfg.nombre||'Taller';
@@ -12372,8 +12370,7 @@ async function tp_notificarListo(id){
 
   // Enviar email automáticamente
   let emailEnviado=false;
-  const resendKeyListo=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
-  if(o.email&&resendKeyListo){
+  if(o.email){
     const res=await tp_callSendEmail(o.email,`Tu ${o.modelo} está listo para retirar — #${o.num}`,bodyHtml);
     emailEnviado=res.ok;
   }
@@ -12552,7 +12549,6 @@ async function tp_enviarAprobacion(orderId, canal){
     tp_renderAll();
   } else {
     const asunto=`Aprobación de presupuesto — ${o.modelo||'Equipo'} #${o.num||''}`;
-    const resendKeyAprob=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
     // Construir filas de productos
     const items=o.repuestos||[];
     const total=items.length?items.reduce((s,r)=>s+(Number(r.precio)||0)*(Number(r.qty)||1),0):Number(o.presup||0);
@@ -12645,20 +12641,13 @@ async function tp_enviarAprobacion(orderId, canal){
 </td></tr>
 </table>
 </body></html>`;
-    if(resendKeyAprob){
-      closeModal();
-      toast('Enviando email...','');
-      tp_callSendEmail(o.email, asunto, bodyHtmlAprob).then(res=>{
-        if(res.ok) toast('✅ Email enviado a '+o.email,'success');
-        else toast('⚠️ Error al enviar: '+res.error,'error');
-      });
-      tp_renderAll();
-    } else {
-      window.open(`mailto:${o.email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(emailPlain)}`,'_blank');
-      closeModal();
-      toast('Abriendo cliente de correo — configura Resend para envío directo','');
-      tp_renderAll();
-    }
+    closeModal();
+    toast('Enviando email...','');
+    tp_callSendEmail(o.email, asunto, bodyHtmlAprob).then(res=>{
+      if(res.ok) toast('✅ Email enviado a '+o.email,'success');
+      else toast('⚠️ Error al enviar: '+res.error,'error');
+    });
+    tp_renderAll();
   }
 }
 
@@ -13283,15 +13272,10 @@ async function tp_enviarInspeccionReporte(orderId, via){
 </table>
 </body></html>`;
     const asunto=`Inspección de equipo - ${o.modelo} #${o.num}`;
-    const resendKey=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
-    if(resendKey){
-      toast('Enviando reporte...','');
-      const res=await tp_callSendEmail(email,asunto,bodyHtml);
-      if(res.ok) toast('✅ Reporte enviado a '+email,'success');
-      else toast('⚠️ Error al enviar: '+res.error,'error');
-    } else {
-      window.open(`mailto:${email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent('Reporte de inspección adjunto.\n\nEquipo: '+o.modelo+'\nOrden: #'+o.num+(notasEnvio?'\n\nEstado del equipo:\n'+notasEnvio:''))}`, '_blank');
-    }
+    toast('Enviando reporte...','');
+    const res=await tp_callSendEmail(email,asunto,bodyHtml);
+    if(res.ok) toast('✅ Reporte enviado a '+email,'success');
+    else toast('⚠️ Error al enviar: '+res.error,'error');
   }
 }
 
@@ -13764,17 +13748,13 @@ function tp_saveSmtp(){
 }
 
 async function tp_callSendEmail(to, subject, bodyHtml){
-  const cfg=DB.get('tp_smtp_config');
-  if(!cfg) return {ok:false,error:'Sin configuración de correo'};
-  const resendKey=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
-  if(!resendKey) return {ok:false,error:'Configura el Resend API Key en Configuración → Correo'};
+  const cfg=DB.get('tp_smtp_config')||{};
   try{
     const {data,error}=await _sb.functions.invoke('send-email',{
       body:{
         to, subject, html:bodyHtml,
         from:'onboarding@resend.dev',
-        from_name:cfg.from_name||'TallerPro',
-        resend_api_key:resendKey
+        from_name:cfg.from_name||'TallerPro'
       }
     });
     if(error) return {ok:false,error:error.message};
