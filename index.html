@@ -1171,6 +1171,9 @@ async function _doRegisterInvitado(token){
   }
   await _sb.from('user_profiles').insert({id:data.user.id, empresa_id:inv.empresa_id, role:inv.role, nombre, activo:true});
   await _sb.from('pending_invites').update({used:true}).eq('token', token);
+  // Cargar datos de la empresa para poder leer pending_cargo desde Supabase
+  _empresaId = inv.empresa_id;
+  await _cargarDesdeSupabase();
   // Aplicar cargo y sucursal si estaban guardados en la invitación
   const _pendingCargoStr=DB.get('pending_cargo_'+token);
   if(_pendingCargoStr){ try{ const pc=JSON.parse(_pendingCargoStr); setUserConfig(data.user.id,pc); DB.set('pending_cargo_'+token,null); }catch(e){} }
