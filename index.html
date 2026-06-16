@@ -1229,6 +1229,8 @@ async function _iniciarApp(user){
   // Cargar cargo y sucursal del usuario desde config local
   const _uCfg = getUserConfig(_currentUserId);
   _currentCargoId = _uCfg.cargoId || (_currentRole==='admin'?null:_currentRole); // fallback a role legacy
+  // encargado se guarda como 'tecnico' en BD por constraint — restaurar rol real desde cargoId
+  if(_currentCargoId==='encargado' && _currentRole!=='admin') _currentRole='encargado';
   _currentBranchContext = (_currentRole==='admin'&&!_uCfg.branchId) ? null : (_uCfg.branchId||null);
   if(_currentBranchContext){ tp_currentBranchId=_currentBranchContext; try{tp_loadState();}catch(e){} }
   else { try{tp_loadState();}catch(e){} }
@@ -14973,7 +14975,7 @@ async function _sysGuardarUserConfig(userId, currentRole){
   const branchId=document.getElementById('edit-branch-sel')?.value||'';
   if(cargoId==='__admin'){ /* no cambiar rol admin */ }
   else if(cargoId){
-    const roleMap={tecnico:'tecnico',vendedor:'vendedor',encargado:'encargado'};
+    const roleMap={tecnico:'tecnico',vendedor:'vendedor',encargado:'tecnico'};
     const newRole=roleMap[cargoId]||'tecnico';
     const {error:roleErr}=await _sb.from('user_profiles').update({role:newRole}).eq('id',userId);
     if(roleErr){ toast('Error al actualizar rol: '+roleErr.message,'error'); return; }
