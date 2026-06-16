@@ -15025,7 +15025,7 @@ async function sysCrearInvitacion(){
   const branchId=document.getElementById('inv-branch')?.value||'';
   if(!nombre||!email){ toast('Completa nombre y email','error'); return; }
   const isSuperAdmin = cargoId==='__superadmin';
-  const role = isSuperAdmin ? 'admin' : ({'tecnico':'tecnico',vendedor:'vendedor',encargado:'encargado'}[cargoId]||'tecnico');
+  const role = isSuperAdmin ? 'admin' : ({'tecnico':'tecnico',vendedor:'vendedor',encargado:'tecnico'}[cargoId]||'tecnico');
   const token = Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
   DB.set('pending_cargo_'+token, JSON.stringify(isSuperAdmin ? {cargoId:'__superadmin', branchId:''} : {cargoId, branchId}));
   const {error} = await _sb.from('pending_invites').insert({empresa_id:_empresaId, email, nombre, role, token, used:false});
