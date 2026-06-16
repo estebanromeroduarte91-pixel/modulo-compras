@@ -12187,7 +12187,7 @@ async function tp_enviarCorreoIngreso(order){
     </td></tr>
     <!-- Body -->
     <tr><td style="background:#ffffff;padding:32px 40px">
-      <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${emailPlainIngreso.replace(/\n/g,'<br>')}</p>
+      <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${tp_msgToEmailHtml(emailPlainIngreso)}</p>
 
       <!-- Equipo -->
       <div style="background:#f8fafc;border-radius:12px;padding:16px 18px;margin-bottom:20px">
@@ -12300,8 +12300,9 @@ async function tp_notificarListo(id){
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
   const cfg=DB.get('tp_config')||{};
   const taller=cfg.nombre||'TallerPro';
-  const sucursal=cfg.direccion||'nuestra sucursal';
-  const horario=cfg.horario||'Lun–Vie 9:00–18:00';
+  const _branchListo=tp_branches.find(b=>b.id===o.branchId)||{};
+  const sucursal=_branchListo.nombre||_branchListo.name||cfg.nombre||'';
+  const horario=_branchListo.horario||cfg.horario||'';
   const _logoListo=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return'';}})();
 
   const tplData={nombre:o.nombre,modelo:o.modelo,orden:o.num,sucursal,horario,tecnico:o.tecnico||'',fecha_estimada:o.fechaEstimada?tp_fmtDate(o.fechaEstimada):''};
@@ -12322,7 +12323,7 @@ async function tp_notificarListo(id){
   <!-- BODY -->
   <tr><td style="background:#ffffff;padding:32px 40px">
     <!-- Mensaje personalizado desde configuración -->
-    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${(emailPlain||'').replace(/\n/g,'<br>')}</p>
+    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${tp_msgToEmailHtml(emailPlain||'')}</p>
     <!-- Info detalle -->
     <div style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:24px">
       <p style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin:0 0 14px">Detalle de la orden</p>
@@ -13227,7 +13228,7 @@ async function tp_enviarInspeccionReporte(orderId, via){
   </td></tr>
   <!-- BODY -->
   <tr><td style="background:#ffffff;padding:32px 40px">
-    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${emailPlainInsp.replace(/\n/g,'<br>')}</p>
+    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">${tp_msgToEmailHtml(emailPlainInsp)}</p>
     <!-- Info equipo -->
     <div style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:20px">
       <p style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin:0 0 14px">Datos de la orden</p>
@@ -13681,6 +13682,13 @@ function tp_renderMensajesSettings(tab){
     </div>`;
 }
 
+function tp_msgToEmailHtml(txt){
+  return txt
+    .replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}\u{2700}-\u{27BF}]/gu,'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*(.*?)\*/g,'<b>$1</b>')
+    .replace(/\n/g,'<br>');
+}
 function tp_applyMsgTemplate(key, data){
   const tpl=tp_getMsgTemplates()[key]||'';
   return tpl
