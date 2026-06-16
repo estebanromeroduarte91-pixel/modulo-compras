@@ -12501,7 +12501,9 @@ async function tp_enviarAprobacion(orderId, canal){
     token=uid()+uid();
     // Guardar en Supabase tabla aprobaciones
     const _acfg=DB.get('tp_config')||{};
-    const _trabajoData=JSON.stringify({v:2,items:(o.repuestos||[]).map(r=>({name:r.name,qty:r.qty,precio:r.precio||0})),trabajo:o.trabajo||'',taller:_acfg.nombre||_acfg.taller||'TallerPro',sucursal:_acfg.sucursal||_acfg.direccion||'',horario:_acfg.horario||'',tel:_acfg.tel||''});
+    const _branchEnvio=tp_branches.find(b=>b.id===o.branchId)||{};
+    const _logoEnvio=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})();
+    const _trabajoData=JSON.stringify({v:2,items:(o.repuestos||[]).map(r=>({name:r.name,qty:r.qty,precio:r.precio||0})),trabajo:o.trabajo||'',taller:_acfg.nombre||_acfg.taller||'TallerPro',sucursal:_branchEnvio.nombre||_branchEnvio.name||_acfg.nombre||'',horario:_branchEnvio.horario||_acfg.horario||'',tel:_branchEnvio.tel||_acfg.tel||'',logoUrl:_logoEnvio});
     const row={token, orden_id:orderId, empresa_id:_empresaId, orden_num:o.num||'', cliente:o.nombre||'', equipo:o.modelo||'', trabajo:_trabajoData, presupuesto:o.presup||0, estado:'pendiente'};
     const {error}=await _sb.from('aprobaciones').insert(row);
     if(error){ toast('Error al crear la solicitud: '+error.message,'error'); return; }
