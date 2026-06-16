@@ -12302,6 +12302,7 @@ async function tp_notificarListo(id){
   const taller=cfg.nombre||'TallerPro';
   const sucursal=cfg.direccion||'nuestra sucursal';
   const horario=cfg.horario||'Lun–Vie 9:00–18:00';
+  const _logoListo=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return'';}})();
 
   const tplData={nombre:o.nombre,modelo:o.modelo,orden:o.num,sucursal,horario,tecnico:o.tecnico||'',fecha_estimada:o.fechaEstimada?tp_fmtDate(o.fechaEstimada):''};
   const textoWA=tp_applyMsgTemplate('listo_wa',tplData);
@@ -12312,12 +12313,11 @@ async function tp_notificarListo(id){
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
   <!-- HEADER -->
-  <tr><td style="background:#16a34a;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
-    <div style="background:rgba(255,255,255,.2);display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;margin-bottom:16px">
-      <span style="font-size:26px">✅</span>
-    </div>
-    <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 6px;letter-spacing:-.3px">Tu equipo está listo</h1>
-    <p style="color:rgba(255,255,255,.8);font-size:13px;margin:0">${taller}</p>
+  <tr><td style="${_logoListo?'background:#ffffff;border-bottom:1px solid #e5e7eb;':'background:#3656e6;'}border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+    ${_logoListo
+      ?`<img src="${_logoListo}" style="max-width:200px;max-height:72px;object-fit:contain;display:block;margin:0 auto" alt="${taller}">`
+      :`<h2 style="color:#ffffff;font-size:22px;font-weight:700;margin:0;letter-spacing:-.3px">${taller}</h2>`
+    }
   </td></tr>
   <!-- BODY -->
   <tr><td style="background:#ffffff;padding:32px 40px">
@@ -12559,12 +12559,9 @@ async function tp_enviarAprobacion(orderId, canal){
 <tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
   <!-- HEADER -->
-  <tr><td style="background:#3656e6;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;position:relative">
-    <div style="display:inline-block;background:rgba(255,255,255,.15);padding:5px 14px;border-radius:20px;margin-bottom:14px">
-      <span style="color:rgba(255,255,255,.9);font-size:11px;font-weight:700;letter-spacing:.5px">${o.modelo||'Equipo'} · Orden #${o.num||''}</span>
-    </div>
-    <h1 style="color:#ffffff;font-size:22px;font-weight:800;margin:0 0 6px;letter-spacing:-.3px">Solicitud de aprobación</h1>
-    <p style="color:rgba(255,255,255,.75);font-size:13px;margin:0">${cfg.nombre||cfg.taller||'TallerPro'}</p>
+  <tr><td style="${(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})()
+    ?'background:#ffffff;border-bottom:1px solid #e5e7eb;':'background:#3656e6;'}border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+    ${(()=>{const _l=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})();const _n=cfg.nombre||cfg.taller||'TallerPro';return _l?`<img src="${_l}" style="max-width:200px;max-height:72px;object-fit:contain;display:block;margin:0 auto" alt="${_n}">`:`<h2 style="color:#ffffff;font-size:22px;font-weight:700;margin:0;letter-spacing:-.3px">${_n}</h2>`})()}
   </td></tr>
   <!-- BODY -->
   <tr><td style="background:#ffffff;padding:32px 40px">
@@ -13224,12 +13221,9 @@ async function tp_enviarInspeccionReporte(orderId, via){
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
   <!-- HEADER -->
-  <tr><td style="background:#3656e6;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
-    <div style="display:inline-block;background:rgba(255,255,255,.15);border-radius:10px;padding:6px 14px;margin-bottom:16px">
-      <span style="color:rgba(255,255,255,.9);font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase">Orden #OT-${o.num}</span>
-    </div>
-    <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 6px;letter-spacing:-.3px">Reporte de Inspección</h1>
-    <p style="color:rgba(255,255,255,.75);font-size:13px;margin:0">${tallerNombre}${fecha?' · '+fecha:''}</p>
+  <tr><td style="${(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})()
+    ?'background:#ffffff;border-bottom:1px solid #e5e7eb;':'background:#3656e6;'}border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+    ${(()=>{const _l=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})();return _l?`<img src="${_l}" style="max-width:200px;max-height:72px;object-fit:contain;display:block;margin:0 auto" alt="${tallerNombre}">`:`<h2 style="color:#ffffff;font-size:22px;font-weight:700;margin:0;letter-spacing:-.3px">${tallerNombre}</h2>`})()}
   </td></tr>
   <!-- BODY -->
   <tr><td style="background:#ffffff;padding:32px 40px">
@@ -14066,9 +14060,9 @@ function tp_printOrder(id){
     .chk-sec{margin-bottom:14px}
     .cg{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
     .ci{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:500;padding:5px 8px;border-radius:6px;border:0.8px solid #ececec;color:#333}
-    .ci-icon{width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1.2px solid #ccc;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;color:#111;background:#fff}
-    .ci-icon.ok{background:#111;border-color:#111;color:#fff}
-    .ci-icon.fail{background:#fff;border-color:#111;color:#111}
+    .ci-icon{width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1.2px solid #ccc;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;color:#111;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .ci-icon.ok{background:#111!important;border-color:#111!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .ci-icon.fail{background:#fff!important;border-color:#111!important;color:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .tc-sec{margin-top:20px;padding-top:16px;border-top:1px solid #efefef;margin-bottom:16px}
     .tc-val{font-size:9px;color:#777;line-height:1.8;font-weight:500;white-space:pre-wrap;padding:10px 14px;border-radius:7px;border:0.8px solid #e0e0e0;background:#fafafa}
     .foot{margin-top:16px;padding-top:12px;border-top:1px solid #efefef;display:flex;justify-content:space-between;align-items:flex-end}
