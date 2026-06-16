@@ -12437,12 +12437,13 @@ function tp_modalAprobacion(orderId){
   const isPending=o.aprobacion_estado==='pendiente';
   const link=isPending&&o.aprobacion_token?`${_APROB_BASE_URL}?t=${o.aprobacion_token}`:'';
   const cfg=DB.get('tp_config')||{};
+  const _branchModal=tp_branches.find(b=>b.id===o.branchId)||{};
   const tplData={
     nombre:o.nombre||'',
     modelo:o.modelo||'',
     orden:o.num||'',
-    sucursal:_branchAprob.nombre||_branchAprob.name||cfg.nombre||'',
-    horario:_branchAprob.horario||cfg.horario||'',
+    sucursal:_branchModal.nombre||_branchModal.name||cfg.nombre||'',
+    horario:_branchModal.horario||cfg.horario||'',
     tecnico:o.tecnico||'',
     fecha_estimada:o.fechaEstimada||'',
     presupuesto:presup,
