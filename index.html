@@ -12512,6 +12512,7 @@ async function tp_enviarAprobacion(orderId, canal){
 
   // Email: usar template aprobacion_email con todas las variables
   const cfg=DB.get('tp_config')||{};
+  const _logoAprob=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})();
   const presup=o.presup?'$'+Number(o.presup).toLocaleString('es-CL'):'$0';
   const tplData={
     nombre:o.nombre||'',modelo:o.modelo||'',orden:o.num||'',
@@ -12559,9 +12560,8 @@ async function tp_enviarAprobacion(orderId, canal){
 <tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
   <!-- HEADER -->
-  <tr><td style="${(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})()
-    ?'background:#ffffff;border-bottom:1px solid #e5e7eb;':'background:#3656e6;'}border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
-    ${(()=>{const _l=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})();const _n=cfg.nombre||cfg.taller||'TallerPro';return _l?`<img src="${_l}" style="max-width:200px;max-height:72px;object-fit:contain;display:block;margin:0 auto" alt="${_n}">`:`<h2 style="color:#ffffff;font-size:22px;font-weight:700;margin:0;letter-spacing:-.3px">${_n}</h2>`})()}
+  <tr><td style="${_logoAprob?'background:#ffffff;border-bottom:1px solid #e5e7eb;':'background:#3656e6;'}border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+    ${_logoAprob?`<img src="${_logoAprob}" style="max-width:200px;max-height:72px;object-fit:contain;display:block;margin:0 auto" alt="${cfg.nombre||'Taller'}">`:`<h2 style="color:#ffffff;font-size:22px;font-weight:700;margin:0;letter-spacing:-.3px">${cfg.nombre||cfg.taller||'Taller'}</h2>`}
   </td></tr>
   <!-- BODY -->
   <tr><td style="background:#ffffff;padding:32px 40px">
