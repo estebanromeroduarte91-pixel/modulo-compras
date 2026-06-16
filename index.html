@@ -10394,6 +10394,10 @@ function renderTaller() {
   <!-- PAGE: ORDERS -->
   <div id="page-orders" class="page-content" style="display:none">
     <div class="status-bar-4">
+      <div class="status-card" style="cursor:pointer" onclick="tp_filterOrders('Entregado',document.querySelector('.pipeline-tab'))">
+        <div class="status-card-icon" style="background:#ede9fe;color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+        <div><div class="status-card-label">Órdenes finalizadas</div><div><span class="status-card-value" style="color:#7c3aed" id="finalizadas-count">0</span></div><div class="status-card-link">Ver historial</div></div>
+      </div>
       <div class="status-card">
         <div class="status-card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
         <div><div class="status-card-label">Estado del taller</div><div class="status-card-value" style="font-size:14px;font-weight:600" id="taller-estado">Todo en orden</div></div>
@@ -10405,10 +10409,6 @@ function renderTaller() {
       <div class="status-card" style="cursor:pointer" onclick="tp_filterOrders('Listo',document.querySelectorAll('.pipeline-tab')[3])">
         <div class="status-card-icon" style="background:var(--green-bg);color:var(--green)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
         <div><div class="status-card-label">Listos para entregar</div><div><span class="status-card-value" style="color:var(--green)" id="listo-count">0</span></div><div class="status-card-link">Pendientes de retiro</div></div>
-      </div>
-      <div class="status-card">
-        <div class="status-card-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-        <div><div class="status-card-label">Ingresos del mes</div><div class="status-card-value blue" id="monthly-income" style="font-size:16px;font-weight:700">$0</div><div class="status-card-link" id="income-orders-lbl" style="color:var(--text3)"></div></div>
       </div>
     </div>
     <div class="pipeline" id="pipeline">
@@ -11637,6 +11637,8 @@ function tp_updateHeader(){
   const listoCount=bo.filter(o=>o.status==='Listo').length;
   const el_oc=document.getElementById('open-count');if(el_oc)el_oc.textContent=open;
   const el_lc=document.getElementById('listo-count');if(el_lc)el_lc.textContent=listoCount;
+  const finalizadas=bo.filter(o=>o.status==='Entregado').length;
+  const el_fc=document.getElementById('finalizadas-count');if(el_fc)el_fc.textContent=finalizadas;
   const now=new Date();const m=now.getMonth();const y=now.getFullYear();
   const mo=bo.filter(o=>{if(!o.fecha)return false;const d=new Date(o.fecha+'T12:00:00');return d.getMonth()===m&&d.getFullYear()===y;});
   const inc=mo.filter(o=>o.costo&&o.costo!=='0').reduce((s,o)=>s+Number(o.costo),0);
