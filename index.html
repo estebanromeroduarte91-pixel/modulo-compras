@@ -14987,7 +14987,8 @@ async function _sysGuardarUserConfig(userId, currentRole){
       [{empresa_id:_empresaId, clave:'ucfg_'+userId, datos:cfgData, actualizado_en:new Date().toISOString()}],
       {onConflict:'empresa_id,clave'}
     );
-    if(cfgErr) console.error('Error guardando config usuario:',cfgErr);
+    if(cfgErr){ toast('Error config: '+cfgErr.message,'error'); console.error('Error guardando config usuario:',cfgErr); }
+    else { console.log('[CFG] Guardado OK ucfg_'+userId, cfgData); }
   }
   closeModal(); toast('Usuario actualizado ✓','success'); renderSysUsuarios();
 }
