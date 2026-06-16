@@ -1228,6 +1228,7 @@ async function _iniciarApp(user){
 
   // Cargar cargo y sucursal del usuario desde config local
   const _uCfg = getUserConfig(_currentUserId);
+  console.log('[DEBUG] userId:',_currentUserId,'uCfg:',JSON.stringify(_uCfg),'cargoMap:',JSON.stringify(getUserCargoMap()));
   _currentCargoId = _uCfg.cargoId || (_currentRole==='admin'?null:_currentRole); // fallback a role legacy
   // encargado se guarda como 'tecnico' en BD por constraint — restaurar rol real desde cargoId
   if(_currentCargoId==='encargado' && _currentRole!=='admin') _currentRole='encargado';
