@@ -1068,8 +1068,8 @@ function getCargos(){ const s=DB.get('cargos'); return (s&&s.length)?s:[..._CARG
 function setCargos(v){ DB.set('cargos',v); }
 function getUserCargoMap(){ return DB.get('user_cargo_map')||{}; }
 function setUserCargoMap(v){ DB.set('user_cargo_map',v); }
-function getUserConfig(uid){ return (getUserCargoMap())[uid]||{}; }
-function setUserConfig(uid,cfg){ const m=getUserCargoMap(); m[uid]=cfg; setUserCargoMap(m); }
+function getUserConfig(uid){ return DB.get('ucfg_'+uid)||(getUserCargoMap())[uid]||{}; }
+function setUserConfig(uid,cfg){ DB.set('ucfg_'+uid,cfg); const m=getUserCargoMap(); m[uid]=cfg; setUserCargoMap(m); }
 
 function _updateSidebarBadge(){
   const branchBadge=document.getElementById('sidebar-branch-badge');
