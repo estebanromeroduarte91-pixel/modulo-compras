@@ -14949,17 +14949,17 @@ function sysEditUserConfig(userId, nombre, currentRole){
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
       <div>
         <label class="form-label">Cargo</label>
-        <select class="form-input" id="edit-cargo-sel" style="width:100%">
-          ${currentRole==='admin'?'<option value="__admin" selected>Super-admin (acceso total)</option>':''}
-          ${!currentRole||currentRole!=='admin'?cargoOpts:''}
+        <select class="form-input" id="edit-cargo-sel" style="width:100%" onchange="document.getElementById('edit-branch-row').style.display=this.value==='__admin'?'none':'block'">
+          <option value="__admin" ${currentRole==='admin'&&!uCfg.cargoId?'selected':''}>Super-admin (acceso total)</option>
+          ${cargoOpts}
         </select>
       </div>
-      ${currentRole!=='admin'?`<div>
+      <div id="edit-branch-row" style="display:${currentRole==='admin'&&!uCfg.cargoId?'none':'block'}">
         <label class="form-label">Sucursal</label>
         <select class="form-input" id="edit-branch-sel" style="width:100%">
           <option value="">Sin sucursal</option>${branchOpts}
         </select>
-      </div>`:''}
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
