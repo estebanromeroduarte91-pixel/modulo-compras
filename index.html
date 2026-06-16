@@ -14980,7 +14980,14 @@ async function _sysGuardarUserConfig(userId, currentRole){
     const newRole=roleMap[cargoId]||'tecnico';
     const {error:roleErr}=await _sb.from('user_profiles').update({role:newRole}).eq('id',userId);
     if(roleErr){ toast('Error al actualizar rol: '+roleErr.message,'error'); return; }
-    setUserConfig(userId,{cargoId,branchId});
+    // Guardar config directo en Supabase sin esperar debounce
+    const cfgData={cargoId,branchId};
+    setUserConfig(userId,cfgData);
+    const {error:cfgErr}=await _sb.from('erp_data').upsert(
+      [{empresa_id:_empresaId, clave:'ucfg_'+userId, datos:cfgData, actualizado_en:new Date().toISOString()}],
+      {onConflict:'empresa_id,clave'}
+    );
+    if(cfgErr) console.error('Error guardando config usuario:',cfgErr);
   }
   closeModal(); toast('Usuario actualizado ✓','success'); renderSysUsuarios();
 }
