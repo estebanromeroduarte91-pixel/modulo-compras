@@ -906,7 +906,7 @@ async function ltCorrect(taId, btnId) {
   btn.innerHTML = `${spinSvg} Corrigiendo...`;
   btn.disabled = true;
 
-  const groqKey = localStorage.getItem('erp_groq_key') || '';
+  const groqKey = DB.get('groq_key')||localStorage.getItem('erp_groq_key') || '';
 
   try {
     let corrected = text;
@@ -2028,7 +2028,7 @@ function renderConfigGlobal(){
                 <div style="font-size:12.5px;font-weight:700;color:#0369a1;margin-bottom:6px">Resend API Key (recomendado)</div>
                 <div style="font-size:12px;color:#0284c7;margin-bottom:10px">Usa <strong>Resend</strong> para enviar emails de forma confiable. El servidor SMTP se ignora cuando hay una API Key configurada.</div>
                 <input id="smtp-resend-key" type="password"
-                  placeholder="${localStorage.getItem('erp_resend_key')?'✓ Clave guardada — pega nueva para cambiar':'re_xxxxxxxxxxxxxxxxxxxx'}"
+                  placeholder="${DB.get('resend_key')||localStorage.getItem('erp_resend_key')?'✓ Clave guardada — pega nueva para cambiar':'re_xxxxxxxxxxxxxxxxxxxx'}"
                   style="width:100%;padding:8px 12px;border:1px solid #bae6fd;border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;background:#fff;outline:none;color:#0c4a6e">
               </div>
             </div>
@@ -2040,7 +2040,7 @@ function renderConfigGlobal(){
                 <div style="font-size:12.5px;font-weight:700;color:#5b21b6;margin-bottom:4px">Groq API Key — Corrección ortográfica con IA</div>
                 <div style="font-size:12px;color:#6d28d9;margin-bottom:10px;line-height:1.5">Permite corregir automáticamente ortografía, tildes <strong>y comas</strong> usando IA. Gratis en <a href="https://console.groq.com" target="_blank" style="color:#5b21b6;font-weight:700">console.groq.com</a> — sin tarjeta de crédito.</div>
                 <input id="smtp-groq-key" type="password"
-                  placeholder="${localStorage.getItem('erp_groq_key')?'✓ Clave guardada — pega nueva para cambiar':'gsk_xxxxxxxxxxxxxxxxxxxx'}"
+                  placeholder="${DB.get('groq_key')||localStorage.getItem('erp_groq_key')?'✓ Clave guardada — pega nueva para cambiar':'gsk_xxxxxxxxxxxxxxxxxxxx'}"
                   style="width:100%;padding:8px 12px;border:1px solid #c4b5fd;border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;background:#fff;outline:none;color:#3b0764">
               </div>
             </div>
@@ -2053,7 +2053,7 @@ function renderConfigGlobal(){
                 <div style="font-size:12.5px;font-weight:700;color:#c2410c;margin-bottom:4px">Anthropic API Key — Asistente IA del ERP ✨</div>
                 <div style="font-size:12px;color:#ea580c;margin-bottom:10px;line-height:1.5">Activa el asistente de IA que responde preguntas sobre ventas, gastos, OTs y más. Obtén tu clave en <a href="https://console.anthropic.com" target="_blank" style="color:#c2410c;font-weight:700">console.anthropic.com</a> — sin tarjeta de crédito.</div>
                 <input id="smtp-anthropic-key" type="password"
-                  placeholder="${localStorage.getItem('erp_anthropic_key')?'✓ Clave guardada — pega nueva para cambiar':'sk-ant-xxxxxxxxxxxxxxxxxxxx'}"
+                  placeholder="${DB.get('anthropic_key')||localStorage.getItem('erp_anthropic_key')?'✓ Clave guardada — pega nueva para cambiar':'sk-ant-xxxxxxxxxxxxxxxxxxxx'}"
                   style="width:100%;padding:8px 12px;border:1px solid #fed7aa;border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;background:#fff;outline:none;color:#9a3412">
               </div>
             </div>
@@ -12103,7 +12103,7 @@ function tp_updateStatus(id,val){
 
 async function tp_enviarCorreoIngreso(order){
   if(!order.email){console.warn('tp_enviarCorreoIngreso: order.email vacío');return{ok:false,error:'Email del cliente vacío en la orden'};}
-  const resendKeyIng=localStorage.getItem('erp_resend_key')||'';
+  const resendKeyIng=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
   if(!resendKeyIng) return{ok:false,error:'API Key de Resend no configurada'};
   const cfg=DB.get('tp_config')||{};
   const branch=tp_branches.find(b=>b.id===order.branchId)||{};
@@ -12372,7 +12372,7 @@ async function tp_notificarListo(id){
 
   // Enviar email automáticamente
   let emailEnviado=false;
-  const resendKeyListo=localStorage.getItem('erp_resend_key')||'';
+  const resendKeyListo=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
   if(o.email&&resendKeyListo){
     const res=await tp_callSendEmail(o.email,`Tu ${o.modelo} está listo para retirar — #${o.num}`,bodyHtml);
     emailEnviado=res.ok;
@@ -12552,7 +12552,7 @@ async function tp_enviarAprobacion(orderId, canal){
     tp_renderAll();
   } else {
     const asunto=`Aprobación de presupuesto — ${o.modelo||'Equipo'} #${o.num||''}`;
-    const resendKeyAprob=localStorage.getItem('erp_resend_key')||'';
+    const resendKeyAprob=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
     // Construir filas de productos
     const items=o.repuestos||[];
     const total=items.length?items.reduce((s,r)=>s+(Number(r.precio)||0)*(Number(r.qty)||1),0):Number(o.presup||0);
@@ -13283,7 +13283,7 @@ async function tp_enviarInspeccionReporte(orderId, via){
 </table>
 </body></html>`;
     const asunto=`Inspección de equipo - ${o.modelo} #${o.num}`;
-    const resendKey=localStorage.getItem('erp_resend_key')||'';
+    const resendKey=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
     if(resendKey){
       toast('Enviando reporte...','');
       const res=await tp_callSendEmail(email,asunto,bodyHtml);
@@ -13401,16 +13401,16 @@ function tp_refreshTecnicoSelect(){
 // ─── SETTINGS TABS ───
 function tp_saveTerminos(){
   const val=document.getElementById('tp-terminos-textarea')?.value||'';
-  localStorage.setItem('erp_tp_terminos',val);
+  DB.set('tp_terminos',val);
   showToast('Términos guardados');
 }
 function tp_loadTerminos(){
-  const val=localStorage.getItem('erp_tp_terminos')||'';
+  const val=DB.get('tp_terminos')||localStorage.getItem('erp_tp_terminos')||'';
   const el=document.getElementById('tp-terminos-textarea');
   if(el) el.value=val;
 }
 function tp_getTerminos(){
-  return localStorage.getItem('erp_tp_terminos')||'';
+  return DB.get('tp_terminos')||localStorage.getItem('erp_tp_terminos')||'';
 }
 
 function tp_settingsTab(tab){
@@ -13434,7 +13434,7 @@ function tp_settingsTab(tab){
 }
 
 function tp_getSeguimientoConfig(){
-  try{ return JSON.parse(localStorage.getItem('erp_tp_seg_config')||'{}'); }catch(e){ return {}; }
+  try{ return JSON.parse(DB.get('tp_seg_config')||localStorage.getItem('erp_tp_seg_config')||'{}'); }catch(e){ return {}; }
 }
 function tp_loadSeguimientoConfig(){
   const c=tp_getSeguimientoConfig();
@@ -13488,7 +13488,7 @@ async function tp_loadLogoPreview(input){
     // Guardar en config y mostrar preview
     const cfg=tp_getSeguimientoConfig();
     cfg.logoUrl=publicUrl;
-    localStorage.setItem('erp_tp_seg_config', JSON.stringify(cfg));
+    DB.set('tp_seg_config', cfg);
     localStorage.removeItem('erp_tp_seg_logo'); // limpiar base64 antiguo
     if(urlInp) urlInp.value=publicUrl;
     if(prev){ prev.style.background='#fff'; prev.innerHTML=`<img src="${publicUrl}" style="max-width:190px;max-height:72px;object-fit:contain;border-radius:6px">`; }
@@ -13542,7 +13542,7 @@ function tp_saveSeguimientoConfig(){
     msgCierre: get('seg-msg-cierre'),
     logoUrl: get('seg-logo-url'),
   };
-  localStorage.setItem('erp_tp_seg_config', JSON.stringify(cfg));
+  DB.set('tp_seg_config', cfg);
   const st=document.getElementById('seg-config-status');
   if(st){ st.textContent='✓ Guardado'; st.style.color='#10b981'; setTimeout(()=>st.textContent='',2500); }
   toast('Configuración de seguimiento guardada','success');
@@ -13724,11 +13724,11 @@ function tp_renderSmtpSettings(){
   map.forEach(([id,key])=>{const el=document.getElementById(id);if(el&&cfg[key]!=null)el.value=cfg[key];});
   // Mostrar placeholder con estado actual de las keys
   const resendEl=document.getElementById('smtp-resend-key');
-  if(resendEl) resendEl.placeholder=localStorage.getItem('erp_resend_key')?'✓ Clave guardada — pega nueva para cambiar':'re_xxxxxxxxxxxxxxxxxxxx';
+  if(resendEl) resendEl.placeholder=DB.get('resend_key')||localStorage.getItem('erp_resend_key')?'✓ Clave guardada — pega nueva para cambiar':'re_xxxxxxxxxxxxxxxxxxxx';
   const groqEl=document.getElementById('smtp-groq-key');
-  if(groqEl) groqEl.placeholder=localStorage.getItem('erp_groq_key')?'✓ Clave guardada — pega nueva para cambiar':'gsk_xxxxxxxxxxxxxxxxxxxx';
+  if(groqEl) groqEl.placeholder=DB.get('groq_key')||localStorage.getItem('erp_groq_key')?'✓ Clave guardada — pega nueva para cambiar':'gsk_xxxxxxxxxxxxxxxxxxxx';
   const anthropicEl=document.getElementById('smtp-anthropic-key');
-  if(anthropicEl) anthropicEl.placeholder=localStorage.getItem('erp_anthropic_key')?'✓ Clave guardada — pega nueva para cambiar':'sk-ant-xxxxxxxxxxxxxxxxxxxx';
+  if(anthropicEl) anthropicEl.placeholder=DB.get('anthropic_key')||localStorage.getItem('erp_anthropic_key')?'✓ Clave guardada — pega nueva para cambiar':'sk-ant-xxxxxxxxxxxxxxxxxxxx';
 }
 
 function tp_saveSmtp(){
@@ -13739,11 +13739,10 @@ function tp_saveSmtp(){
   const pwInput=(document.getElementById('smtp-password')?.value||'').trim();
   const resendInput=(document.getElementById('smtp-resend-key')?.value||'').trim();
   const groqInput=(document.getElementById('smtp-groq-key')?.value||'').trim();
-  // Guardar keys en localStorage propio (no sincroniza a Supabase)
-  if(resendInput) localStorage.setItem('erp_resend_key', resendInput);
-  if(groqInput) localStorage.setItem('erp_groq_key', groqInput);
   const anthropicInput=(document.getElementById('smtp-anthropic-key')?.value||'').trim();
-  if(anthropicInput) localStorage.setItem('erp_anthropic_key', anthropicInput);
+  if(resendInput) DB.set('resend_key', resendInput);
+  if(groqInput) DB.set('groq_key', groqInput);
+  if(anthropicInput) DB.set('anthropic_key', anthropicInput);
   const cfg={
     host,
     port:parseInt(document.getElementById('smtp-port')?.value)||587,
@@ -13767,7 +13766,7 @@ function tp_saveSmtp(){
 async function tp_callSendEmail(to, subject, bodyHtml){
   const cfg=DB.get('tp_smtp_config');
   if(!cfg) return {ok:false,error:'Sin configuración de correo'};
-  const resendKey=localStorage.getItem('erp_resend_key')||'';
+  const resendKey=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
   if(!resendKey) return {ok:false,error:'Configura el Resend API Key en Configuración → Correo'};
   try{
     const {data,error}=await _sb.functions.invoke('send-email',{
@@ -14045,7 +14044,7 @@ function tp_openSend(id,tipo){
 function tp_printOrder(id){
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
   const esc=s=>(s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const tallerNom=(()=>{try{const c=JSON.parse(localStorage.getItem('erp_smtp_config')||'{}');return c.from_name||c.fromName||'Mi Taller';}catch(e){return'Mi Taller';}})();
+  const tallerNom=(()=>{try{const c=JSON.parse(JSON.stringify(DB.get('tp_smtp_config'))||localStorage.getItem('erp_smtp_config')||'{}');return c.from_name||c.fromName||'Mi Taller';}catch(e){return'Mi Taller';}})();
   const logoUrl=(()=>{try{const c=tp_getSeguimientoConfig();return c.logoUrl||'';}catch(e){return'';}})();
   const terminos=tp_getTerminos();
   const chkGrid=arr=>{
@@ -14128,7 +14127,7 @@ function tp_printOrder(id){
 function tp_printLabel(id){
   const o=tp_orders.find(x=>x.id===id);if(!o)return;
   const w=window.open('','_blank');
-  const tallerNom=(()=>{try{const c=JSON.parse(localStorage.getItem('erp_smtp_config')||'{}');return c.from_name||c.fromName||'Taller';}catch(e){return'Taller';}})();
+  const tallerNom=(()=>{try{const c=JSON.parse(JSON.stringify(DB.get('tp_smtp_config'))||localStorage.getItem('erp_smtp_config')||'{}');return c.from_name||c.fromName||'Taller';}catch(e){return'Taller';}})();
   const otUrl=`${location.origin}${location.pathname}?ot=${encodeURIComponent(o.id)}`;
   w.document.write(`<!DOCTYPE html><html><head><title>Etiqueta OT #${o.num}</title>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -15182,7 +15181,7 @@ async function _aiEnviar(){
   const inp=document.getElementById('ai-input');
   const q=(inp?.value||'').trim();
   if(!q) return;
-  const key=localStorage.getItem('erp_groq_key')||'';
+  const key=DB.get('groq_key')||localStorage.getItem('erp_groq_key')||'';
   if(!key){
     _aiAddMsg('bot','Para usar el asistente primero debes guardar tu <strong>Groq API Key</strong> en Configuración → Correo / IA. Obtén una gratis en console.groq.com');
     inp.value=''; return;
