@@ -1053,7 +1053,7 @@ async function _cargarDesdeSupabase(){
 // ─────────────────────────────────────────────
 // AUTH — multi-usuario con roles
 // ─────────────────────────────────────────────
-const _ROLES_LABEL = {admin:'Administrador', tecnico:'Técnico', vendedor:'Vendedor'};
+const _ROLES_LABEL = {admin:'Administrador', encargado:'Encargado', tecnico:'Técnico', vendedor:'Vendedor'};
 
 // ─── CARGOS Y PERMISOS ────────────────────────
 const _MODULOS = ['dashboard','ventas','taller','clientes','inventario','compras','estadisticas','configuracion'];
@@ -1226,7 +1226,7 @@ async function _iniciarApp(user){
   // Cargar cargo y sucursal del usuario desde config local
   const _uCfg = getUserConfig(_currentUserId);
   _currentCargoId = _uCfg.cargoId || (_currentRole==='admin'?null:_currentRole); // fallback a role legacy
-  _currentBranchContext = (_currentRole==='admin') ? null : (_uCfg.branchId||null);
+  _currentBranchContext = (_currentRole==='admin'&&!_uCfg.branchId) ? null : (_uCfg.branchId||null);
   if(_currentBranchContext){ tp_currentBranchId=_currentBranchContext; try{tp_loadState();}catch(e){} }
   else { try{tp_loadState();}catch(e){} }
 
@@ -1254,7 +1254,7 @@ async function _iniciarApp(user){
       const ord=(tp_orders||[]).find(x=>x.id===_urlOt||String(x.num)===_urlOt);
       if(ord) tp_openOrder(ord.id);
     },600);
-  } else if(_currentRole==='admin') nav('dashboard');
+  } else if(_currentRole==='admin'||_currentRole==='encargado') nav('dashboard');
   else if(_currentCargoId==='tecnico'||_currentRole==='tecnico') navTaller('orders','Taller — Órdenes');
   else nav('dashboard');
 }
@@ -1263,6 +1263,12 @@ function _applyRoleAccess(){
   const _hide=(...ids)=>ids.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   if(_currentRole==='admin'){
     // Super-admin: ve todo, incluyendo Cargos y Accesos
+    _updateSidebarBadge();
+    return;
+  }
+  if(_currentRole==='encargado'){
+    // Encargado: ve todo menos Cargos y Accesos, acotado a su sucursal
+    _hide('nav-sys-usuarios','nav-cargos');
     _updateSidebarBadge();
     return;
   }
@@ -14895,7 +14901,7 @@ async function renderSysUsuarios(){
         const branch=bodegas.find(b=>b.id===uCfg.branchId)||null;
         const isMe=p.id===_currentUserId;
         const rolLabel=p.role==='admin'?'Super-admin':(cargo?.nombre||_ROLES_LABEL[p.role]||p.role);
-        const branchLabel=p.role==='admin'?'Global':(branch?(branch.nombre||branch.name):'Sin sucursal');
+        const branchLabel=(p.role==='admin'&&!branch)?'Global':(branch?(branch.nombre||branch.name):'Sin sucursal');
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px">
           <div style="display:flex;align-items:center;gap:12px">
             <div style="width:36px;height:36px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center">
@@ -14986,7 +14992,7 @@ async function _sysGuardarUserConfig(userId, currentRole){
   if(cargoId==='__admin'){ /* no cambiar rol admin */ }
   else if(cargoId){
     // Mapear cargo a role legacy para compatibilidad
-    const roleMap={tecnico:'tecnico',vendedor:'vendedor',encargado:'admin'};
+    const roleMap={tecnico:'tecnico',vendedor:'vendedor',encargado:'encargado'};
     const newRole=roleMap[cargoId]||'tecnico';
     await _sb.from('user_profiles').update({role:newRole}).eq('id',userId);
     setUserConfig(userId,{cargoId,branchId});
@@ -15035,7 +15041,7 @@ async function sysCrearInvitacion(){
   const branchId=document.getElementById('inv-branch')?.value||'';
   if(!nombre||!email){ toast('Completa nombre y email','error'); return; }
   const isSuperAdmin = cargoId==='__superadmin';
-  const role = isSuperAdmin ? 'admin' : ({'tecnico':'tecnico',vendedor:'vendedor',encargado:'admin'}[cargoId]||'tecnico');
+  const role = isSuperAdmin ? 'admin' : ({'tecnico':'tecnico',vendedor:'vendedor',encargado:'encargado'}[cargoId]||'tecnico');
   const token = Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
   DB.set('pending_cargo_'+token, JSON.stringify(isSuperAdmin ? {cargoId:'__superadmin', branchId:''} : {cargoId, branchId}));
   const {error} = await _sb.from('pending_invites').insert({empresa_id:_empresaId, email, nombre, role, token, used:false});
