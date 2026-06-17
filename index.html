@@ -8472,15 +8472,18 @@ function renderProdsTable(prods){
     const stockTotal=getProdStockTotal(p);
     const hasSucs=bodegas.length>0&&p.stock_sucursales&&Object.keys(p.stock_sucursales).length>0;
     const stockHtml=bodegas.length?bodegas.map((b,i)=>{
-      const s=hasSucs?getProdStockSucursal(p,b.id):null;
       const nom=b.nombre||b.name||'Sucursal';
+      const s=hasSucs?getProdStockSucursal(p,b.id):null;
       const low=s!==null&&s<=3;
+      const dispVal=hasSucs?`<span style="font-weight:600;font-size:12px;${low?'color:#b91c1c':''}">${s}${low?' ⚠':''}</span>`
+        :`<span style="font-size:11px;color:var(--gray-400)">—</span>`;
       return `<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">
         <span style="width:7px;height:7px;border-radius:50%;background:${_branchColor(i)};display:inline-block;flex-shrink:0"></span>
         <span style="font-size:11px;color:var(--gray-500);min-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nom}</span>
-        <span style="font-weight:600;font-size:12px;${low?'color:#b91c1c':''}">${s!==null?s:'—'}${low?' ⚠':''}</span>
+        ${dispVal}
       </div>`;
-    }).join(''):`<span style="font-weight:600;${stockTotal<=5&&stockTotal>=0?'color:#b91c1c':''}">${stockTotal}${stockTotal<=5?' ⚠':''}</span>`;
+    }).join('')+(!hasSucs&&stockTotal>0?`<div style="font-size:10.5px;color:var(--gray-400);margin-top:3px">Total sin desglose: <strong style="color:var(--gray-600)">${stockTotal}</strong> · usa ⇅ para asignar</div>`:'')
+    :`<span style="font-weight:600;${stockTotal<=5&&stockTotal>=0?'color:#b91c1c':''}">${stockTotal}${stockTotal<=5?' ⚠':''}</span>`;
     return`<tr>
     <td style="font-size:12px;color:var(--gray-500)">${p.sku||'—'}</td>
     <td><strong>${p.nombre}</strong></td>
