@@ -1049,7 +1049,15 @@ function ltBtn(taId) {
     </button>
   </div>`;
 }
-const _sb = supabase.createClient(_SB_URL, _SB_KEY);
+const _sb = supabase.createClient(_SB_URL, _SB_KEY, {
+  auth: {
+    persistSession: true,        // guardar sesión entre recargas
+    autoRefreshToken: true,      // renovar el token automáticamente
+    detectSessionInUrl: false,   // este app no usa OAuth por URL
+    storage: window.localStorage,// forzar localStorage (no memoria)
+    storageKey: 'sb-erp-stevedocs-auth'
+  }
+});
 let _empresaId = null;
 let _currentRole = 'admin';      // admin | tecnico | vendedor | cargoId
 let _currentUserNombre = '';
