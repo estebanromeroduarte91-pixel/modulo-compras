@@ -11373,9 +11373,15 @@ function renderTaller() {
       <div id="rep-selected" style="display:none;margin-top:10px;padding:10px;background:var(--green-bg);border:1px solid #A8D5BE;border-radius:var(--radius)">
         <div style="font-size:13px;font-weight:600" id="rep-sel-name"></div>
         <div style="font-size:12px;color:var(--text2);margin-top:2px">Stock disponible: <span id="rep-sel-stock"></span></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-          <label class="form-label">Cantidad:</label>
-          <input type="number" class="form-input" id="rep-qty" value="1" min="1" style="width:80px">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label class="form-label" style="margin:0">Cantidad:</label>
+            <input type="number" class="form-input" id="rep-qty" value="1" min="1" style="width:80px">
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label class="form-label" style="margin:0">Precio unit.:</label>
+            <input type="number" class="form-input" id="rep-precio" value="0" min="0" style="width:110px" placeholder="$0">
+          </div>
         </div>
       </div>
     </div>
@@ -14270,12 +14276,14 @@ function tp_selectRepProduct(id){
   const sn=document.getElementById('rep-sel-name');if(sn)sn.textContent=p.nombre;
   const ss=document.getElementById('rep-sel-stock');if(ss)ss.textContent=getProdStockTotal(p);
   const rq=document.getElementById('rep-qty');if(rq)rq.value=1;
+  const rp=document.getElementById('rep-precio');if(rp)rp.value=p.precio_venta||0;
   const rsel=document.getElementById('rep-selected');if(rsel)rsel.style.display='block';
 }
 function tp_confirmRepuesto(){
   if(!tp_selectedRepProduct){alert('Selecciona un producto.');return;}
   const qty=parseInt(document.getElementById('rep-qty')?.value)||1;
-  const rep={productId:tp_selectedRepProduct.id,name:tp_selectedRepProduct.nombre,qty,precio:tp_selectedRepProduct.precio_venta};
+  const precio=parseFloat(document.getElementById('rep-precio')?.value)||tp_selectedRepProduct.precio_venta||0;
+  const rep={productId:tp_selectedRepProduct.id,name:tp_selectedRepProduct.nombre,qty,precio};
   if(tp_detailOrderId){
     // Agregar directamente a la orden existente desde el modal de detalle
     const o=tp_orders.find(x=>x.id===tp_detailOrderId);
