@@ -2146,6 +2146,21 @@ function renderConfigGlobal(){
     <!-- 2-col grid -->
     <div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:22px;align-items:start">
 
+      <!-- Columna izquierda (dominio + SMTP) -->
+      <div style="display:flex;flex-direction:column;gap:22px;min-width:0">
+
+      <!-- Dominio verificado card (recomendado) -->
+      <section style="background:#fff;border:1px solid var(--gray-200);border-radius:14px;box-shadow:0 1px 2px rgba(16,18,24,.03),0 6px 20px rgba(16,18,24,.04);overflow:hidden">
+        <div style="display:flex;gap:14px;padding:22px 24px 14px;align-items:flex-start">
+          <div style="width:40px;height:40px;border-radius:10px;flex:0 0 40px;background:#eef6ff;color:#2563eb;display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg></div>
+          <div style="flex:1;min-width:0">
+            <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--gray-900);letter-spacing:-.015em">Dominio de envío <span style="font-size:10.5px;font-weight:700;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;padding:2px 8px;border-radius:999px;vertical-align:middle;margin-left:4px">RECOMENDADO</span></h2>
+            <p style="margin:5px 0 0;font-size:13px;color:var(--gray-500);font-weight:500;line-height:1.5">Verifica tu dominio una sola vez. Los correos saldrán desde tu marca y llegarán a la bandeja de entrada (no a spam), sin servidores ni contraseñas.</p>
+          </div>
+        </div>
+        <div id="domain-card-body" style="padding:4px 24px 22px">${tp_domainBodyHtml()}</div>
+      </section>
+
       <!-- SMTP card (izquierda) -->
       <section style="background:#fff;border:1px solid var(--gray-200);border-radius:14px;box-shadow:0 1px 2px rgba(16,18,24,.03),0 6px 20px rgba(16,18,24,.04);overflow:hidden">
 
@@ -2153,8 +2168,8 @@ function renderConfigGlobal(){
         <div style="display:flex;gap:14px;padding:22px 24px 18px;align-items:flex-start">
           <div style="width:40px;height:40px;border-radius:10px;flex:0 0 40px;background:var(--primary-light);color:var(--primary);display:grid;place-items:center">${iconServer}</div>
           <div style="flex:1;min-width:0">
-            <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--gray-900);letter-spacing:-.015em">Correo saliente (SMTP)</h2>
-            <p style="margin:5px 0 0;font-size:13px;color:var(--gray-500);font-weight:500;line-height:1.5">Envío de emails automáticos: confirmaciones de OT, reportes de inspección y aprobaciones de presupuesto.</p>
+            <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--gray-900);letter-spacing:-.015em">Correo saliente (SMTP) <span style="font-size:10.5px;font-weight:600;color:var(--gray-400);background:var(--gray-100);padding:2px 8px;border-radius:999px;vertical-align:middle;margin-left:4px">ALTERNATIVA</span></h2>
+            <p style="margin:5px 0 0;font-size:13px;color:var(--gray-500);font-weight:500;line-height:1.5">Solo si no usas dominio verificado. Puede fallar según tu proveedor (Gmail, Office365 y hostings suelen bloquearlo).</p>
           </div>
           ${badgeHtml}
         </div>
@@ -2221,6 +2236,7 @@ function renderConfigGlobal(){
           </div>
         </div>
       </section>
+      </div><!-- /columna izquierda -->
 
       <!-- Columna lateral (derecha) -->
       <div style="display:flex;flex-direction:column;gap:20px">
@@ -2269,6 +2285,138 @@ function tp_toggleSmtpPw(){
   const el=document.getElementById('smtp-password');
   if(!el) return;
   el.type=el.type==='password'?'text':'password';
+}
+
+// ─────────────────────────────────────────────
+// VERIFICACIÓN DE DOMINIO (Resend)
+// ─────────────────────────────────────────────
+function tp_domainBodyHtml(){
+  const d=DB.get('tp_email_domain')||{};
+  window._tpDomainRecords=d.records||[];
+  const statusMeta={
+    verified:{label:'Verificado',color:'#0c9b66',bg:'#e7f7ef',bd:'#c8ecdb'},
+    pending:{label:'Pendiente de DNS',color:'#b7791f',bg:'#fdf6e7',bd:'#f1e2bd'},
+    not_started:{label:'Sin verificar',color:'#b7791f',bg:'#fdf6e7',bd:'#f1e2bd'},
+    failed:{label:'Falló — revisa los registros',color:'#d8413a',bg:'#fdecec',bd:'#f6cfcd'},
+    temporary_failure:{label:'Reintentando…',color:'#b7791f',bg:'#fdf6e7',bd:'#f1e2bd'}
+  };
+  // Estado inicial: pedir el dominio
+  if(!d.domainId){
+    return `
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <label style="display:block;font-size:12.5px;font-weight:600;color:var(--gray-600);margin-bottom:6px">Tu dominio</label>
+          <input id="domain-input" class="form-input" style="font-family:monospace;font-size:13px" placeholder="tudominio.cl" value="${escAttr(d.domain||'')}">
+        </div>
+        <button class="btn btn-primary" onclick="tp_createDomain()" id="domain-create-btn" style="font-size:13px;white-space:nowrap">Verificar dominio</button>
+      </div>
+      <p style="margin:12px 0 0;font-size:12px;color:var(--gray-400);line-height:1.55">Escribe solo el dominio, sin <code style="font-family:monospace;background:var(--gray-100);padding:1px 4px;border-radius:4px">www</code> ni <code style="font-family:monospace;background:var(--gray-100);padding:1px 4px;border-radius:4px">https://</code>. Ej: <strong>empresa.cl</strong></p>`;
+  }
+  const meta=statusMeta[d.status]||statusMeta.not_started;
+  const verified=d.status==='verified';
+  const headerRow=`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="font-size:14px;font-weight:700;color:var(--gray-800);font-family:monospace">${escHtml(d.domain)}</div>
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;background:${meta.bg};color:${meta.color};border:1px solid ${meta.bd}"><span style="width:6px;height:6px;border-radius:50%;background:${meta.color}"></span>${meta.label}</span>
+    </div>`;
+  if(verified){
+    return headerRow+`
+      <div style="background:#e7f7ef;border:1px solid #c8ecdb;border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:13px;color:#0c7a52;font-weight:600;margin-bottom:12px">✓ Dominio verificado. Tus correos saldrán desde aquí.</div>
+        <label style="display:block;font-size:12px;font-weight:600;color:#0c7a52;margin-bottom:5px">Correo remitente</label>
+        <input id="domain-from-email" class="form-input" style="font-family:monospace;font-size:13px;margin-bottom:10px" value="${escAttr(d.from_email||('contacto@'+d.domain))}" placeholder="contacto@${escAttr(d.domain)}">
+        <label style="display:block;font-size:12px;font-weight:600;color:#0c7a52;margin-bottom:5px">Nombre remitente</label>
+        <input id="domain-from-name" class="form-input" style="font-size:13px" value="${escAttr(d.from_name||'')}" placeholder="Mi Empresa">
+      </div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="tp_saveDomainFrom()" style="font-size:13px">Guardar remitente</button>
+        <button class="btn btn-default" onclick="tp_removeDomain()" style="font-size:13px">Cambiar dominio</button>
+      </div>`;
+  }
+  const recordsRows=(d.records||[]).map((r,i)=>`
+    <tr>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--gray-100);font-family:monospace;font-size:11.5px;color:var(--gray-600);white-space:nowrap;vertical-align:top">${escHtml(r.type||'')}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--gray-100);font-family:monospace;font-size:11.5px;color:var(--gray-700);word-break:break-all;vertical-align:top">${escHtml(r.name||'')}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--gray-100);font-family:monospace;font-size:11.5px;color:var(--gray-700);word-break:break-all;vertical-align:top">${escHtml(r.value||'')}${r.priority?` <span style="color:var(--gray-400)">(prioridad ${r.priority})</span>`:''}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid var(--gray-100);text-align:center;vertical-align:top"><button onclick="tp_copyRecord(this,${i})" title="Copiar valor" style="border:1px solid var(--gray-200);background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;color:var(--gray-500);font-family:inherit">Copiar</button></td>
+    </tr>`).join('');
+  return headerRow+`
+    <p style="margin:0 0 12px;font-size:13px;color:var(--gray-600);line-height:1.55">Agrega estos registros en el panel <strong>DNS</strong> de tu proveedor de dominio. Cuando estén propagados (puede tardar de minutos a unas horas), pulsa <strong>Comprobar</strong>.</p>
+    <div style="border:1px solid var(--gray-200);border-radius:10px;overflow:auto;margin-bottom:14px">
+      <table style="width:100%;border-collapse:collapse;min-width:480px">
+        <thead><tr style="background:var(--gray-50)">
+          <th style="padding:8px 10px;text-align:left;font-size:10.5px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px">Tipo</th>
+          <th style="padding:8px 10px;text-align:left;font-size:10.5px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px">Nombre / Host</th>
+          <th style="padding:8px 10px;text-align:left;font-size:10.5px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px">Valor</th>
+          <th style="padding:8px 6px"></th>
+        </tr></thead>
+        <tbody>${recordsRows}</tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="tp_checkDomain()" id="domain-check-btn" style="font-size:13px">Comprobar verificación</button>
+      <button class="btn btn-default" onclick="tp_removeDomain()" style="font-size:13px">Empezar de nuevo</button>
+    </div>`;
+}
+
+async function tp_createDomain(){
+  const inp=document.getElementById('domain-input');
+  const domain=(inp?.value||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,'');
+  if(!domain||!domain.includes('.')){ toast('Ingresa un dominio válido (ej: empresa.cl)','error'); return; }
+  const btn=document.getElementById('domain-create-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Creando…'; }
+  let res={};
+  try{
+    const r=await _sb.functions.invoke('manage-domain',{body:{action:'create',domain}});
+    res=r.data||{}; if(r.error&&!res.error) res.error=r.error.message;
+  }catch(e){ res={ok:false,error:e.message}; }
+  if(btn){ btn.disabled=false; btn.textContent='Verificar dominio'; }
+  if(!res.ok){ toast('Error: '+(res.error||'No se pudo crear el dominio'),'error'); return; }
+  const cur=DB.get('tp_email_domain')||{};
+  const smtpCfg=DB.get('tp_smtp_config')||{};
+  DB.set('tp_email_domain',{domain:res.name,domainId:res.id,status:res.status,records:res.records||[],from_email:cur.from_email||('contacto@'+res.name),from_name:cur.from_name||smtpCfg.from_name||''});
+  const body=document.getElementById('domain-card-body'); if(body) body.innerHTML=tp_domainBodyHtml();
+  toast('Dominio creado. Agrega los registros DNS y pulsa Comprobar.','success');
+}
+
+async function tp_checkDomain(){
+  const d=DB.get('tp_email_domain')||{};
+  if(!d.domainId) return;
+  const btn=document.getElementById('domain-check-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Comprobando…'; }
+  let res={};
+  try{
+    const r=await _sb.functions.invoke('manage-domain',{body:{action:'verify',domainId:d.domainId}});
+    res=r.data||{}; if(r.error&&!res.error) res.error=r.error.message;
+  }catch(e){ res={ok:false,error:e.message}; }
+  if(btn){ btn.disabled=false; btn.textContent='Comprobar verificación'; }
+  if(!res.ok){ toast('Error: '+(res.error||'No se pudo comprobar'),'error'); return; }
+  d.status=res.status; d.records=res.records||d.records;
+  DB.set('tp_email_domain',d);
+  const body=document.getElementById('domain-card-body'); if(body) body.innerHTML=tp_domainBodyHtml();
+  if(res.status==='verified') toast('✓ Dominio verificado correctamente','success');
+  else toast('Aún no verificado. Los DNS pueden tardar en propagarse.','error');
+}
+
+function tp_saveDomainFrom(){
+  const d=DB.get('tp_email_domain')||{};
+  const fe=(document.getElementById('domain-from-email')?.value||'').trim().toLowerCase();
+  const fn=(document.getElementById('domain-from-name')?.value||'').trim();
+  if(fe&&d.domain&&!fe.endsWith('@'+d.domain)){ toast('El correo debe terminar en @'+d.domain,'error'); return; }
+  d.from_email=fe||('contacto@'+d.domain); d.from_name=fn;
+  DB.set('tp_email_domain',d);
+  toast('Remitente guardado ✓','success');
+}
+
+function tp_removeDomain(){
+  if(!confirm('¿Quitar la configuración de dominio? Tendrás que verificarlo de nuevo.')) return;
+  DB.set('tp_email_domain',null);
+  const body=document.getElementById('domain-card-body'); if(body) body.innerHTML=tp_domainBodyHtml();
+}
+
+function tp_copyRecord(btn,i){
+  const rec=(window._tpDomainRecords||[])[i]; if(!rec) return;
+  navigator.clipboard.writeText(rec.value||'').then(()=>{ const o=btn.textContent; btn.textContent='✓ Copiado'; setTimeout(()=>btn.textContent=o,1200); }).catch(()=>toast('No se pudo copiar','error'));
 }
 
 // ─────────────────────────────────────────────
@@ -14091,14 +14239,28 @@ function tp_saveSmtp(){
 async function tp_callSendEmail(to, subject, bodyHtml){
   const cfg=DB.get('tp_smtp_config')||{};
   const tpCfg=DB.get('tp_config')||{};
+  const dom=DB.get('tp_email_domain')||{};
+  const resendKey=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
+
+  // Prioridad 1: dominio verificado en Resend → enviar vía Resend (API key del servidor)
+  if(dom.status==='verified' && dom.from_email){
+    try{
+      const {data,error}=await _sb.functions.invoke('send-email',{
+        body:{to, subject, html:bodyHtml, from:dom.from_email, from_name:dom.from_name||tpCfg.nombre||'Taller'}
+      });
+      if(error) return {ok:false,error:error.message};
+      return data||{ok:true};
+    }catch(e){return {ok:false,error:e.message};}
+  }
+
+  // Prioridad 2: SMTP / Resend manual (legacy)
   const fromEmail=cfg.from||tpCfg.from_email||tpCfg.email||'onboarding@resend.dev';
   const fromName=cfg.from_name||cfg.fromName||tpCfg.nombre||'TallerPro';
-  const resendKey=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
   try{
     const body={to, subject, html:bodyHtml, from:fromEmail, from_name:fromName};
     // Pasar credenciales SMTP para que la Edge Function las use directamente
     if(cfg.host&&cfg.user&&cfg.password){
-      body.smtp={host:cfg.host, port:Number(cfg.port)||465, secure:cfg.security!=='tls', user:cfg.user, password:cfg.password};
+      body.smtp={host:cfg.host, port:Number(cfg.port)||465, secure:(cfg.security||'SSL').toUpperCase()!=='TLS', user:cfg.user, password:cfg.password};
     }
     if(resendKey) body.resend_api_key=resendKey;
     const {data,error}=await _sb.functions.invoke('send-email',{body});
