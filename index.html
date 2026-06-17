@@ -1463,6 +1463,30 @@ const getGastoCats=()=>{ const v=DB.get('gasto_cats'); return(v&&v.length)?v:DEF
 const setGastoCats=v=>DB.set('gasto_cats',v);
 const getBodegas = ()=> DB.get('bodegas')||[];
 const setBodegas = v=> DB.set('bodegas',v);
+function _formatHorario(h){
+  if(!h) return '';
+  if(typeof h==='string') return h;
+  const ALL=['lun','mar','mie','jue','vie','sab','dom'];
+  const LBL={lun:'Lun',mar:'Mar',mie:'Mié',jue:'Jue',vie:'Vie',sab:'Sáb',dom:'Dom'};
+  const dias=(h.dias||[]).filter(d=>ALL.includes(d));
+  const idx=dias.map(d=>ALL.indexOf(d)).sort((a,b)=>a-b);
+  let dStr='';
+  if(idx.length){
+    let consec=true;
+    for(let i=1;i<idx.length;i++) if(idx[i]!==idx[i-1]+1){consec=false;break;}
+    dStr=(consec&&idx.length>2)?`${LBL[ALL[idx[0]]]}–${LBL[ALL[idx[idx.length-1]]]}`:idx.map(i=>LBL[ALL[i]]).join(', ');
+  }
+  const tStr=(h.desde&&h.hasta)?`${h.desde}–${h.hasta}`:(h.desde||h.hasta||'');
+  return [dStr,tStr].filter(Boolean).join(' ');
+}
+function _toggleHorarioDia(d){
+  const btn=document.getElementById('hd-'+d); if(!btn) return;
+  const on=btn.dataset.active!=='1';
+  btn.dataset.active=on?'1':'0';
+  btn.style.background=on?'var(--primary-light)':'transparent';
+  btn.style.borderColor=on?'var(--primary)':'var(--border)';
+  btn.style.color=on?'var(--primary-dark)':'var(--text2)';
+}
 const getCatsDB = ()=> { try{ return JSON.parse(DB.get('cats_db')||'[]'); }catch(e){ return []; } };
 const setCatsDB = v=> DB.set('cats_db', JSON.stringify(v));
 const DEFAULT_PLAN_CUENTAS=[
@@ -9222,7 +9246,7 @@ function renderBodegasTable(bodegas){
   <tbody>${bodegas.map(b=>`<tr>
     <td><strong>${b.nombre}</strong></td>
     <td>${b.direccion||'—'}</td>
-    <td style="font-size:12px;color:var(--text2)">${b.horario||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${_formatHorario(b.horario)||'—'}</td>
     <td>${b.responsable||'—'}</td>
     <td>${b.tel?`<a href="https://wa.me/${b.tel.replace(/\D/g,'')}" target="_blank" style="color:#25d366;font-weight:500;text-decoration:none">📞 ${b.tel}</a>`:'—'}</td>
     <td><div style="display:flex;gap:4px">
@@ -9248,7 +9272,22 @@ function modalNuevaBodega(bEdit){
       <div class="form-group"><label>Nombre *</label><input id="b-nombre" value="${bEdit?bEdit.nombre||'':''}" placeholder="Bodega Principal"></div>
       <div class="form-group"><label>Dirección</label><input id="b-dir" value="${bEdit?bEdit.direccion||'':''}" placeholder="Dirección física"></div>
       <div class="form-group"><label>Teléfono / WhatsApp</label><input id="b-tel" value="${bEdit?bEdit.tel||'':''}" placeholder="+56912345678" type="tel"></div>
-      <div class="form-group"><label>Horario de atención</label><input id="b-horario" value="${bEdit?bEdit.horario||'':''}" placeholder="Lun–Vie 9:00–18:00"></div>
+      <div class="form-group"><label>Horario de atención</label>
+        <div style="margin-bottom:8px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Días</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            ${[['lun','Lun'],['mar','Mar'],['mie','Mié'],['jue','Jue'],['vie','Vie'],['sab','Sáb'],['dom','Dom']].map(([d,lbl])=>{
+              const sel=bEdit&&typeof bEdit.horario==='object'&&bEdit.horario?.dias?.includes(d);
+              return `<button type="button" id="hd-${d}" data-active="${sel?'1':'0'}" onclick="_toggleHorarioDia('${d}')" style="padding:5px 11px;border-radius:20px;border:1.5px solid ${sel?'var(--primary)':'var(--border)'};background:${sel?'var(--primary-light)':'transparent'};color:${sel?'var(--primary-dark)':'var(--text2)'};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">${lbl}</button>`;
+            }).join('')}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div style="flex:1"><div style="font-size:12px;color:var(--text2);margin-bottom:4px">Desde</div><input type="time" id="b-horario-desde" class="form-input" value="${bEdit&&typeof bEdit.horario==='object'?bEdit.horario.desde||'':''}"></div>
+          <div style="padding-bottom:10px;color:var(--text3);font-size:16px">–</div>
+          <div style="flex:1"><div style="font-size:12px;color:var(--text2);margin-bottom:4px">Hasta</div><input type="time" id="b-horario-hasta" class="form-input" value="${bEdit&&typeof bEdit.horario==='object'?bEdit.horario.hasta||'':''}"></div>
+        </div>
+      </div>
       <div class="form-group"><label>Responsable</label><input id="b-resp" value="${bEdit?bEdit.responsable||'':''}" placeholder="Nombre responsable"></div>
       <div class="form-group"><label>Notas</label><textarea id="b-notas" rows="2">${bEdit?bEdit.notas||'':''}</textarea></div>
     </div>
@@ -9269,7 +9308,7 @@ function saveBodega(editId){
   if(!nombre){ toast('El nombre es obligatorio','error'); return; }
   const bodega={nombre,direccion:document.getElementById('b-dir').value.trim(),
     tel:document.getElementById('b-tel').value.trim(),
-    horario:document.getElementById('b-horario').value.trim(),
+    horario:(()=>{const ALL=['lun','mar','mie','jue','vie','sab','dom'];const dias=ALL.filter(d=>document.getElementById('hd-'+d)?.dataset.active==='1');return {dias,desde:document.getElementById('b-horario-desde')?.value||'',hasta:document.getElementById('b-horario-hasta')?.value||''};})(),
     responsable:document.getElementById('b-resp').value.trim(),
     notas:document.getElementById('b-notas').value.trim()};
   const bodegas=getBodegas();
@@ -12172,7 +12211,7 @@ async function tp_enviarCorreoIngreso(order){
   }
 
   // Mensaje personalizado desde configuración
-  const ingresoTplData={nombre:order.nombre||'',modelo:order.modelo||'',orden:order.num||'',sucursal:branchNombre,horario:branch.horario||cfg.horario||'',tecnico:order.tecnico||'',fecha_estimada:order.fechaEstimada||'',presupuesto:'',link:''};
+  const ingresoTplData={nombre:order.nombre||'',modelo:order.modelo||'',orden:order.num||'',sucursal:branchNombre,horario:_formatHorario(branch.horario)||_formatHorario(cfg.horario)||'',tecnico:order.tecnico||'',fecha_estimada:order.fechaEstimada||'',presupuesto:'',link:''};
   const emailPlainIngreso=tp_applyMsgTemplate('ingreso_email',ingresoTplData);
 
   // Pills de contacto
@@ -12315,7 +12354,7 @@ async function tp_notificarListo(id){
   const taller=cfg.nombre||'TallerPro';
   const _branchListo=tp_branches.find(b=>b.id===o.branchId)||{};
   const sucursal=_branchListo.nombre||_branchListo.name||cfg.nombre||'';
-  const horario=_branchListo.horario||cfg.horario||'';
+  const horario=_formatHorario(_branchListo.horario)||_formatHorario(cfg.horario)||'';
   const _logoListo=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return'';}})();
 
   const tplData={nombre:o.nombre,modelo:o.modelo,orden:o.num,sucursal,horario,tecnico:o.tecnico||'',fecha_estimada:o.fechaEstimada?tp_fmtDate(o.fechaEstimada):''};
@@ -12452,7 +12491,7 @@ function tp_modalAprobacion(orderId){
     modelo:o.modelo||'',
     orden:o.num||'',
     sucursal:_branchModal.nombre||_branchModal.name||cfg.nombre||'',
-    horario:_branchModal.horario||cfg.horario||'',
+    horario:_formatHorario(_branchModal.horario)||_formatHorario(cfg.horario)||'',
     tecnico:o.tecnico||'',
     fecha_estimada:o.fechaEstimada||'',
     presupuesto:presup,
@@ -12512,7 +12551,7 @@ async function tp_enviarAprobacion(orderId, canal){
     const _acfg=DB.get('tp_config')||{};
     const _branchEnvio=tp_branches.find(b=>b.id===o.branchId)||{};
     const _logoEnvio=(()=>{try{return tp_getSeguimientoConfig().logoUrl||'';}catch(e){return '';}})();
-    const _trabajoData=JSON.stringify({v:2,items:(o.repuestos||[]).map(r=>({name:r.name,qty:r.qty,precio:r.precio||0})),trabajo:o.trabajo||'',taller:_acfg.nombre||_acfg.taller||'TallerPro',sucursal:_branchEnvio.nombre||_branchEnvio.name||_acfg.nombre||'',horario:_branchEnvio.horario||_acfg.horario||'',tel:_branchEnvio.tel||_acfg.tel||'',logoUrl:_logoEnvio});
+    const _trabajoData=JSON.stringify({v:2,items:(o.repuestos||[]).map(r=>({name:r.name,qty:r.qty,precio:r.precio||0})),trabajo:o.trabajo||'',taller:_acfg.nombre||_acfg.taller||'TallerPro',sucursal:_branchEnvio.nombre||_branchEnvio.name||_acfg.nombre||'',horario:_formatHorario(_branchEnvio.horario)||_formatHorario(_acfg.horario)||'',tel:_branchEnvio.tel||_acfg.tel||'',logoUrl:_logoEnvio});
     const row={token, orden_id:orderId, empresa_id:_empresaId, orden_num:o.num||'', cliente:o.nombre||'', equipo:o.modelo||'', trabajo:_trabajoData, presupuesto:o.presup||0, estado:'pendiente'};
     const {error}=await _sb.from('aprobaciones').insert(row);
     if(error){ toast('Error al crear la solicitud: '+error.message,'error'); return; }
@@ -12534,7 +12573,7 @@ async function tp_enviarAprobacion(orderId, canal){
   const tplData={
     nombre:o.nombre||'',modelo:o.modelo||'',orden:o.num||'',
     sucursal:_branchAprob.nombre||_branchAprob.name||cfg.nombre||'',
-    horario:_branchAprob.horario||cfg.horario||'',tecnico:o.tecnico||'',
+    horario:_formatHorario(_branchAprob.horario)||_formatHorario(cfg.horario)||'',tecnico:o.tecnico||'',
     fecha_estimada:o.fechaEstimada||'',presupuesto:presup,
     trabajo:o.trabajo||'—',link,
   };
