@@ -8835,114 +8835,117 @@ function modalAjusteStock(prodId){
   const p=getProductos().find(x=>x.id===prodId);if(!p)return;
   const bodegas=getBodegas();
   window._ajProdId=prodId;
-  window._ajBodegaId=bodegas[0]?.id||'';
-  window._ajTipo='agregar';
-  const branchCards=bodegas.map((b,i)=>{
+  const tipoStyles={
+    agregar:{b:'1.5px solid #16a34a',bg:'#f0fdf4',c:'#15803d'},
+    quitar:{b:'1.5px solid #dc2626',bg:'#fef2f2',c:'#dc2626'},
+    total:{b:'1.5px solid #2563eb',bg:'#eff6ff',c:'#1d4ed8'}
+  };
+  const mkTipoBtn=(bid,t,lbl,active)=>{
+    const s=active?tipoStyles[t]:{b:'1px solid var(--gray-200)',bg:'#fff',c:'var(--gray-600)'};
+    return `<button onclick="ajSetTipoBodega('${bid}','${t}')" id="ajt-${bid}-${t}" style="flex:1;padding:6px 4px;border-radius:7px;border:${s.b};background:${s.bg};color:${s.c};cursor:pointer;font-size:12px;font-weight:600">${lbl}</button>`;
+  };
+  const branchRows=bodegas.length?bodegas.map((b,i)=>{
     const s=getProdStockSucursal(p,b.id);
     const nom=b.nombre||b.name||'Sucursal';
-    const sel=i===0;
-    return `<div id="ajb-${b.id}" onclick="ajSelBranch('${b.id}')" style="flex:1;min-width:100px;padding:10px 8px;border-radius:10px;border:${sel?`1.5px solid ${_branchColor(i)}`:'1px solid var(--gray-200)'};background:${sel?'#eff6ff':'#fff'};cursor:pointer;text-align:center">
-      <span style="width:8px;height:8px;border-radius:50%;background:${_branchColor(i)};display:inline-block;margin-bottom:4px"></span>
-      <div style="font-size:12.5px;font-weight:600;color:var(--gray-800)">${nom}</div>
-      <div style="font-size:11px;color:var(--gray-500);margin-top:2px">Stock: <strong id="ajcs-${b.id}" style="${s<=3?'color:#b91c1c':''}">${s}</strong></div>
+    return `<div style="border:1px solid var(--gray-200);border-radius:12px;padding:14px;background:#fafafa">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="width:9px;height:9px;border-radius:50%;background:${_branchColor(i)};display:inline-block;flex-shrink:0"></span>
+        <span style="font-size:13px;font-weight:600;color:var(--gray-800);flex:1">${nom}</span>
+        <span style="font-size:11px;color:var(--gray-500)">Stock actual: <strong id="ajcs-${b.id}" style="${s<=3?'color:#b91c1c':''}">${s}</strong></span>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        ${mkTipoBtn(b.id,'agregar','+ Agregar',true)}
+        ${mkTipoBtn(b.id,'quitar','− Quitar',false)}
+        ${mkTipoBtn(b.id,'total','= Establecer',false)}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="aj-qty-${b.id}" value="" min="0" placeholder="Cantidad" style="width:100px" oninput="ajActPreviewBodega('${b.id}',${s})">
+        <span style="font-size:12px;color:var(--gray-500)">${s} →</span>
+        <span id="aj-result-${b.id}" style="font-size:14px;font-weight:700;color:var(--gray-400)">—</span>
+      </div>
     </div>`;
-  }).join('');
-  const firstStock=bodegas.length?getProdStockSucursal(p,window._ajBodegaId):getProdStockTotal(p);
+  }).join(''):`<p style="color:var(--gray-500);font-size:13px">No hay sucursales configuradas.</p>`;
+
   showModal(`
   <div class="modal-bg" onclick="if(event.target===this)closeModal()">
-  <div class="modal" style="max-width:480px">
+  <div class="modal" style="max-width:500px">
     <div class="modal-header">
       <div><h3 style="margin:0">Ajuste de stock</h3><div style="font-size:12px;color:var(--gray-500);margin-top:2px">${p.nombre}${p.sku?' · SKU '+p.sku:''}</div></div>
       <button class="close-btn" onclick="closeModal()">×</button>
     </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
-      ${bodegas.length?`<div>
-        <label class="form-label">Sucursal</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">${branchCards}</div>
-      </div>`:''}
-      <div>
-        <label class="form-label">Tipo de ajuste</label>
-        <div style="display:flex;gap:8px">
-          <button id="ajt-agregar" onclick="ajSelTipo('agregar')" style="flex:1;padding:8px;border-radius:8px;border:1.5px solid #16a34a;background:#f0fdf4;color:#15803d;cursor:pointer;font-size:12.5px;font-weight:600">+ Agregar</button>
-          <button id="ajt-quitar" onclick="ajSelTipo('quitar')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);cursor:pointer;font-size:12.5px;font-weight:600">− Quitar</button>
-          <button id="ajt-total" onclick="ajSelTipo('total')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);cursor:pointer;font-size:12.5px;font-weight:600">= Establecer</button>
-        </div>
-      </div>
-      <div>
-        <label class="form-label">Cantidad</label>
-        <div style="display:flex;gap:8px">
-          <input type="number" id="aj-qty" value="1" min="0" style="width:90px" oninput="ajActPreview()">
-          <input type="text" id="aj-motivo" placeholder="Motivo (opcional)" style="flex:1">
-        </div>
-      </div>
-      <div style="background:var(--gray-50,#f8fafc);border:1px solid var(--gray-200);border-radius:10px;padding:12px 14px;font-size:13px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--gray-500)">Stock antes</span><span id="aj-prev-a" style="font-weight:600">${firstStock}</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--gray-500)">Ajuste</span><span id="aj-prev-d" style="font-weight:600;color:#16a34a">+ 1</span></div>
-        <div style="border-top:1px solid var(--gray-200);margin:8px 0"></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--gray-500)">Stock después</span><span id="aj-prev-b" style="font-weight:700;font-size:15px;color:#16a34a">${firstStock+1}</span></div>
-      </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      ${branchRows}
+      <input type="text" id="aj-motivo" placeholder="Motivo (opcional)" style="width:100%">
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveAjusteStock()">Confirmar ajuste</button>
     </div>
   </div></div>`);
+  // init tipo state
+  window._ajTipoBodega={};
+  bodegas.forEach(b=>{ window._ajTipoBodega[b.id]='agregar'; });
 }
-function ajSelBranch(bodegaId){
-  window._ajBodegaId=bodegaId;
-  getBodegas().forEach((b,i)=>{
-    const el=document.getElementById('ajb-'+b.id);if(!el)return;
-    const sel=b.id===bodegaId;
-    el.style.border=sel?`1.5px solid ${_branchColor(i)}`:'1px solid var(--gray-200)';
-    el.style.background=sel?'#eff6ff':'#fff';
-  });
-  ajActPreview();
-}
-function ajSelTipo(tipo){
-  window._ajTipo=tipo;
-  const styles={agregar:{b:'1.5px solid #16a34a',bg:'#f0fdf4',c:'#15803d'},quitar:{b:'1.5px solid #dc2626',bg:'#fef2f2',c:'#dc2626'},total:{b:'1.5px solid #2563eb',bg:'#eff6ff',c:'#1d4ed8'}};
+function ajSetTipoBodega(bodegaId,tipo){
+  window._ajTipoBodega=window._ajTipoBodega||{};
+  window._ajTipoBodega[bodegaId]=tipo;
+  const tipoStyles={
+    agregar:{b:'1.5px solid #16a34a',bg:'#f0fdf4',c:'#15803d'},
+    quitar:{b:'1.5px solid #dc2626',bg:'#fef2f2',c:'#dc2626'},
+    total:{b:'1.5px solid #2563eb',bg:'#eff6ff',c:'#1d4ed8'}
+  };
   ['agregar','quitar','total'].forEach(t=>{
-    const btn=document.getElementById('ajt-'+t);if(!btn)return;
-    const s=t===tipo?styles[t]:{b:'1px solid var(--gray-200)',bg:'#fff',c:'var(--gray-600)'};
+    const btn=document.getElementById(`ajt-${bodegaId}-${t}`);if(!btn)return;
+    const s=t===tipo?tipoStyles[t]:{b:'1px solid var(--gray-200)',bg:'#fff',c:'var(--gray-600)'};
     btn.style.border=s.b;btn.style.background=s.bg;btn.style.color=s.c;
   });
-  ajActPreview();
-}
-function ajActPreview(){
   const p=getProductos().find(x=>x.id===window._ajProdId);if(!p)return;
-  const antes=getProdStockSucursal(p,window._ajBodegaId)||0;
-  const qty=Math.max(0,parseInt(document.getElementById('aj-qty')?.value)||0);
-  let despues=antes;
-  if(window._ajTipo==='agregar') despues=antes+qty;
-  else if(window._ajTipo==='quitar') despues=Math.max(0,antes-qty);
-  else despues=qty;
-  const up=despues>=antes;const col=up?'#16a34a':'#dc2626';
-  const delta=despues-antes;
-  const el=id=>document.getElementById(id);
-  if(el('aj-prev-a'))el('aj-prev-a').textContent=antes;
-  if(el('aj-prev-d')){el('aj-prev-d').textContent=`${delta>=0?'+':''}${delta}`;el('aj-prev-d').style.color=col;}
-  if(el('aj-prev-b')){el('aj-prev-b').textContent=despues;el('aj-prev-b').style.color=col;}
+  ajActPreviewBodega(bodegaId,getProdStockSucursal(p,bodegaId));
 }
-function saveAjusteStock(){
-  const p=getProductos().find(x=>x.id===window._ajProdId);if(!p)return;
-  const bodegaId=window._ajBodegaId;
-  const tipo=window._ajTipo;
-  const qty=Math.max(0,parseInt(document.getElementById('aj-qty')?.value)||0);
-  const motivo=document.getElementById('aj-motivo')?.value.trim()||'';
-  const antes=getProdStockSucursal(p,bodegaId)||0;
+function ajActPreviewBodega(bodegaId,antes){
+  const tipo=(window._ajTipoBodega||{})[bodegaId]||'agregar';
+  const qty=Math.max(0,parseInt(document.getElementById('aj-qty-'+bodegaId)?.value)||0);
+  const inp=document.getElementById('aj-qty-'+bodegaId);
+  if(!inp||inp.value===''){
+    const r=document.getElementById('aj-result-'+bodegaId);
+    if(r){r.textContent='—';r.style.color='var(--gray-400)';}
+    return;
+  }
   let despues=antes;
   if(tipo==='agregar') despues=antes+qty;
   else if(tipo==='quitar') despues=Math.max(0,antes-qty);
   else despues=qty;
-  const diff=despues-antes;
+  const col=despues>=antes?'#16a34a':'#dc2626';
+  const r=document.getElementById('aj-result-'+bodegaId);
+  if(r){r.textContent=despues;r.style.color=col;}
+  const cur=document.getElementById('ajcs-'+bodegaId);
+  if(cur) cur.parentElement.previousElementSibling&&null; // noop, just update result
+}
+function saveAjusteStock(){
+  const p=getProductos().find(x=>x.id===window._ajProdId);if(!p)return;
+  const bodegas=getBodegas();
+  const motivo=document.getElementById('aj-motivo')?.value.trim()||'';
   const prods=getProductos();
   const i=prods.findIndex(x=>x.id===window._ajProdId);if(i<0)return;
   if(!prods[i].stock_sucursales) prods[i].stock_sucursales={};
-  prods[i].stock_sucursales[bodegaId]=despues;
+  let changed=0;
+  bodegas.forEach(b=>{
+    const inp=document.getElementById('aj-qty-'+b.id);
+    if(!inp||inp.value==='') return;
+    const tipo=(window._ajTipoBodega||{})[b.id]||'agregar';
+    const qty=Math.max(0,parseInt(inp.value)||0);
+    const antes=getProdStockSucursal(p,b.id)||0;
+    let despues=antes;
+    if(tipo==='agregar') despues=antes+qty;
+    else if(tipo==='quitar') despues=Math.max(0,antes-qty);
+    else despues=qty;
+    const diff=despues-antes;
+    prods[i].stock_sucursales[b.id]=despues;
+    const bNom=b.nombre||b.name||'';
+    if(diff!==0){ changed++; registrarMovimiento({tipo:'ajuste',productos:[{producto_id:p.id,producto_nombre:p.nombre,cantidad:Math.abs(diff),direccion:diff>0?'+':'-'}],bodega_destino:diff>0?bNom:'',bodega_origen:diff<0?bNom:'',notas:motivo||`Ajuste manual en ${bNom}: ${diff>0?'+':''}${diff}`}); }
+  });
+  if(!changed){ toast('No se ingresó ninguna cantidad','error'); return; }
   prods[i].stock=getProdStockTotal(prods[i]);
-  const bodega=getBodegas().find(b=>b.id===bodegaId);
-  const bNom=bodega?bodega.nombre||bodega.name:'';
-  if(diff!==0) registrarMovimiento({tipo:'ajuste',productos:[{producto_id:p.id,producto_nombre:p.nombre,cantidad:Math.abs(diff),direccion:diff>0?'+':'-'}],bodega_destino:diff>0?bNom:'',bodega_origen:diff<0?bNom:'',notas:motivo||`Ajuste manual en ${bNom}: ${diff>0?'+':''}${diff}`});
   _syncProductosNow(prods);
   closeModal();
   toast(`Stock actualizado · ${p.nombre}`,'success');
@@ -8996,15 +8999,22 @@ function saveProducto(editId){
 let _importProdRows=[];
 
 function descargarPlantillaProductos(){
+  const bodegas=getBodegas();
+  const stockCols=bodegas.length?bodegas.map(b=>'Stock '+(b.nombre||b.name||'Sucursal')):['Stock'];
+  const headers=['SKU','Producto','Costo Neto','Precio Venta',...stockCols,'Categoría','Subcategoría','Enlace'];
+  const mkRow=(sku,nom,costo,pventa,stocks,cat,subcat,enlace)=>[sku,nom,costo,pventa,...stocks,cat,subcat,enlace];
+  const n=bodegas.length||1;
+  const rows=[
+    headers,
+    mkRow('SKU-001','Pantalla iPhone 13',15000,45000,Array(n).fill(0).map((_,i)=>i===0?10:0),'iPhones','Pantallas','iPhone 13'),
+    mkRow('SKU-002','Batería iPhone 13',8000,22000,Array(n).fill(0).map((_,i)=>i===0?15:5),'iPhones','Baterías','iPhone 13'),
+    mkRow('SKU-003','Cámara iPhone 13',20000,55000,Array(n).fill(0).map((_,i)=>i===0?8:3),'iPhones','Cámaras','iPhone 13'),
+    mkRow('SKU-004','Batería MacBook Pro',25000,75000,Array(n).fill(0).map((_,i)=>i===0?5:2),'MacBooks','Baterías','MacBook Pro 14'),
+  ];
   const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet([
-    ['SKU','Producto','Costo Neto','Precio Venta','Stock','Categoría','Subcategoría','Enlace'],
-    ['SKU-001','Pantalla iPhone 13',15000,45000,10,'iPhones','Pantallas','iPhone 13'],
-    ['SKU-002','Batería iPhone 13',8000,22000,15,'iPhones','Baterías','iPhone 13'],
-    ['SKU-003','Cámara iPhone 13',20000,55000,8,'iPhones','Cámaras','iPhone 13'],
-    ['SKU-004','Batería MacBook Pro',25000,75000,5,'MacBooks','Baterías','MacBook Pro 14'],
-  ]);
-  ws['!cols']=[{wch:14},{wch:30},{wch:14},{wch:14},{wch:8},{wch:16},{wch:16},{wch:18}];
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const colWidths=[{wch:14},{wch:30},{wch:12},{wch:12},...bodegas.map(()=>({wch:14})),{wch:16},{wch:16},{wch:18}];
+  ws['!cols']=colWidths;
   XLSX.utils.book_append_sheet(wb,ws,'Productos');
   XLSX.writeFile(wb,'plantilla_productos.xlsx');
 }
@@ -9017,8 +9027,7 @@ function modalImportarProductos(){
     <div class="modal-header"><h3>📊 Importar Productos desde Excel</h3><button class="close-btn" onclick="closeModal()">×</button></div>
     <div class="modal-body">
       <p style="margin:0 0 12px;color:var(--gray-500);font-size:13px">
-        💡 Descarga la <strong style="cursor:pointer;text-decoration:underline" onclick="descargarPlantillaProductos()">plantilla Excel</strong> para asegurarte que las columnas estén correctas.
-        Columnas: <strong>SKU, Producto, Costo Neto, Precio Venta, Stock, Categoría, Subcategoría, Enlace</strong>
+        💡 Descarga la <strong style="cursor:pointer;text-decoration:underline" onclick="descargarPlantillaProductos()">plantilla Excel</strong> — incluye columnas de stock por sucursal (ej: <em>Stock Los Dominicos</em>, <em>Stock La Reina</em>). Si el archivo tiene esas columnas el stock se asigna por sucursal automáticamente.
       </p>
       <div id="prod-drop-zone" ondragover="event.preventDefault()" ondrop="handleProdExcelDrop(event)"
         style="border:2px dashed var(--gray-300);border-radius:8px;padding:40px;text-align:center;cursor:pointer;background:var(--gray-50)" onclick="document.getElementById('prod-file-inp').click()">
@@ -9056,16 +9065,23 @@ function handleProdExcelFile(file){
 
 function parseProdExcel(rows){
   if(!rows||rows.length<2){ toast('El archivo está vacío o sin datos','error'); return; }
-  // Find header row
+  const bodegas=getBodegas();
   const headerRow=rows[0].map(h=>String(h).toLowerCase().trim());
   const colSKU=headerRow.findIndex(h=>h.includes('sku')||h.includes('código')||h.includes('codigo'));
   const colNombre=headerRow.findIndex(h=>h.includes('producto')||h.includes('nombre'));
   const colCosto=headerRow.findIndex(h=>h.includes('costo'));
   const colPventa=headerRow.findIndex(h=>h.includes('precio venta')||h.includes('precio_venta')||h.includes('venta'));
-  const colStock=headerRow.findIndex(h=>h.includes('stock'));
   const colCat=headerRow.findIndex(h=>h.includes('categor'));
   const colSubcat=headerRow.findIndex(h=>h.includes('subcat'));
   const colEnlace=headerRow.findIndex(h=>h.includes('enlace')||h.includes('kit')||h.includes('equipo'));
+  // Detectar columnas de stock por sucursal: "stock [nombre]"
+  const stockSucCols=bodegas.map(b=>{
+    const nom=(b.nombre||b.name||'').toLowerCase().trim();
+    const idx=headerRow.findIndex(h=>h.startsWith('stock')&&h.includes(nom));
+    return {bodegaId:b.id,idx};
+  }).filter(x=>x.idx>=0);
+  // Columna genérica "stock" solo si no hay columnas por sucursal
+  const colStockGenerico=stockSucCols.length===0?headerRow.findIndex(h=>h==='stock'||(h.includes('stock')&&!h.includes(' '))):- 1;
 
   if(colNombre<0){ toast('No se encontró columna "Producto"','error'); return; }
 
@@ -9074,12 +9090,17 @@ function parseProdExcel(rows){
     const row=rows[r];
     const nombre=String(row[colNombre]||'').trim();
     if(!nombre) continue;
+    const stock_sucursales={};
+    stockSucCols.forEach(({bodegaId,idx})=>{ stock_sucursales[bodegaId]=+row[idx]||0; });
+    const stockGenerico=colStockGenerico>=0?+row[colStockGenerico]||0:0;
+    const stockTotal=stockSucCols.length?Object.values(stock_sucursales).reduce((s,v)=>s+v,0):stockGenerico;
     _importProdRows.push({
       sku:colSKU>=0?String(row[colSKU]||'').trim():'',
       nombre,
       precio_compra:colCosto>=0?+row[colCosto]||0:0,
       precio_venta:colPventa>=0?+row[colPventa]||0:0,
-      stock:colStock>=0?+row[colStock]||0:0,
+      stock:stockTotal,
+      stock_sucursales:stockSucCols.length?stock_sucursales:null,
       categoria:colCat>=0?String(row[colCat]||'').trim():'',
       subcategoria:colSubcat>=0?String(row[colSubcat]||'').trim():'',
       enlace:colEnlace>=0?String(row[colEnlace]||'').trim():'',
@@ -9098,9 +9119,18 @@ function parseProdExcel(rows){
     else nuevos++;
   });
 
+  const bodegas=getBodegas();
+  const hasSucCols=_importProdRows.some(p=>p.stock_sucursales&&Object.keys(p.stock_sucursales).length>0);
+  const stockHeader=hasSucCols
+    ?bodegas.map(b=>`<th style="padding:6px 8px;text-align:center">${b.nombre||b.name||'Suc'}</th>`).join('')
+    :'<th style="padding:6px 8px;text-align:center">Stock</th>';
+  const stockCell=p=>hasSucCols
+    ?bodegas.map(b=>`<td style="padding:5px 8px;text-align:center">${p.stock_sucursales?.[b.id]??'—'}</td>`).join('')
+    :`<td style="padding:5px 8px;text-align:center">${p.stock||0}</td>`;
   const previewHtml=`
     <div style="background:var(--gray-50);border-radius:6px;padding:12px;margin-bottom:12px;font-size:13px;display:flex;gap:24px;flex-wrap:wrap">
       <span>📦 <strong>${_importProdRows.length}</strong> productos encontrados</span>
+      ${hasSucCols?`<span style="color:#6366f1">🏪 Stock por sucursal detectado</span>`:''}
       ${nuevos?`<span style="color:#10b981">✅ <strong>${nuevos}</strong> nuevos</span>`:''}
       ${actualizados?`<span style="color:#3b82f6">🔄 <strong>${actualizados}</strong> se actualizarán (mismo SKU)</span>`:''}
     </div>
@@ -9110,10 +9140,8 @@ function parseProdExcel(rows){
       <th style="padding:6px 8px;text-align:left">Producto</th>
       <th style="padding:6px 8px;text-align:right">Costo</th>
       <th style="padding:6px 8px;text-align:right">P.Venta</th>
-      <th style="padding:6px 8px;text-align:center">Stock</th>
+      ${stockHeader}
       <th style="padding:6px 8px;text-align:left">Categoría</th>
-      <th style="padding:6px 8px;text-align:left">Subcategoría</th>
-      <th style="padding:6px 8px;text-align:left">Enlace</th>
       <th style="padding:6px 8px;text-align:center">Estado</th>
     </tr></thead><tbody>
     ${_importProdRows.map(p=>{
@@ -9127,10 +9155,8 @@ function parseProdExcel(rows){
         <td style="padding:5px 8px"><strong>${p.nombre}</strong></td>
         <td style="padding:5px 8px;text-align:right">${p.precio_compra?fmt$(p.precio_compra):'—'}</td>
         <td style="padding:5px 8px;text-align:right;color:#10b981">${p.precio_venta?fmt$(p.precio_venta):'—'}</td>
-        <td style="padding:5px 8px;text-align:center">${p.stock||0}</td>
+        ${stockCell(p)}
         <td style="padding:5px 8px">${p.categoria||'—'}</td>
-        <td style="padding:5px 8px">${p.subcategoria||'—'}</td>
-        <td style="padding:5px 8px">${p.enlace?`<span style="background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:10px;font-size:11px">${p.enlace}</span>`:'—'}</td>
         <td style="padding:5px 8px;text-align:center">${badge}</td>
       </tr>`;
     }).join('')}
@@ -9154,19 +9180,20 @@ function confirmarImportarProductos(){
       stock:p.stock, categoria:p.categoria,
       subcategoria:p.subcategoria, enlace:p.enlace||''
     };
+    if(p.stock_sucursales) campos.stock_sucursales=p.stock_sucursales;
     if(p.sku && skuMap[p.sku.toLowerCase()]!==undefined){
-      // Actualizar existente — conserva id, unidad, stock_min, descripcion salvo que vengan en el excel
-      Object.assign(prods[skuMap[p.sku.toLowerCase()]], campos);
+      const idx=skuMap[p.sku.toLowerCase()];
+      Object.assign(prods[idx], campos);
+      if(p.stock_sucursales) prods[idx].stock=getProdStockTotal(prods[idx]);
       updated++;
     } else {
       prods.push({...campos,id:uid(),unidad:'unidad',stock_min:0,descripcion:''});
       added++;
     }
   });
-  setProductos(prods);
+  _syncProductosNow(prods);
   closeModal();
-  const msg=`✅ ${added} nuevo${added!==1?'s':''}, 🔄 ${updated} actualizado${updated!==1?'s':''}`;
-  toast(msg,'success');
+  toast(`✅ ${added} nuevo${added!==1?'s':''}, 🔄 ${updated} actualizado${updated!==1?'s':''}  importado${added+updated!==1?'s':''}${ _importProdRows.some(p=>p.stock_sucursales)?' · stock por sucursal aplicado':''}`, 'success');
   renderProductos();
 }
 
