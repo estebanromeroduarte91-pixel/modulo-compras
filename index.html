@@ -1468,24 +1468,60 @@ function _formatHorario(h){
   if(typeof h==='string') return h;
   const ALL=['lun','mar','mie','jue','vie','sab','dom'];
   const LBL={lun:'Lun',mar:'Mar',mie:'Mié',jue:'Jue',vie:'Vie',sab:'Sáb',dom:'Dom'};
-  const dias=(h.dias||[]).filter(d=>ALL.includes(d));
-  const idx=dias.map(d=>ALL.indexOf(d)).sort((a,b)=>a-b);
-  let dStr='';
-  if(idx.length){
-    let consec=true;
-    for(let i=1;i<idx.length;i++) if(idx[i]!==idx[i-1]+1){consec=false;break;}
-    dStr=(consec&&idx.length>2)?`${LBL[ALL[idx[0]]]}–${LBL[ALL[idx[idx.length-1]]]}`:idx.map(i=>LBL[ALL[i]]).join(', ');
+  function _fmtBloque(b){
+    const dias=(b.dias||[]).filter(d=>ALL.includes(d));
+    const idx=dias.map(d=>ALL.indexOf(d)).sort((a,b)=>a-b);
+    let dStr='';
+    if(idx.length){
+      let consec=true;
+      for(let i=1;i<idx.length;i++) if(idx[i]!==idx[i-1]+1){consec=false;break;}
+      dStr=(consec&&idx.length>2)?`${LBL[ALL[idx[0]]]}–${LBL[ALL[idx[idx.length-1]]]}`:idx.map(i=>LBL[ALL[i]]).join(', ');
+    }
+    const tStr=(b.desde&&b.hasta)?`${b.desde}–${b.hasta}`:(b.desde||b.hasta||'');
+    return [dStr,tStr].filter(Boolean).join(' ');
   }
-  const tStr=(h.desde&&h.hasta)?`${h.desde}–${h.hasta}`:(h.desde||h.hasta||'');
-  return [dStr,tStr].filter(Boolean).join(' ');
+  // Formato nuevo: {bloques:[...]}
+  if(h.bloques) return h.bloques.map(_fmtBloque).filter(Boolean).join(' / ');
+  // Formato anterior: {dias, desde, hasta}
+  return _fmtBloque(h);
 }
-function _toggleHorarioDia(d){
-  const btn=document.getElementById('hd-'+d); if(!btn) return;
+function _toggleHorarioDia(d, idx){
+  const btn=document.getElementById(`hd-${idx}-${d}`); if(!btn) return;
   const on=btn.dataset.active!=='1';
   btn.dataset.active=on?'1':'0';
   btn.style.background=on?'var(--primary-light)':'transparent';
   btn.style.borderColor=on?'var(--primary)':'var(--border)';
   btn.style.color=on?'var(--primary-dark)':'var(--text2)';
+}
+function _renderHorarioBloques(){
+  const cont=document.getElementById('horario-bloques'); if(!cont) return;
+  cont.innerHTML=window._horarioBloques.map((b,i)=>`
+    <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;position:relative">
+      ${window._horarioBloques.length>1?`<button type="button" onclick="window._horarioBloques.splice(${i},1);_renderHorarioBloques()" style="position:absolute;top:8px;right:8px;border:none;background:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1">×</button>`:''}
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Días</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+        ${[['lun','Lun'],['mar','Mar'],['mie','Mié'],['jue','Jue'],['vie','Vie'],['sab','Sáb'],['dom','Dom']].map(([d,lbl])=>{
+          const sel=(b.dias||[]).includes(d);
+          return `<button type="button" id="hd-${i}-${d}" data-active="${sel?'1':'0'}" onclick="_toggleHorarioDia('${d}',${i})" style="padding:4px 10px;border-radius:20px;border:1.5px solid ${sel?'var(--primary)':'var(--border)'};background:${sel?'var(--primary-light)':'transparent'};color:${sel?'var(--primary-dark)':'var(--text2)'};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">${lbl}</button>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div style="flex:1"><div style="font-size:12px;color:var(--text2);margin-bottom:4px">Desde</div><input type="text" id="hd-desde-${i}" class="form-input" maxlength="5" placeholder="10:00" value="${b.desde||''}" style="width:100%"></div>
+        <div style="padding-bottom:10px;color:var(--text3)">–</div>
+        <div style="flex:1"><div style="font-size:12px;color:var(--text2);margin-bottom:4px">Hasta</div><input type="text" id="hd-hasta-${i}" class="form-input" maxlength="5" placeholder="19:00" value="${b.hasta||''}" style="width:100%"></div>
+      </div>
+    </div>`).join('');
+}
+function _addHorarioBloque(){
+  window._horarioBloques.push({dias:[],desde:'',hasta:''});
+  _renderHorarioBloques();
+}
+function _getHorarioData(){
+  return {bloques: window._horarioBloques.map((b,i)=>{
+    const ALL=['lun','mar','mie','jue','vie','sab','dom'];
+    const dias=ALL.filter(d=>document.getElementById(`hd-${i}-${d}`)?.dataset.active==='1');
+    return {dias, desde:document.getElementById(`hd-desde-${i}`)?.value||'', hasta:document.getElementById(`hd-hasta-${i}`)?.value||''};
+  }).filter(b=>b.dias.length||b.desde||b.hasta)};
 }
 const getCatsDB = ()=> { try{ return JSON.parse(DB.get('cats_db')||'[]'); }catch(e){ return []; } };
 const setCatsDB = v=> DB.set('cats_db', JSON.stringify(v));
@@ -9273,20 +9309,8 @@ function modalNuevaBodega(bEdit){
       <div class="form-group"><label>Dirección</label><input id="b-dir" value="${bEdit?bEdit.direccion||'':''}" placeholder="Dirección física"></div>
       <div class="form-group"><label>Teléfono / WhatsApp</label><input id="b-tel" value="${bEdit?bEdit.tel||'':''}" placeholder="+56912345678" type="tel"></div>
       <div class="form-group"><label>Horario de atención</label>
-        <div style="margin-bottom:8px">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Días</div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
-            ${[['lun','Lun'],['mar','Mar'],['mie','Mié'],['jue','Jue'],['vie','Vie'],['sab','Sáb'],['dom','Dom']].map(([d,lbl])=>{
-              const sel=bEdit&&typeof bEdit.horario==='object'&&bEdit.horario?.dias?.includes(d);
-              return `<button type="button" id="hd-${d}" data-active="${sel?'1':'0'}" onclick="_toggleHorarioDia('${d}')" style="padding:5px 11px;border-radius:20px;border:1.5px solid ${sel?'var(--primary)':'var(--border)'};background:${sel?'var(--primary-light)':'transparent'};color:${sel?'var(--primary-dark)':'var(--text2)'};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">${lbl}</button>`;
-            }).join('')}
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:flex-end">
-          <div style="flex:1"><div style="font-size:12px;color:var(--text2);margin-bottom:4px">Desde</div><input type="text" id="b-horario-desde" class="form-input" maxlength="5" placeholder="10:00" pattern="[0-2][0-9]:[0-5][0-9]" value="${bEdit&&typeof bEdit.horario==='object'?bEdit.horario.desde||'':''}"></div>
-          <div style="padding-bottom:10px;color:var(--text3);font-size:16px">–</div>
-          <div style="flex:1"><div style="font-size:12px;color:var(--text2);margin-bottom:4px">Hasta</div><input type="text" id="b-horario-hasta" class="form-input" maxlength="5" placeholder="19:00" pattern="[0-2][0-9]:[0-5][0-9]" value="${bEdit&&typeof bEdit.horario==='object'?bEdit.horario.hasta||'':''}"></div>
-        </div>
+        <div id="horario-bloques"></div>
+        <button type="button" onclick="_addHorarioBloque()" style="margin-top:4px;padding:5px 12px;border:1.5px dashed var(--border);border-radius:8px;background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit">+ Agregar otro horario</button>
       </div>
       <div class="form-group"><label>Responsable</label><input id="b-resp" value="${bEdit?bEdit.responsable||'':''}" placeholder="Nombre responsable"></div>
       <div class="form-group"><label>Notas</label><textarea id="b-notas" rows="2">${bEdit?bEdit.notas||'':''}</textarea></div>
@@ -9296,6 +9320,12 @@ function modalNuevaBodega(bEdit){
       <button class="btn btn-primary" onclick="saveBodega(${isEdit?`'${bEdit.id}'`:'null'})">💾 Guardar</button>
     </div>
   </div></div>`);
+  // Inicializar bloques de horario
+  const _hExist = bEdit?.horario;
+  if(_hExist?.bloques) window._horarioBloques = JSON.parse(JSON.stringify(_hExist.bloques));
+  else if(_hExist?.dias) window._horarioBloques = [{dias:_hExist.dias, desde:_hExist.desde||'', hasta:_hExist.hasta||''}];
+  else window._horarioBloques = [{dias:[], desde:'', hasta:''}];
+  _renderHorarioBloques();
 }
 
 function modalEditarBodega(id){
@@ -9308,7 +9338,7 @@ function saveBodega(editId){
   if(!nombre){ toast('El nombre es obligatorio','error'); return; }
   const bodega={nombre,direccion:document.getElementById('b-dir').value.trim(),
     tel:document.getElementById('b-tel').value.trim(),
-    horario:(()=>{const ALL=['lun','mar','mie','jue','vie','sab','dom'];const dias=ALL.filter(d=>document.getElementById('hd-'+d)?.dataset.active==='1');return {dias,desde:document.getElementById('b-horario-desde')?.value||'',hasta:document.getElementById('b-horario-hasta')?.value||''};})(),
+    horario:_getHorarioData(),
     responsable:document.getElementById('b-resp').value.trim(),
     notas:document.getElementById('b-notas').value.trim()};
   const bodegas=getBodegas();
