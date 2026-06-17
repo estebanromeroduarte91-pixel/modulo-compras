@@ -9119,7 +9119,6 @@ function parseProdExcel(rows){
     else nuevos++;
   });
 
-  const bodegas=getBodegas();
   const hasSucCols=_importProdRows.some(p=>p.stock_sucursales&&Object.keys(p.stock_sucursales).length>0);
   const stockHeader=hasSucCols
     ?bodegas.map(b=>`<th style="padding:6px 8px;text-align:center">${b.nombre||b.name||'Suc'}</th>`).join('')
