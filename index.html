@@ -2341,15 +2341,30 @@ function tp_domainBodyHtml(){
         <button class="btn btn-default" onclick="tp_removeDomain()" style="font-size:13px">Cambiar dominio</button>
       </div>`;
   }
-  const recordsRows=(d.records||[]).map((r,i)=>`
+  const recStatus={
+    verified:{c:'#0c9b66',t:'Verificado'},
+    pending:{c:'#b7791f',t:'Esperando propagación DNS'},
+    not_started:{c:'#9ca3af',t:'Aún no detectado'},
+    failed:{c:'#d8413a',t:'Error: el valor no coincide, revísalo'},
+    temporary_failure:{c:'#b7791f',t:'Reintentando…'}
+  };
+  const recordsRows=(d.records||[]).map((r,i)=>{
+    const rs=recStatus[r.status]||recStatus.not_started;
+    return `
     <tr>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--gray-100);font-family:monospace;font-size:11.5px;color:var(--gray-600);white-space:nowrap;vertical-align:top">${escHtml(r.type||'')}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--gray-100);font-family:monospace;font-size:11.5px;color:var(--gray-600);white-space:nowrap;vertical-align:top"><span title="${rs.t}" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${rs.c};margin-right:7px;vertical-align:middle"></span>${escHtml(r.type||'')}</td>
       <td style="padding:8px 10px;border-bottom:1px solid var(--gray-100);font-family:monospace;font-size:11.5px;color:var(--gray-700);word-break:break-all;vertical-align:top">${escHtml(r.name||'')}</td>
       <td style="padding:8px 10px;border-bottom:1px solid var(--gray-100);font-family:monospace;font-size:11.5px;color:var(--gray-700);word-break:break-all;vertical-align:top">${escHtml(r.value||'')}${r.priority?` <span style="color:var(--gray-400)">(prioridad ${r.priority})</span>`:''}</td>
       <td style="padding:8px 6px;border-bottom:1px solid var(--gray-100);text-align:center;vertical-align:top"><button onclick="tp_copyRecord(this,${i})" title="Copiar valor" style="border:1px solid var(--gray-200);background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;color:var(--gray-500);font-family:inherit">Copiar</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   return headerRow+`
     <p style="margin:0 0 12px;font-size:13px;color:var(--gray-600);line-height:1.55">Agrega estos registros en el panel <strong>DNS</strong> de tu proveedor de dominio. Cuando estén propagados (puede tardar de minutos a unas horas), pulsa <strong>Comprobar</strong>.</p>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--gray-500)">
+      <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#0c9b66"></span>Detectado</span>
+      <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#b7791f"></span>Esperando DNS</span>
+      <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#d8413a"></span>Error en el valor</span>
+    </div>
     <div style="border:1px solid var(--gray-200);border-radius:10px;overflow:auto;margin-bottom:14px">
       <table style="width:100%;border-collapse:collapse;min-width:480px">
         <thead><tr style="background:var(--gray-50)">
@@ -2402,8 +2417,18 @@ async function tp_checkDomain(){
   d.status=res.status; d.records=res.records||d.records;
   DB.set('tp_email_domain',d);
   const body=document.getElementById('domain-card-body'); if(body) body.innerHTML=tp_domainBodyHtml();
-  if(res.status==='verified') toast('✓ Dominio verificado correctamente','success');
-  else toast('Aún no verificado. Los DNS pueden tardar en propagarse.','error');
+  if(res.status==='verified'){ toast('✓ Dominio verificado correctamente','success'); return; }
+  // Detallar qué registros faltan o tienen error
+  const recs=res.records||[];
+  const fallidos=recs.filter(r=>r.status==='failed');
+  const pendientes=recs.filter(r=>r.status==='pending'||r.status==='not_started'||r.status==='temporary_failure');
+  if(fallidos.length){
+    toast('⚠ '+fallidos.length+' registro(s) con error de valor: '+fallidos.map(r=>r.type).join(', ')+'. Revisa que el valor en tu DNS sea idéntico.','error');
+  } else if(pendientes.length){
+    toast('Aún esperando '+pendientes.length+' registro(s): '+pendientes.map(r=>r.type).join(', ')+'. El DNS puede tardar minutos en propagar — vuelve a comprobar en un rato.','error');
+  } else {
+    toast('Aún no verificado. Espera unos minutos a que propague el DNS.','error');
+  }
 }
 
 function tp_saveDomainFrom(){
