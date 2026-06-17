@@ -1047,7 +1047,10 @@ async function _cargarDesdeSupabase(){
   if(!_empresaId) return;
   const {data, error} = await _sb.from('erp_data').select('clave,datos').eq('empresa_id', _empresaId);
   if(error){ console.error(error); return; }
-  if(data) data.forEach(r=>{ _dbCache[r.clave]=r.datos; localStorage.setItem('erp_'+r.clave, JSON.stringify(r.datos)); });
+  if(data){
+    data.forEach(r=>{ _dbCache[r.clave]=r.datos; localStorage.setItem('erp_'+r.clave, JSON.stringify(r.datos)); });
+    console.log('[SUPABASE] claves cargadas:', data.map(r=>r.clave), '| bodegas:', JSON.stringify(_dbCache['bodegas']));
+  }
 }
 
 // ─────────────────────────────────────────────
