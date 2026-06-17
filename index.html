@@ -1437,6 +1437,17 @@ function _syncProductosNow(prods){
   if(_empresaId) _sb.from('erp_data').upsert([{empresa_id:_empresaId,clave:'productos',datos:prods,actualizado_en:new Date().toISOString()}],{onConflict:'empresa_id,clave'}).then(({error})=>{if(error)console.error('Error sync productos:',error);});
   _refreshInventoryViews();
 }
+const _BRANCH_COLORS=['#2563eb','#7c3aed','#16a34a','#ea580c','#0891b2'];
+function _branchColor(idx){return _BRANCH_COLORS[idx%_BRANCH_COLORS.length];}
+function getProdStockSucursal(prod,bodegaId){
+  if(prod.stock_sucursales&&bodegaId in prod.stock_sucursales) return Number(prod.stock_sucursales[bodegaId])||0;
+  return 0;
+}
+function getProdStockTotal(prod){
+  if(prod.stock_sucursales&&Object.keys(prod.stock_sucursales).length>0)
+    return Object.values(prod.stock_sucursales).reduce((s,v)=>s+(Number(v)||0),0);
+  return Number(prod.stock)||0;
+}
 const getOCs = ()=> DB.get('ocs')||[];
 const setOCs = v=> DB.set('ocs',v);
 const getOCLog = ()=> DB.get('oc_log')||[];
@@ -8449,25 +8460,37 @@ function pfClearAll(){
 }
 
 function renderProdsTable(prods){
+  const bodegas=getBodegas();
   if(!prods.length) return `<div class="empty-state"><div class="empty-icon">📦</div><h3>Sin productos</h3>
     <p>Agrega productos manualmente o importa desde Excel</p>
     <button class="btn btn-outline" onclick="modalImportarProductos()">📊 Importar desde Excel</button>
   </div>`;
   return `<table><thead><tr>
-    <th>SKU</th><th>Producto</th><th>Costo Neto</th><th>Precio Venta</th><th>Stock</th><th>Categoría</th><th>Subcategoría</th><th>Acciones</th>
+    <th>SKU</th><th>Producto</th><th>Costo Neto</th><th>Precio Venta</th><th>${bodegas.length?'Stock por sucursal':'Stock'}</th><th>Categoría</th><th>Subcategoría</th><th>Acciones</th>
   </tr></thead>
   <tbody>${prods.map(p=>{
-    const stock=p.stock!==undefined&&p.stock!==''?Number(p.stock):null;
-    const lowStock=stock!==null&&stock<=5;
+    const stockTotal=getProdStockTotal(p);
+    const hasSucs=bodegas.length>0&&p.stock_sucursales&&Object.keys(p.stock_sucursales).length>0;
+    const stockHtml=bodegas.length?bodegas.map((b,i)=>{
+      const s=hasSucs?getProdStockSucursal(p,b.id):null;
+      const nom=b.nombre||b.name||'Sucursal';
+      const low=s!==null&&s<=3;
+      return `<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${_branchColor(i)};display:inline-block;flex-shrink:0"></span>
+        <span style="font-size:11px;color:var(--gray-500);min-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nom}</span>
+        <span style="font-weight:600;font-size:12px;${low?'color:#b91c1c':''}">${s!==null?s:'—'}${low?' ⚠':''}</span>
+      </div>`;
+    }).join(''):`<span style="font-weight:600;${stockTotal<=5&&stockTotal>=0?'color:#b91c1c':''}">${stockTotal}${stockTotal<=5?' ⚠':''}</span>`;
     return`<tr>
     <td style="font-size:12px;color:var(--gray-500)">${p.sku||'—'}</td>
     <td><strong>${p.nombre}</strong></td>
     <td>${p.precio_compra?fmt$(p.precio_compra):'—'}</td>
     <td>${p.precio_venta?`<span style="color:#10b981;font-weight:600">${fmt$(p.precio_venta)}</span>`:'—'}</td>
-    <td style="text-align:center">${stock!==null?`<span style="${lowStock?'color:#b91c1c;font-weight:700':'font-weight:600'}">${stock}${lowStock?` <span style="font-size:10px">⚠</span>`:''}` :'—'}</span></td>
+    <td>${stockHtml}</td>
     <td>${p.categoria?`<span class="badge badge-blue">${p.categoria}</span>`:'—'}</td>
     <td>${p.subcategoria?`<span class="badge badge-gray">${p.subcategoria}</span>`:'—'}</td>
     <td><div style="display:flex;gap:4px">
+      <button class="btn-icon btn-sm" title="Ajustar stock" onclick="modalAjusteStock('${p.id}')" style="color:#2563eb;font-size:14px">⇅</button>
       <button class="btn-icon btn-sm" onclick="modalEditarProducto('${p.id}')">✏️</button>
       <button class="import-row-del" onclick="eliminarProducto('${p.id}')">🗑</button>
     </div></td>
@@ -8482,7 +8505,7 @@ function filtrarProductos(){
   if(q) prods=prods.filter(p=>(p.nombre||'').toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q));
   if(cat) prods=prods.filter(p=>p.categoria===cat);
   if(subcat) prods=prods.filter(p=>p.subcategoria===subcat);
-  if(_pfLowStock) prods=prods.filter(p=>p.stock!==undefined&&p.stock!==''&&Number(p.stock)<=5);
+  if(_pfLowStock) prods=prods.filter(p=>getProdStockTotal(p)<=5);
   const hasFilter=q||cat||subcat||_pfLowStock;
   const clr=document.getElementById('pf-clear');if(clr)clr.style.display=hasFilter?'flex':'none';
   const info=document.getElementById('pf-results-info');
@@ -8805,6 +8828,124 @@ function modalEditarProducto(id){
   if(p) modalNuevoProducto(p);
 }
 
+function modalAjusteStock(prodId){
+  const p=getProductos().find(x=>x.id===prodId);if(!p)return;
+  const bodegas=getBodegas();
+  window._ajProdId=prodId;
+  window._ajBodegaId=bodegas[0]?.id||'';
+  window._ajTipo='agregar';
+  const branchCards=bodegas.map((b,i)=>{
+    const s=getProdStockSucursal(p,b.id);
+    const nom=b.nombre||b.name||'Sucursal';
+    const sel=i===0;
+    return `<div id="ajb-${b.id}" onclick="ajSelBranch('${b.id}')" style="flex:1;min-width:100px;padding:10px 8px;border-radius:10px;border:${sel?`1.5px solid ${_branchColor(i)}`:'1px solid var(--gray-200)'};background:${sel?'#eff6ff':'#fff'};cursor:pointer;text-align:center">
+      <span style="width:8px;height:8px;border-radius:50%;background:${_branchColor(i)};display:inline-block;margin-bottom:4px"></span>
+      <div style="font-size:12.5px;font-weight:600;color:var(--gray-800)">${nom}</div>
+      <div style="font-size:11px;color:var(--gray-500);margin-top:2px">Stock: <strong id="ajcs-${b.id}" style="${s<=3?'color:#b91c1c':''}">${s}</strong></div>
+    </div>`;
+  }).join('');
+  const firstStock=bodegas.length?getProdStockSucursal(p,window._ajBodegaId):getProdStockTotal(p);
+  showModal(`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div><h3 style="margin:0">Ajuste de stock</h3><div style="font-size:12px;color:var(--gray-500);margin-top:2px">${p.nombre}${p.sku?' · SKU '+p.sku:''}</div></div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+      ${bodegas.length?`<div>
+        <label class="form-label">Sucursal</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${branchCards}</div>
+      </div>`:''}
+      <div>
+        <label class="form-label">Tipo de ajuste</label>
+        <div style="display:flex;gap:8px">
+          <button id="ajt-agregar" onclick="ajSelTipo('agregar')" style="flex:1;padding:8px;border-radius:8px;border:1.5px solid #16a34a;background:#f0fdf4;color:#15803d;cursor:pointer;font-size:12.5px;font-weight:600">+ Agregar</button>
+          <button id="ajt-quitar" onclick="ajSelTipo('quitar')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);cursor:pointer;font-size:12.5px;font-weight:600">− Quitar</button>
+          <button id="ajt-total" onclick="ajSelTipo('total')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);cursor:pointer;font-size:12.5px;font-weight:600">= Establecer</button>
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Cantidad</label>
+        <div style="display:flex;gap:8px">
+          <input type="number" id="aj-qty" value="1" min="0" style="width:90px" oninput="ajActPreview()">
+          <input type="text" id="aj-motivo" placeholder="Motivo (opcional)" style="flex:1">
+        </div>
+      </div>
+      <div style="background:var(--gray-50,#f8fafc);border:1px solid var(--gray-200);border-radius:10px;padding:12px 14px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--gray-500)">Stock antes</span><span id="aj-prev-a" style="font-weight:600">${firstStock}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--gray-500)">Ajuste</span><span id="aj-prev-d" style="font-weight:600;color:#16a34a">+ 1</span></div>
+        <div style="border-top:1px solid var(--gray-200);margin:8px 0"></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--gray-500)">Stock después</span><span id="aj-prev-b" style="font-weight:700;font-size:15px;color:#16a34a">${firstStock+1}</span></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveAjusteStock()">Confirmar ajuste</button>
+    </div>
+  </div></div>`);
+}
+function ajSelBranch(bodegaId){
+  window._ajBodegaId=bodegaId;
+  getBodegas().forEach((b,i)=>{
+    const el=document.getElementById('ajb-'+b.id);if(!el)return;
+    const sel=b.id===bodegaId;
+    el.style.border=sel?`1.5px solid ${_branchColor(i)}`:'1px solid var(--gray-200)';
+    el.style.background=sel?'#eff6ff':'#fff';
+  });
+  ajActPreview();
+}
+function ajSelTipo(tipo){
+  window._ajTipo=tipo;
+  const styles={agregar:{b:'1.5px solid #16a34a',bg:'#f0fdf4',c:'#15803d'},quitar:{b:'1.5px solid #dc2626',bg:'#fef2f2',c:'#dc2626'},total:{b:'1.5px solid #2563eb',bg:'#eff6ff',c:'#1d4ed8'}};
+  ['agregar','quitar','total'].forEach(t=>{
+    const btn=document.getElementById('ajt-'+t);if(!btn)return;
+    const s=t===tipo?styles[t]:{b:'1px solid var(--gray-200)',bg:'#fff',c:'var(--gray-600)'};
+    btn.style.border=s.b;btn.style.background=s.bg;btn.style.color=s.c;
+  });
+  ajActPreview();
+}
+function ajActPreview(){
+  const p=getProductos().find(x=>x.id===window._ajProdId);if(!p)return;
+  const antes=getProdStockSucursal(p,window._ajBodegaId)||0;
+  const qty=Math.max(0,parseInt(document.getElementById('aj-qty')?.value)||0);
+  let despues=antes;
+  if(window._ajTipo==='agregar') despues=antes+qty;
+  else if(window._ajTipo==='quitar') despues=Math.max(0,antes-qty);
+  else despues=qty;
+  const up=despues>=antes;const col=up?'#16a34a':'#dc2626';
+  const delta=despues-antes;
+  const el=id=>document.getElementById(id);
+  if(el('aj-prev-a'))el('aj-prev-a').textContent=antes;
+  if(el('aj-prev-d')){el('aj-prev-d').textContent=`${delta>=0?'+':''}${delta}`;el('aj-prev-d').style.color=col;}
+  if(el('aj-prev-b')){el('aj-prev-b').textContent=despues;el('aj-prev-b').style.color=col;}
+}
+function saveAjusteStock(){
+  const p=getProductos().find(x=>x.id===window._ajProdId);if(!p)return;
+  const bodegaId=window._ajBodegaId;
+  const tipo=window._ajTipo;
+  const qty=Math.max(0,parseInt(document.getElementById('aj-qty')?.value)||0);
+  const motivo=document.getElementById('aj-motivo')?.value.trim()||'';
+  const antes=getProdStockSucursal(p,bodegaId)||0;
+  let despues=antes;
+  if(tipo==='agregar') despues=antes+qty;
+  else if(tipo==='quitar') despues=Math.max(0,antes-qty);
+  else despues=qty;
+  const diff=despues-antes;
+  const prods=getProductos();
+  const i=prods.findIndex(x=>x.id===window._ajProdId);if(i<0)return;
+  if(!prods[i].stock_sucursales) prods[i].stock_sucursales={};
+  prods[i].stock_sucursales[bodegaId]=despues;
+  prods[i].stock=getProdStockTotal(prods[i]);
+  const bodega=getBodegas().find(b=>b.id===bodegaId);
+  const bNom=bodega?bodega.nombre||bodega.name:'';
+  if(diff!==0) registrarMovimiento({tipo:'ajuste',productos:[{producto_id:p.id,producto_nombre:p.nombre,cantidad:Math.abs(diff),direccion:diff>0?'+':'-'}],bodega_destino:diff>0?bNom:'',bodega_origen:diff<0?bNom:'',notas:motivo||`Ajuste manual en ${bNom}: ${diff>0?'+':''}${diff}`});
+  _syncProductosNow(prods);
+  closeModal();
+  toast(`Stock actualizado · ${p.nombre}`,'success');
+  renderProductos();
+}
+
 function saveProducto(editId){
   const nombre=document.getElementById('pr-nombre').value.trim();
   if(!nombre){ toast('El nombre es obligatorio','error'); return; }
@@ -8831,11 +8972,18 @@ function saveProducto(editId){
   if(editId){
     const i=prods.findIndex(p=>p.id===editId);
     if(i>=0){
-      const stockAntes=+prods[i].stock||0;
-      const stockDespues=+prod.stock||0;
-      const diff=stockDespues-stockAntes;
-      Object.assign(prods[i],prod);
-      if(diff!==0) registrarMovimiento({tipo:'ajuste',productos:[{producto_id:editId,producto_nombre:prod.nombre,cantidad:Math.abs(diff),direccion:diff>0?'+':'-'}],notas:`Ajuste manual: ${diff>0?'+':''}${diff} unidades`});
+      const hasSucs=prods[i].stock_sucursales&&Object.keys(prods[i].stock_sucursales).length>0;
+      if(hasSucs){
+        const {stock,...sinStock}=prod;
+        Object.assign(prods[i],sinStock);
+        prods[i].stock=getProdStockTotal(prods[i]);
+      } else {
+        const stockAntes=+prods[i].stock||0;
+        const stockDespues=+prod.stock||0;
+        const diff=stockDespues-stockAntes;
+        Object.assign(prods[i],prod);
+        if(diff!==0) registrarMovimiento({tipo:'ajuste',productos:[{producto_id:editId,producto_nombre:prod.nombre,cantidad:Math.abs(diff),direccion:diff>0?'+':'-'}],notas:`Ajuste manual: ${diff>0?'+':''}${diff} unidades`});
+      }
     }
   } else { prod.id=uid(); prods.push(prod); }
   _syncProductosNow(prods); closeModal(); toast(editId?'Producto actualizado':'Producto guardado'); renderProductos();
@@ -14075,13 +14223,13 @@ function tp_renderRepSearch(){
   const list=getProductos().filter(p=>(!q||p.nombre.toLowerCase().includes(q)||(p.sku&&p.sku.toLowerCase().includes(q))));
   const cont=document.getElementById('rep-results');if(!cont)return;
   if(!list.length){cont.innerHTML='<div style="padding:10px;font-size:12.5px;color:var(--text3);text-align:center">Sin productos en inventario</div>';return;}
-  cont.innerHTML=list.slice(0,8).map(p=>`<div onclick="tp_selectRepProduct('${p.id}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"><div style="font-weight:500">${p.nombre}</div><div style="font-size:11.5px;color:var(--text2)">Stock: ${p.stock||0} · $${Number(p.precio_venta||0).toLocaleString('es-CL')}</div></div>`).join('');
+  cont.innerHTML=list.slice(0,8).map(p=>`<div onclick="tp_selectRepProduct('${p.id}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"><div style="font-weight:500">${p.nombre}</div><div style="font-size:11.5px;color:var(--text2)">Stock: ${getProdStockTotal(p)} · $${Number(p.precio_venta||0).toLocaleString('es-CL')}</div></div>`).join('');
 }
 function tp_selectRepProduct(id){
   const p=getProductos().find(x=>x.id===id);if(!p)return;
   tp_selectedRepProduct=p;
   const sn=document.getElementById('rep-sel-name');if(sn)sn.textContent=p.nombre;
-  const ss=document.getElementById('rep-sel-stock');if(ss)ss.textContent=p.stock||0;
+  const ss=document.getElementById('rep-sel-stock');if(ss)ss.textContent=getProdStockTotal(p);
   const rq=document.getElementById('rep-qty');if(rq)rq.value=1;
   const rsel=document.getElementById('rep-selected');if(rsel)rsel.style.display='block';
 }
@@ -14404,7 +14552,7 @@ function tp_renderInventory(){
       <td style="font-size:12.5px;color:var(--text2)">${cn>0?'$'+cn.toLocaleString('es-CL'):'—'}</td>
       <td style="font-size:12.5px;font-weight:500">${precio>0?'$'+precio.toLocaleString('es-CL'):'—'}</td>
       <td>${mh}</td>
-      <td class="${Number(p.stock||0)<=3?'stock-low':''}" style="font-size:12.5px">${p.stock||0}${Number(p.stock||0)<=3?' ⚠':''}${Number(p.stock||0)===0?' · Sin stock':''}</td>
+      <td class="${getProdStockTotal(p)<=3?'stock-low':''}" style="font-size:12.5px">${getProdStockTotal(p)}${getProdStockTotal(p)<=3?' ⚠':''}${getProdStockTotal(p)===0?' · Sin stock':''}</td>
       <td style="display:flex;gap:4px">
         <button class="icon-btn" onclick="tp_openEditProduct('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         <button class="icon-btn" style="color:var(--red)" onclick="tp_deleteProduct('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
@@ -14811,7 +14959,7 @@ function tp_computeAlerts(){
   const alerts=[];
   tp_orders.filter(o=>o.status!=='Entregado').forEach(o=>{const age=tp_getOrderAge(o);if(age>7)alerts.push({type:'red',text:`Orden #${o.num} · ${o.nombre} lleva ${age} días abierta`,sub:o.modelo,orderId:o.id});});
   tp_orders.filter(o=>o.status==='Listo').forEach(o=>{const age=tp_getOrderAge(o);if(age>2)alerts.push({type:'amber',text:`Listo sin retirar: #${o.num} · ${o.nombre}`,sub:age+' días esperando',orderId:o.id});});
-  const low=tp_products.filter(p=>Number(p.stock||0)<=3);
+  const low=tp_products.filter(p=>getProdStockTotal(p)<=3);
   if(low.length)alerts.push({type:'blue',text:`${low.length} producto${low.length!==1?'s':''} con stock bajo`,sub:low.slice(0,2).map(p=>p.nombre).join(', ')+(low.length>2?'…':''),productId:true});
   return alerts;
 }
