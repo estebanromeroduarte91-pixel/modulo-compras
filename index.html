@@ -14223,8 +14223,14 @@ function tp_buildRepHtml(o){
   const rows = o.repuestos.map((r,i)=>`
     <div class="rep-row">
       <div class="rep-row-name">${r.name}</div>
-      <div class="rep-row-qty"><span class="rep-qty-badge">×${r.qty}</span></div>
-      <div class="rep-row-price">${r.precio?tp_fmtMoney(r.precio*r.qty):'—'}</div>
+      <div class="rep-row-qty">
+        <input type="number" min="1" value="${r.qty}" style="width:48px;border:1px solid var(--border);border-radius:6px;padding:3px 5px;font-size:12px;text-align:center;font-family:inherit;background:var(--surface)"
+          onchange="tp_editRepuesto('${o.id}',${i},'qty',this.value)">
+      </div>
+      <div class="rep-row-price">
+        <input type="number" min="0" value="${r.precio||0}" style="width:80px;border:1px solid var(--border);border-radius:6px;padding:3px 5px;font-size:12px;text-align:right;font-family:inherit;background:var(--surface)"
+          onchange="tp_editRepuesto('${o.id}',${i},'precio',this.value)">
+      </div>
       <div class="rep-row-del">
         <button class="rep-del-btn" title="Quitar" onclick="tp_removeRepuestoFromDetail('${o.id}',${i})">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -14232,11 +14238,11 @@ function tp_buildRepHtml(o){
       </div>
     </div>`).join('');
   const totalCost = o.repuestos.reduce((s,r)=>s+(r.precio?r.precio*r.qty:0),0);
-  const totalRow = totalCost>0?`<div style="display:grid;grid-template-columns:1fr 56px 90px 32px;padding:8px 10px 4px;border-top:1px solid var(--border);margin-top:2px">
+  const totalRow = `<div style="display:grid;grid-template-columns:1fr 56px 90px 32px;padding:8px 10px 4px;border-top:1px solid var(--border);margin-top:2px">
     <div></div><div></div>
-    <div style="text-align:right;font-size:12.5px;font-weight:700;color:var(--text);padding-right:4px">${tp_fmtMoney(totalCost)}</div>
+    <div id="rep-total-${o.id}" style="text-align:right;font-size:12.5px;font-weight:700;color:var(--text);padding-right:4px">${tp_fmtMoney(totalCost)}</div>
     <div></div>
-  </div>`:'';
+  </div>`;
   return `<div class="rep-table-head"><span>Repuesto</span><span>Cant.</span><span style="text-align:right;padding-right:4px">Subtotal</span><span></span></div>${rows}${totalRow}`;
 }
 
@@ -14255,6 +14261,15 @@ function tp_removeRepuestoFromDetail(orderId, idx){
   tp_saveState();
   const list=document.getElementById('detail-repuestos-list');
   if(list) list.innerHTML=tp_buildRepHtml(o);
+}
+function tp_editRepuesto(orderId, idx, field, val){
+  const o=tp_orders.find(x=>x.id===orderId);if(!o||!o.repuestos[idx])return;
+  o.repuestos[idx][field]=field==='qty'?Math.max(1,parseInt(val)||1):Math.max(0,parseFloat(val)||0);
+  tp_saveState();
+  // Actualizar solo el total sin rerenderizar (para no perder el foco)
+  const totalCost=o.repuestos.reduce((s,r)=>s+(r.precio?r.precio*r.qty:0),0);
+  const totalEl=document.getElementById('rep-total-'+orderId);
+  if(totalEl) totalEl.textContent=tp_fmtMoney(totalCost);
 }
 
 function tp_openAddRepuesto(){
