@@ -11812,7 +11812,14 @@ function tp_loadState() {
 }
 function tp_saveState() {
   try {
-    DB.set('tp_orders',JSON.stringify(tp_orders));
+    const ordersJson=JSON.stringify(tp_orders);
+    DB.set('tp_orders',ordersJson);
+    // Sync inmediato a Supabase para evitar que realtime de otro cliente sobreescriba
+    // el estado local antes de que el debounce de 1500ms dispare
+    if(_empresaId){
+      _sb.from('erp_data').upsert([{empresa_id:_empresaId,clave:'tp_orders',datos:ordersJson,actualizado_en:new Date().toISOString()}],{onConflict:'empresa_id,clave'})
+        .then(({error})=>{ if(error) console.error('tp_saveState sync error:',error); });
+    }
     // tp_branches se guarda via setBodegas() directamente
     DB.set('tp_cl_ingreso',JSON.stringify(tp_checklistIngreso));
     DB.set('tp_cl_salida',JSON.stringify(tp_checklistSalida));
@@ -12411,7 +12418,7 @@ function tp_saveOrder(){
       }
     }).catch(e=>console.warn('tp_enviarCorreoIngreso:',e));
   }
-  tp_saveState();tp_closeModal('mod-order');tp_renderAll();
+  tp_saveState();tp_editingOrderId=null;tp_closeModal('mod-order');tp_renderAll();
 }
 function tp_deleteOrder(id){
   if(!confirm('¿Eliminar esta orden?'))return;
