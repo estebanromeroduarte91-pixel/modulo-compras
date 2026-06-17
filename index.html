@@ -1085,11 +1085,11 @@ function _updateSidebarBadge(){
       if(globalBadge) globalBadge.style.display='none';
     } else {
       if(branchBadge) branchBadge.style.display='none';
-      if(globalBadge) globalBadge.style.display='block';
+      if(globalBadge) globalBadge.style.display='flex';
     }
   } else {
     const b=getBodegas().find(x=>x.id===_currentBranchContext);
-    if(branchBadge){ branchBadge.style.display=b?'block':'none'; branchBadge.style.cursor='default'; branchBadge.onclick=null; if(branchName&&b) branchName.textContent=b.nombre||b.name; }
+    if(branchBadge){ branchBadge.style.display=b?'flex':'none'; branchBadge.style.cursor='default'; branchBadge.onclick=null; if(branchName&&b) branchName.textContent=b.nombre||b.name; }
     const dot=document.getElementById('sidebar-branch-dot'); if(dot) dot.style.background='#60a5fa';
     const sub=branchBadge?.querySelector('div>div:last-child'); if(sub) sub.style.display='none';
     if(globalBadge) globalBadge.style.display='none';
