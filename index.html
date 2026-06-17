@@ -12056,7 +12056,7 @@ function tp_renderOrders(){
       ${showSucursal?`<td style="font-size:12px;color:var(--text2);white-space:nowrap">${sucursalNombre}</td>`:''}
       <td>${tp_badge(o.status)}${isDerived?`<span style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 7px;font-size:10.5px;font-weight:600;margin-left:4px">🔄 ${derivedTsl?.tecnico||'Derivado'}</span>`:''}</td>
       <td><div style="font-size:12px;color:var(--text2)">${o.fecha?tp_fmtDate(o.fecha):'—'}</div><span class="age-chip ${ageClass}">${ageLabel}</span></td>
-      <td class="price-cell">${tp_fmtMoney(o.costo||o.presup||(o.repuestos||[]).reduce((s,r)=>s+(r.precio?r.precio*(r.qty||1):0),0))}</td>
+      <td class="price-cell">${(()=>{const rep=(o.repuestos||[]).reduce((s,r)=>s+(r.precio?r.precio*(r.qty||1):0),0);const manual=Number(o.costo)||Number(o.presup)||0;return tp_fmtMoney(manual||rep);})()}</td>
       <td class="actions-cell" onclick="event.stopPropagation()">
         <div class="actions-cell-inner">
         <button class="icon-btn" title="Ver detalle" onclick="tp_openDetail('${o.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
