@@ -14094,26 +14094,14 @@ async function tp_callSendEmail(to, subject, bodyHtml){
   const fromEmail=cfg.from||tpCfg.from_email||tpCfg.email||'onboarding@resend.dev';
   const fromName=cfg.from_name||cfg.fromName||tpCfg.nombre||'TallerPro';
   const resendKey=DB.get('resend_key')||localStorage.getItem('erp_resend_key')||'';
-
-  // Si hay API key de Resend, llamar directamente a su API (sin pasar por Edge Function)
-  if(resendKey){
-    try{
-      const res=await fetch('https://api.resend.com/emails',{
-        method:'POST',
-        headers:{'Authorization':'Bearer '+resendKey,'Content-Type':'application/json'},
-        body:JSON.stringify({from:`${fromName} <${fromEmail}>`,to:[to],subject,html:bodyHtml})
-      });
-      const data=await res.json();
-      if(!res.ok) return {ok:false,error:data?.message||data?.name||'Error Resend ('+res.status+')'};
-      return {ok:true,id:data.id};
-    }catch(e){return {ok:false,error:e.message};}
-  }
-
-  // Fallback: Edge Function de Supabase
   try{
-    const {data,error}=await _sb.functions.invoke('send-email',{
-      body:{to, subject, html:bodyHtml, from:fromEmail, from_name:fromName}
-    });
+    const body={to, subject, html:bodyHtml, from:fromEmail, from_name:fromName};
+    // Pasar credenciales SMTP para que la Edge Function las use directamente
+    if(cfg.host&&cfg.user&&cfg.password){
+      body.smtp={host:cfg.host, port:Number(cfg.port)||465, secure:cfg.security!=='tls', user:cfg.user, password:cfg.password};
+    }
+    if(resendKey) body.resend_api_key=resendKey;
+    const {data,error}=await _sb.functions.invoke('send-email',{body});
     if(error) return {ok:false,error:error.message};
     return data||{ok:true};
   }catch(e){return {ok:false,error:e.message};}
