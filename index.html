@@ -9344,7 +9344,10 @@ function saveBodega(editId){
   const bodegas=getBodegas();
   if(editId){ const i=bodegas.findIndex(b=>b.id===editId); if(i>=0) Object.assign(bodegas[i],bodega); }
   else { bodega.id=uid(); bodegas.push(bodega); }
-  setBodegas(bodegas); closeModal(); toast(editId?'Bodega actualizada':'Bodega guardada'); renderBodegas();
+  setBodegas(bodegas);
+  // Sync inmediato a Supabase sin esperar el timer
+  if(_empresaId) _sb.from('erp_data').upsert([{empresa_id:_empresaId,clave:'bodegas',datos:bodegas,actualizado_en:new Date().toISOString()}],{onConflict:'empresa_id,clave'}).then(({error})=>{if(error)console.error('Error sync bodegas:',error);});
+  closeModal(); toast(editId?'Bodega actualizada':'Bodega guardada'); renderBodegas();
 }
 
 // ─────────────────────────────────────────────
