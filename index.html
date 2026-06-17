@@ -14085,12 +14085,15 @@ function tp_saveSmtp(){
 
 async function tp_callSendEmail(to, subject, bodyHtml){
   const cfg=DB.get('tp_smtp_config')||{};
+  const tpCfg=DB.get('tp_config')||{};
+  const fromEmail=cfg.from||tpCfg.from_email||tpCfg.email||'onboarding@resend.dev';
+  const fromName=cfg.from_name||cfg.fromName||tpCfg.nombre||'TallerPro';
   try{
     const {data,error}=await _sb.functions.invoke('send-email',{
       body:{
         to, subject, html:bodyHtml,
-        from:'onboarding@resend.dev',
-        from_name:cfg.from_name||'TallerPro'
+        from:fromEmail,
+        from_name:fromName
       }
     });
     if(error) return {ok:false,error:error.message};
