@@ -1428,6 +1428,15 @@ const getProveedores = ()=> DB.get('proveedores')||[];
 const setProveedores = v=> DB.set('proveedores',v);
 const getProductos = ()=> DB.get('productos')||[];
 const setProductos = v=> DB.set('productos',v);
+function _refreshInventoryViews(){
+  if(typeof filtrarProductos==='function'&&document.getElementById('prods-table')) filtrarProductos();
+  if(typeof tp_renderInventory==='function'&&document.getElementById('inv-tbody')) tp_renderInventory();
+}
+function _syncProductosNow(prods){
+  setProductos(prods);
+  if(_empresaId) _sb.from('erp_data').upsert([{empresa_id:_empresaId,clave:'productos',datos:prods,actualizado_en:new Date().toISOString()}],{onConflict:'empresa_id,clave'}).then(({error})=>{if(error)console.error('Error sync productos:',error);});
+  _refreshInventoryViews();
+}
 const getOCs = ()=> DB.get('ocs')||[];
 const setOCs = v=> DB.set('ocs',v);
 const getOCLog = ()=> DB.get('oc_log')||[];
@@ -8485,7 +8494,7 @@ function filtrarProductos(){
 
 function eliminarProducto(id){
   if(!confirm('¿Eliminar este producto?')) return;
-  setProductos(getProductos().filter(p=>p.id!==id));
+  _syncProductosNow(getProductos().filter(p=>p.id!==id));
   toast('Producto eliminado'); renderProductos();
 }
 
@@ -8829,7 +8838,7 @@ function saveProducto(editId){
       if(diff!==0) registrarMovimiento({tipo:'ajuste',productos:[{producto_id:editId,producto_nombre:prod.nombre,cantidad:Math.abs(diff),direccion:diff>0?'+':'-'}],notas:`Ajuste manual: ${diff>0?'+':''}${diff} unidades`});
     }
   } else { prod.id=uid(); prods.push(prod); }
-  setProductos(prods); closeModal(); toast(editId?'Producto actualizado':'Producto guardado'); renderProductos();
+  _syncProductosNow(prods); closeModal(); toast(editId?'Producto actualizado':'Producto guardado'); renderProductos();
 }
 
 // ── Plantilla y carga masiva Productos ──
@@ -14507,9 +14516,9 @@ function tp_saveProduct(){
   const prods=getProductos();
   if(tp_editingProductId){const i=prods.findIndex(p=>p.id===tp_editingProductId);if(i!==-1)prods[i]={...prods[i],...d};}
   else prods.unshift({id:'tp-'+Date.now().toString(),...d});
-  setProductos(prods);tp_products=prods;tp_closeModal('mod-product');tp_renderInventory();
+  _syncProductosNow(prods);tp_products=prods;tp_closeModal('mod-product');tp_renderInventory();
 }
-function tp_deleteProduct(id){if(!confirm('¿Eliminar producto?'))return;const prods=getProductos().filter(p=>p.id!==id);setProductos(prods);tp_products=prods;tp_renderInventory();}
+function tp_deleteProduct(id){if(!confirm('¿Eliminar producto?'))return;const prods=getProductos().filter(p=>p.id!==id);_syncProductosNow(prods);tp_products=prods;tp_renderInventory();}
 
 // ─── EXCEL ───
 function tp_openUploadModal(){const pv=document.getElementById('upload-preview');if(pv)pv.innerHTML='';const ua=document.getElementById('upload-actions');if(ua)ua.style.display='none';tp_pendingImport=[];document.getElementById('mod-upload').classList.add('open');}
