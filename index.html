@@ -343,6 +343,27 @@ select{cursor:pointer}
   .dash-cards-grid{grid-template-columns:1fr 1fr!important}
   /* Topbar empresa oculto en mobile */
   #topbar-empresa{display:none}
+  /* Dashboard KPI grid: 2 columnas en mobile */
+  .kpi-grid{grid-template-columns:1fr 1fr!important;gap:10px!important}
+  .kpi-card{padding:14px 12px!important}
+  .kpi-value{font-size:1.3rem!important}
+  /* Charts en columna única */
+  #tp-wrap .charts-row{grid-template-columns:1fr!important}
+  #tp-wrap .chart-wrap{height:160px!important}
+  /* Tablas del dashboard con scroll horizontal */
+  #tp-wrap .orders-table-wrap,
+  .db-table-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+  /* Dashboard global: grids en columna única */
+  .db-row-3-1{grid-template-columns:1fr!important}
+  .db-row-3{grid-template-columns:1fr 1fr!important}
+  .db-suc-table{min-width:380px}
+  .db-card{overflow-x:auto}
+  /* Evitar que el contenido de página quede muy ancho */
+  #page-content > div, #page-content > section{max-width:100%!important;box-sizing:border-box}
+  /* Panel de búsqueda más angosto */
+  #tp-wrap .search-panel{width:90vw!important;right:5vw!important}
+  /* Panel de notificaciones */
+  #tp-wrap .notif-panel{width:90vw!important;right:0!important}
 }
 @media(min-width:769px){
   #mob-menu-btn{display:none!important}
