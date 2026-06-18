@@ -12580,13 +12580,23 @@ function tp_saveOrder(){
     photosIngreso:[...tp_photoBuffers.ingreso],
   };
   // Stock se rebaja en módulo de Ventas, no al crear la orden
-  const _isEditing=tp_orders.some(o=>o.id===tp_editingOrderId);
+  const _existIdx=tp_orders.findIndex(o=>o.id===tp_editingOrderId);
+  const _existente=_existIdx!==-1?tp_orders[_existIdx]:null;
+  // Un borrador (creado al subir fotos por QR) NO es edición: es una orden nueva
+  const _isEditing=_existente && !_existente._draft;
   if(_isEditing){
-    const idx=tp_orders.findIndex(o=>o.id===tp_editingOrderId);
-    if(idx!==-1)tp_orders[idx]={...tp_orders[idx],...data};
+    tp_orders[_existIdx]={...tp_orders[_existIdx],...data};
   } else {
-    const newOrder={id:tp_editingOrderId||Date.now().toString(),num:tp_nextNum(),branchId:tp_currentBranchId,fecha:new Date().toISOString(),...data};
-    tp_orders.unshift(newOrder);
+    let newOrder;
+    if(_existente && _existente._draft){
+      // Convertir el borrador en orden real: conservar id/num/fecha y fotos que llegaron por QR
+      newOrder={...(_existente),...data,_draft:false};
+      if((_existente.photosIngreso||[]).length && !(data.photosIngreso||[]).length) newOrder.photosIngreso=_existente.photosIngreso;
+      tp_orders[_existIdx]=newOrder;
+    } else {
+      newOrder={id:tp_editingOrderId||Date.now().toString(),num:tp_nextNum(),branchId:tp_currentBranchId,fecha:new Date().toISOString(),...data};
+      tp_orders.unshift(newOrder);
+    }
     // Auto-registrar cliente en BD compartida si no existe
     const clis=getClientes();
     const yaExiste=clis.find(c=>(c.rut&&c.rut===data.rut)||(c.nombre+' '+(c.apellido||'')).trim().toLowerCase()===nombre.toLowerCase());
@@ -12595,14 +12605,18 @@ function tp_saveOrder(){
     tp_enviarCorreoIngreso(newOrder).then(res=>{
       if(res&&res.ok===false){
         const msg=res.error||'Error desconocido';
-        if(msg.includes('Sin configuración')||msg.includes('smtp_config'))
+        if(msg.includes('vacío')||msg.includes('Email del cliente'))
+          toast('Correo de ingreso no enviado: la orden no tiene email del cliente','error');
+        else if(msg.includes('Sin configuración')||msg.includes('smtp_config'))
           toast('Correo de ingreso no enviado: configura SMTP en Ajustes','error');
         else if(msg.includes('API Key')||msg.includes('resend'))
           toast('Correo de ingreso no enviado: configura API Key de Resend','error');
         else
           toast('Correo de ingreso no enviado: '+msg,'error');
+      } else if(res&&res.ok){
+        toast('📧 Correo de ingreso enviado a '+newOrder.email,'success');
       }
-    }).catch(e=>console.warn('tp_enviarCorreoIngreso:',e));
+    }).catch(e=>{console.warn('tp_enviarCorreoIngreso:',e);toast('Correo de ingreso no enviado: '+(e?.message||e),'error');});
   }
   tp_saveState();tp_editingOrderId=null;tp_closeModal('mod-order');tp_renderAll();
 }
