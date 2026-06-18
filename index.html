@@ -13954,7 +13954,14 @@ function tp_settingsTab(tab){
 }
 
 function tp_getSeguimientoConfig(){
-  try{ return JSON.parse(DB.get('tp_seg_config')||localStorage.getItem('erp_tp_seg_config')||'{}'); }catch(e){ return {}; }
+  try{
+    let v=DB.get('tp_seg_config');
+    // DB.get puede devolver un objeto (cargado de Supabase) o un string (localStorage)
+    if(v&&typeof v==='object') return v;
+    if(typeof v==='string'&&v) return JSON.parse(v);
+    const ls=localStorage.getItem('erp_tp_seg_config');
+    return ls?JSON.parse(ls):{};
+  }catch(e){ return {}; }
 }
 function tp_loadSeguimientoConfig(){
   const c=tp_getSeguimientoConfig();
