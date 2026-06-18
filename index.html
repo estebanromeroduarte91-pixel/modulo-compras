@@ -13628,7 +13628,7 @@ function tp_openInspeccionModal(orderId, mode){
           </div>
         </div>
         <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observaciones</div>
-        <textarea id="insp-notas-input" class="form-input" rows="4" placeholder="Describe el estado del equipo: golpes, rayones, piezas rotas, evidencia de agua, intervenciones previas..." style="width:100%;resize:vertical;font-size:13px;line-height:1.6">${insp.notas||''}</textarea>
+        <textarea id="insp-notas-input" class="form-input" rows="4" placeholder="Describe el estado del equipo: golpes, rayones, piezas rotas, evidencia de agua, intervenciones previas..." oninput="autoCapFirst(this)" style="width:100%;resize:vertical;font-size:13px;line-height:1.6">${insp.notas||''}</textarea>
         ${ltBtn('insp-notas-input')}
         <div style="margin-top:16px">
           <div style="font-size:11.5px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Enviar reporte al cliente</div>
@@ -13718,6 +13718,7 @@ async function tp_enviarInspeccionReporte(orderId, via){
 
   if(via==='whatsapp'){
     const phone=(o.tel||'').replace(/\D/g,'');
+    const fotos=insp.fotos||[];
     let texto=`📋 *Reporte de Inspección - ${tallerNombre}*\n`;
     texto+=`━━━━━━━━━━━━━━━━━━\n`;
     texto+=`👤 Cliente: ${o.nombre}\n`;
@@ -13728,14 +13729,31 @@ async function tp_enviarInspeccionReporte(orderId, via){
     if(notasTexto){
       texto+=`📝 *Estado del equipo:*\n${notasTexto}\n`;
     }
-    if(fotoCount){
-      texto+=`\n📷 Se adjuntan ${fotoCount} foto${fotoCount>1?'s':''} del equipo.\n`;
-    }
     texto+=`\nGracias por confiar en ${tallerNombre}.`;
+
+    // Intentar compartir CON las fotos usando el menú nativo del dispositivo
+    // (en celular permite elegir WhatsApp y adjunta las imágenes de verdad)
+    if(fotoCount && navigator.share && navigator.canShare){
+      try{
+        const files=await Promise.all(fotos.slice(0,10).map(async(src,i)=>{
+          const blob=await (await fetch(src)).blob();
+          const ext=(blob.type.split('/')[1]||'jpg').replace('jpeg','jpg');
+          return new File([blob],`inspeccion_${o.num}_${i+1}.${ext}`,{type:blob.type||'image/jpeg'});
+        }));
+        if(navigator.canShare({files})){
+          await navigator.share({files,text:texto});
+          return;
+        }
+      }catch(e){ if(e&&e.name==='AbortError') return; console.warn('Compartir con fotos no disponible, uso solo texto:',e); }
+    }
+
+    // Fallback: solo texto (wa.me no permite adjuntar imágenes)
+    if(fotoCount) texto+=`\n📷 (${fotoCount} foto${fotoCount>1?'s':''} del equipo — se envían aparte)`;
     const url=phone
       ?`https://wa.me/${phone}?text=${encodeURIComponent(texto)}`
       :`https://wa.me/?text=${encodeURIComponent(texto)}`;
     window.open(url,'_blank');
+    if(fotoCount) toast('WhatsApp web no adjunta fotos por enlace. Desde el celular usa "Compartir" para enviarlas junto al mensaje.','info');
     return;
   }
 
@@ -13922,7 +13940,7 @@ function tp_refreshTecnicoSelect(){
 function tp_saveTerminos(){
   const val=document.getElementById('tp-terminos-textarea')?.value||'';
   DB.set('tp_terminos',val);
-  showToast('Términos guardados');
+  toast('Términos guardados ✓','success');
 }
 function tp_loadTerminos(){
   const val=DB.get('tp_terminos')||localStorage.getItem('erp_tp_terminos')||'';
