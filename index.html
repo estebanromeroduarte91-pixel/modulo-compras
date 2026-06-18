@@ -13940,6 +13940,8 @@ function tp_refreshTecnicoSelect(){
 function tp_saveTerminos(){
   const val=document.getElementById('tp-terminos-textarea')?.value||'';
   DB.set('tp_terminos',val);
+  // Sync inmediato a Supabase para que las sucursales lo reciban sin esperar el debounce
+  if(_empresaId) _sb.from('erp_data').upsert([{empresa_id:_empresaId,clave:'tp_terminos',datos:val,actualizado_en:new Date().toISOString()}],{onConflict:'empresa_id,clave'}).then(({error})=>{if(error)console.error('sync tp_terminos:',error);});
   toast('Términos guardados ✓','success');
 }
 function tp_loadTerminos(){
@@ -14088,6 +14090,8 @@ function tp_saveSeguimientoConfig(){
     logoUrl: get('seg-logo-url'),
   };
   DB.set('tp_seg_config', cfg);
+  // Sync inmediato a Supabase para que las sucursales lo reciban sin esperar el debounce
+  if(_empresaId) _sb.from('erp_data').upsert([{empresa_id:_empresaId,clave:'tp_seg_config',datos:cfg,actualizado_en:new Date().toISOString()}],{onConflict:'empresa_id,clave'}).then(({error})=>{if(error)console.error('sync tp_seg_config:',error);});
   const st=document.getElementById('seg-config-status');
   if(st){ st.textContent='✓ Guardado'; st.style.color='#10b981'; setTimeout(()=>st.textContent='',2500); }
   toast('Configuración de seguimiento guardada','success');
