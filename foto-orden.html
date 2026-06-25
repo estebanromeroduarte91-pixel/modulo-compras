@@ -155,17 +155,17 @@ async function guardarFotos(){
 async function handleFiles(files){
   if(!files||!files.length)return;
   showStatus('Subiendo foto...','status-load');
-  let ok=0;
+  let ok=0, lastErr='';
   for(const file of Array.from(files)){
     try{
       const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
       const path=empresaId+'/ordenes/'+ordenId+'/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
-      const {error}=await sb.storage.from('erp-assets').upload(path,file,{upsert:true});
-      if(error)throw error;
+      const {error}=await sb.storage.from('erp-assets').upload(path,file,{upsert:true,contentType:file.type||'image/jpeg'});
+      if(error){lastErr=error.message||JSON.stringify(error);throw new Error(lastErr);}
       const {data:urlData}=sb.storage.from('erp-assets').getPublicUrl(path);
       const arr=getFotos();arr.push(urlData.publicUrl);setFotos(arr);
       ok++;
-    }catch(e){console.error(e);}
+    }catch(e){lastErr=lastErr||e.message||String(e);console.error(e);}
   }
   if(ok>0){
     const saveErr=await saveOrder();
@@ -176,7 +176,7 @@ async function handleFiles(files){
     showStatus('✅ '+(ok>1?ok+' fotos subidas':'Foto subida')+' correctamente','status-ok');
     setTimeout(()=>{document.getElementById('status-bar').style.display='none';},3000);
   }else{
-    showStatus('⚠️ '+ok+' de '+files.length+' fotos subidas','status-err');
+    showStatus('⚠️ '+ok+' de '+files.length+' fotos subidas. Error: '+lastErr,'status-err');
   }
 }
 
